@@ -1,0 +1,18 @@
+# Bot
+TOKEN=inseryourtokenhere
+EMBED_COLOR=#000001
+SEARCH_ENGINE=youtube
+LEAVE_EMPTY=120000
+
+# Dev
+OWNER_ID=
+
+# Nodes
+NODE_NAME=insertyournodehere
+NODE_URL=0.0.0.0:2333
+NODE_AUTH=youshallnotpass
+
+#SPOTIFY
+spotifyClientID= ""
+spotifySecret= ""
+
