@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2/> </a> 
+<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2/> </a>
 </p>
 
 ## 📑 Feature
