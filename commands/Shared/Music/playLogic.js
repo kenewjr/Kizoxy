@@ -39,7 +39,7 @@ module.exports = async function playLogic(client, ctx, args) {
         voiceId: userVoice.id,
         textId: ctx.channel.id,
         volume: 100,
-        selfDeaf: true,
+        deaf: true,
       });
     } else {
       // Jika player ada tapi voice berbeda, coba update voiceId (tergantung library)

@@ -1,116 +1,152 @@
 <p align="center">
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2"/> </a>
+<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2"/>
 </p>
 
-## 📑 Feature
+<p align="center">
+    <a href="https://github.com/kenewjr/kizoxy-bot/blob/main/LICENSE">
+        <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+    </a>
+    <img src="https://img.shields.io/badge/Node.js-18+-green.svg" alt="Node.js Version">
+    <a href="https://discord.gg/qeemvqq">
+        <img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord Server">
+    </a>
+</p>
 
-- [x] Music Systems
-- [x] Alarm Systems
-- [x] Anime Systems
-- [x] Slash Commands (Base, Group, Sub)
-- [x] prefix Commands
-- [x] AutoComplete (Play, Playskip, Playtop)
-- [x] Custom Filters
-- [x] Easy to use
+## 📑 Features
 
-## 🎶 Support Source
+- [x] **Music Systems**: High-quality music playback.
+- [x] **Alarm Systems**: Set reminders effectively.
+- [x] **Anime Systems**: Schedule and info.
+- [x] **Slash Commands**: Full support for slash commands.
+- [x] **Prefix Commands**: Legacy support for prefix commands.
+- [x] **AutoComplete**: Smart completion for play commands.
+- [x] **Custom Filters**: Nightcore, Bassboost, and more.
+- [x] **Ease of Use**: Simple setup and configuration.
 
-- [x] Youtube
+## 🎶 Supported Sources
+
+- [x] YouTube
 - [x] SoundCloud
-- [x] Spotify (Require Plugin)
-- [x] Deezer (Require Plugin)
+- [x] Spotify (*Requires Plugin*)
+- [x] Deezer (*Requires Plugin*)
 
-<details><summary>📎 Requirements [CLICK ME]</summary>
-<p>
+---
 
-## 📎 Requirements
+<details>
+<summary><h2>📎 Requirements</h2></summary>
 
-- Node.js+ **[Download](https://nodejs.org/en/download/)**
-- Discord Bot Token **[Guide](https://discordjs.guide/legacy/preparations/installation)**
-- LavaLink **[Guide](https://github.com/lavalink-devs/Lavalink)** (_Work on lavalink v4 only_)
+- **Node.js**: [Download](https://nodejs.org/en/download/) (v18 or newer recommended)
+- **Discord Bot Token**: [Guide](https://discordjs.guide/preparations/setting-up-a-bot-application)
+- **LavaLink**: [Guide](https://github.com/lavalink-devs/Lavalink) (v4 required)
 
-</p>
 </details>
 
 ## 📚 Installation
 
-```
-git clone https://github.com/kenewjr/Kizoxy
-cd Kizoxy
-npm install
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/kenewjr/Kizoxy.git
+    cd Kizoxy
+    ```
 
-<details><summary>📄 Configuration [CLICK ME]</summary>
-<p>
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-## 📄 Configuration
+3.  **Start the bot:**
+    ```bash
+    node .
+    # OR
+    npm start
+    ```
 
-Copy or Rename `.env.example` to `.env` and fill out the values:
+---
 
-```.env
-# Bot
-TOKEN=REPLACE_HERE
+<details>
+<summary><h2>📄 Configuration</h2></summary>
+
+Copy `.env.example` to `.env` and fill in your details:
+
+```env
+# Bot Configuration
+TOKEN=YOUR_BOT_TOKEN_HERE
 EMBED_COLOR=#000001
 SEARCH_ENGINE=youtube
 LEAVE_EMPTY=120000
 
-# Dev
-OWNER_ID=REPLACE_HERE
+# Developer
+OWNER_ID=YOUR_DISCORD_ID
 
-# Nodes
+# LavaLink Nodes
 NODE_NAME=NanoSpace
 NODE_URL=localhost:5555
 NODE_AUTH=nanospace
 ```
 
-Don't forget to do `node deploySlash.js global` to deploy slash commands
+**Deploy Slash Commands:**
+```bash
+node deploySlash.js global --clear-all
+```
 
-After installation or finishes all you can use `node .` to start the bot. or `Run Start.bat`
-
-</p>
 </details>
 
-<details><summary>🔩 Features & Commands [CLICK ME]</summary>
-<p>
+---
 
-## 🔩 Features & Commands
+<details>
+<summary><h2>🔩 Features & Commands</h2></summary>
 
-> Note: The default prefix is '/'
+> **Note:** The default prefix is `/`
 
-🎶 **Music Commands!**
+### 🎶 Music Commands
 
-- Play (/play [song/url])
-- Nowplaying (/nowplaying)
-- Queue (/queue [page])
-- Loop (/loop)
-- Shuffle (/shuffle)
-- Volume control (/volume [1 - 100])
-- Pause (/pause)
-- Resume (/resume)
-- Skip (/skip)
-- Clear (/clear)
-- Leave (/leave)
-- Forward (/forward [seconds])
-- Search (/search [songname])
-- 247 (/247)
-- Remove (/remove [song])
+| Command | Description |
+| :--- | :--- |
+| `/play [song/url]` | Play a song from YouTube, SoundCloud, etc. |
+| `/nowplaying` | Show the current playing song. |
+| `/queue [page]` | Show the queue. |
+| `/loop` | Toggle loop mode. |
+| `/shuffle` | Shuffle the queue. |
+| `/volume [1-100]` | Adjust the volume. |
+| `/pause` | Pause playback. |
+| `/resume` | Resume playback. |
+| `/skip` | Skip the current song. |
+| `/clear` | Clear the queue. |
+| `/leave` | Disconnect the bot. |
+| `/forward [seconds]` | Forward the song. |
+| `/search [song]` | Search for a song. |
+| `/247` | Toggle 24/7 mode. |
+| `/remove [song]` | Remove a song from the queue. |
 
-⏺ **Filter Commands!**
+### ⏺ Filter Commands
 
-- Nightcore (/nightcore)
-- Bassboost (/bassboost [-10 - 10])
-- Reset (/reset)
-- 3d (/3d)
-- DoubleTime (/doubletime)
-- Vibrato (/vibrato)
-- Karaoke (/karaoke)
-- SlowMotion (/slowmotion)
+| Command | Description |
+| :--- | :--- |
+| `/nightcore` | Toggle Nightcore filter. |
+| `/bassboost` | Adjust bass boost level. |
+| `/reset` | Reset all filters. |
+| `/3d` | Toggle 3D audio. |
+| `/doubletime` | Toggle DoubleTime effect. |
+| `/vibrato` | Toggle Vibrato effect. |
+| `/karaoke` | Toggle Karaoke mode. |
+| `/slowmotion` | Toggle SlowMotion effect. |
 
-📑 **Misc Commands!**
+### 📑 Misc Commands
 
-- Help (/help)
-- Alarm (/alarm [time])
-- AnimeSchedule (/anime )
+| Command | Description |
+| :--- | :--- |
+| `/help` | Show help menu. |
+| `/alarm [time]` | Set an alarm. |
+| `/anime` | Anime schedule and options. |
 
-</p>
 </details>
+
+---
+
+## 🌟 Made With
+
+- [Discord.js](https://discord.js.org/)
+- [LavaLink](https://github.com/lavalink-devs/Lavalink)
+- [Kazagumo](https://github.com/Takiyo0/Kazagumo)
+- [Shoukaku](https://github.com/Deivu/Shoukaku)
+- [Prettier](https://prettier.io/)
