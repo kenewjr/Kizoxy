@@ -1,6 +1,6 @@
 @echo off
 
-title Kenewjr
+title Kizoxy
 
 :StartBot
 
