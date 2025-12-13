@@ -1,4 +1,5 @@
 <!-- markdownlint-disable MD033 -->
+
 # Kizoxy
 
 <p align="center">
@@ -30,8 +31,8 @@
 
 - [x] YouTube
 - [x] SoundCloud
-- [x] Spotify (*Requires Plugin*)
-- [x] Deezer (*Requires Plugin*)
+- [x] Spotify (_Requires Plugin_)
+- [x] Deezer (_Requires Plugin_)
 
 ---
 
@@ -107,44 +108,44 @@ node deploySlash.js global --clear-all
 
 ### 🎶 Music Commands
 
-| Command | Description |
-| :--- | :--- |
-| `/play [song/url]` | Play a song from YouTube, SoundCloud, etc. |
-| `/nowplaying` | Show the current playing song. |
-| `/queue [page]` | Show the queue. |
-| `/loop` | Toggle loop mode. |
-| `/shuffle` | Shuffle the queue. |
-| `/volume [1-100]` | Adjust the volume. |
-| `/pause` | Pause playback. |
-| `/resume` | Resume playback. |
-| `/skip` | Skip the current song. |
-| `/clear` | Clear the queue. |
-| `/leave` | Disconnect the bot. |
-| `/forward [seconds]` | Forward the song. |
-| `/search [song]` | Search for a song. |
-| `/247` | Toggle 24/7 mode. |
-| `/remove [song]` | Remove a song from the queue. |
+| Command              | Description                                |
+| :------------------- | :----------------------------------------- |
+| `/play [song/url]`   | Play a song from YouTube, SoundCloud, etc. |
+| `/nowplaying`        | Show the current playing song.             |
+| `/queue [page]`      | Show the queue.                            |
+| `/loop`              | Toggle loop mode.                          |
+| `/shuffle`           | Shuffle the queue.                         |
+| `/volume [1-100]`    | Adjust the volume.                         |
+| `/pause`             | Pause playback.                            |
+| `/resume`            | Resume playback.                           |
+| `/skip`              | Skip the current song.                     |
+| `/clear`             | Clear the queue.                           |
+| `/leave`             | Disconnect the bot.                        |
+| `/forward [seconds]` | Forward the song.                          |
+| `/search [song]`     | Search for a song.                         |
+| `/247`               | Toggle 24/7 mode.                          |
+| `/remove [song]`     | Remove a song from the queue.              |
 
 ### ⏺ Filter Commands
 
-| Command | Description |
-| :--- | :--- |
-| `/nightcore` | Toggle Nightcore filter. |
-| `/bassboost` | Adjust bass boost level. |
-| `/reset` | Reset all filters. |
-| `/3d` | Toggle 3D audio. |
+| Command       | Description               |
+| :------------ | :------------------------ |
+| `/nightcore`  | Toggle Nightcore filter.  |
+| `/bassboost`  | Adjust bass boost level.  |
+| `/reset`      | Reset all filters.        |
+| `/3d`         | Toggle 3D audio.          |
 | `/doubletime` | Toggle DoubleTime effect. |
-| `/vibrato` | Toggle Vibrato effect. |
-| `/karaoke` | Toggle Karaoke mode. |
+| `/vibrato`    | Toggle Vibrato effect.    |
+| `/karaoke`    | Toggle Karaoke mode.      |
 | `/slowmotion` | Toggle SlowMotion effect. |
 
 ### 📑 Misc Commands
 
-| Command | Description |
-| :--- | :--- |
-| `/help` | Show help menu. |
-| `/alarm [time]` | Set an alarm. |
-| `/anime` | Anime schedule and options. |
+| Command         | Description                 |
+| :-------------- | :-------------------------- |
+| `/help`         | Show help menu.             |
+| `/alarm [time]` | Set an alarm.               |
+| `/anime`        | Anime schedule and options. |
 
 </details>
 

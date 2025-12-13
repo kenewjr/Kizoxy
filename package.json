@@ -29,12 +29,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kenewjr/kizoxy-bot.git"
+    "url": "https://github.com/kenewjr/Kizoxy.git"
   },
   "bugs": {
-    "url": "https://github.com/kenewjr/kizoxy-bot/issues"
+    "url": "https://github.com/kenewjr/Kizoxy/issues"
   },
-  "homepage": "https://github.com/kenewjr/kizoxy-bot/blob/main/README.md",
+  "homepage": "https://github.com/kenewjr/Kizoxy",
   "author": "Kenewjr",
   "license": "Apache-2.0",
   "devDependencies": {

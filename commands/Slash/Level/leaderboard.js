@@ -18,7 +18,9 @@ module.exports = {
       client.levelStorage = new LevelStorage();
     }
 
-    const leaderboard = await client.levelStorage.getLeaderboard(interaction.guildId);
+    const leaderboard = await client.levelStorage.getLeaderboard(
+      interaction.guildId,
+    );
 
     if (!leaderboard || leaderboard.length === 0) {
       return interaction.editReply("❌ No data available for leaderboard yet.");
@@ -30,11 +32,13 @@ module.exports = {
     const totalPages = Math.ceil(leaderboard.length / itemsPerPage);
 
     // Get user's own rank for footer
-    const userRank = leaderboard.findIndex(u => u.userId === interaction.user.id) + 1;
-    const userData = leaderboard.find(u => u.userId === interaction.user.id);
-    const selfRankText = userRank > 0 
-      ? `You are ranked #${userRank} • Level ${userData.level} • ${userData.xp} XP`
-      : "You are not ranked yet.";
+    const userRank =
+      leaderboard.findIndex((u) => u.userId === interaction.user.id) + 1;
+    const userData = leaderboard.find((u) => u.userId === interaction.user.id);
+    const selfRankText =
+      userRank > 0
+        ? `You are ranked #${userRank} • Level ${userData.level} • ${userData.xp} XP`
+        : "You are not ranked yet.";
 
     const generateEmbed = async (page) => {
       const start = page * itemsPerPage;
@@ -48,11 +52,11 @@ module.exports = {
         .setTimestamp();
 
       let description = "";
-      
+
       for (let i = 0; i < currentItems.length; i++) {
         const item = currentItems[i];
         const position = start + i + 1;
-        
+
         // Fetch user tag (might need to fetch from cache/API)
         let userTag = "Unknown User";
         try {
@@ -109,7 +113,10 @@ module.exports = {
 
     collector.on("collect", async (i) => {
       if (i.user.id !== interaction.user.id) {
-        return i.reply({ content: "❌ These buttons are not for you.", ephemeral: true });
+        return i.reply({
+          content: "❌ These buttons are not for you.",
+          ephemeral: true,
+        });
       }
 
       if (i.customId === "prev_page") {
@@ -127,10 +134,18 @@ module.exports = {
     collector.on("end", () => {
       // Disable buttons
       const disabledRow = new ActionRowBuilder();
-      const prevBtn = new ButtonBuilder().setCustomId("prev").setLabel("Previous").setStyle(ButtonStyle.Secondary).setDisabled(true);
-      const nextBtn = new ButtonBuilder().setCustomId("next").setLabel("Next").setStyle(ButtonStyle.Secondary).setDisabled(true);
+      const prevBtn = new ButtonBuilder()
+        .setCustomId("prev")
+        .setLabel("Previous")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true);
+      const nextBtn = new ButtonBuilder()
+        .setCustomId("next")
+        .setLabel("Next")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true);
       disabledRow.addComponents(prevBtn, nextBtn);
-      
+
       interaction.editReply({ components: [disabledRow] }).catch(() => {});
     });
   },

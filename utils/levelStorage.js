@@ -46,9 +46,7 @@ class LevelStorage extends JSONStorage {
 
   async getUser(userId, guildId) {
     if (!this.data) await this.load();
-    return this.data.find(
-      (u) => u.userId === userId && u.guildId === guildId,
-    );
+    return this.data.find((u) => u.userId === userId && u.guildId === guildId);
   }
 
   async getLeaderboard(guildId) {

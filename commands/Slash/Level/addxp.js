@@ -1,7 +1,4 @@
-const {
-  ApplicationCommandOptionType,
-  EmbedBuilder,
-} = require("discord.js");
+const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
 const LevelStorage = require("../../../utils/levelStorage");
 
 module.exports = {
@@ -33,7 +30,8 @@ module.exports = {
     // Check if user is owner
     if (interaction.user.id !== client.owner) {
       return interaction.reply({
-        content: "❌ Access Denied: This command is restricted to the bot owner.",
+        content:
+          "❌ Access Denied: This command is restricted to the bot owner.",
         ephemeral: true,
       });
     }
@@ -51,15 +49,19 @@ module.exports = {
       }
 
       try {
-        const result = await client.levelStorage.addXp(targetUser.id, interaction.guildId, amount);
-        
+        const result = await client.levelStorage.addXp(
+          targetUser.id,
+          interaction.guildId,
+          amount,
+        );
+
         const embed = new EmbedBuilder()
           .setColor(client.color)
           .setTitle("✅ XP Added")
           .setDescription(
             `Successfully added **${amount} XP** to ${targetUser}.\n` +
-            `Current Level: **${result.level}**\n` +
-            `Current XP: **${result.user.xp}**`
+              `Current Level: **${result.level}**\n` +
+              `Current XP: **${result.user.xp}**`,
           );
 
         return interaction.editReply({ embeds: [embed] });
