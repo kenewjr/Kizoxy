@@ -1,5 +1,8 @@
+<!-- markdownlint-disable MD033 -->
+# Kizoxy
+
 <p align="center">
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2" alt="Kizoxy Banner"/>
 </p>
 
 <p align="center">
@@ -43,23 +46,26 @@
 
 ## 📚 Installation
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/kenewjr/Kizoxy.git
-    cd Kizoxy
-    ```
+1. **Clone the repository:**
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+   ```bash
+   git clone https://github.com/kenewjr/Kizoxy.git
+   cd Kizoxy
+   ```
 
-3.  **Start the bot:**
-    ```bash
-    node .
-    # OR
-    npm start
-    ```
+2. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Start the bot:**
+
+   ```bash
+   node .
+   # OR
+   npm start
+   ```
 
 ---
 
@@ -85,6 +91,7 @@ NODE_AUTH=nanospace
 ```
 
 **Deploy Slash Commands:**
+
 ```bash
 node deploySlash.js global --clear-all
 ```

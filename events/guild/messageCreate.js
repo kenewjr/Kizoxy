@@ -1,27 +1,50 @@
-const { PREFIX } = require("../../settings/config.js");
-const Logger = require("../../utils/logger");
-const logger = new Logger("MESSAGE");
+const { EmbedBuilder } = require("discord.js");
+const LevelStorage = require("../../utils/levelStorage");
+
+// Map to store cooldowns: userId -> timestamp
+const cooldowns = new Map();
+const COOLDOWN_DURATION = 15000; // 15 seconds
 
 module.exports = async (client, message) => {
   if (message.author.bot || !message.guild) return;
-  if (!message.content.startsWith(PREFIX)) return;
 
-  const args = message.content.slice(PREFIX.length).trim().split(/ +/g);
-  const cmdName = args.shift().toLowerCase();
+  // Initialize storage if not already done
+  if (!client.levelStorage) {
+    client.levelStorage = new LevelStorage();
+  }
 
-  const command = client.prefixCommands.get(cmdName);
-  if (!command) return;
+  // Check cooldown
+  const now = Date.now();
+  if (cooldowns.has(message.author.id)) {
+    const expirationTime = cooldowns.get(message.author.id) + COOLDOWN_DURATION;
+    if (now < expirationTime) {
+      return; // On cooldown
+    }
+  }
 
+  // Set cooldown
+  cooldowns.set(message.author.id, now);
+  setTimeout(() => cooldowns.delete(message.author.id), COOLDOWN_DURATION);
+
+  // Add random XP between 10 and 20
+  const xpToAdd = Math.floor(Math.random() * 11) + 10;
+  
   try {
-    logger.info(
-      `Executing prefix command: ${cmdName} by ${message.author.tag}`,
-    );
-    await command.run(client, message, args);
-    logger.success(`Prefix command executed successfully: ${cmdName}`);
-  } catch (err) {
-    logger.error(`Error executing prefix command ${cmdName}: ${err.message}`);
-    message.reply("❌ Error executing command.").catch(() => {
-      logger.warning(`Failed to send error reply for command: ${cmdName}`);
-    });
+    const result = await client.levelStorage.addXp(message.author.id, message.guild.id, xpToAdd);
+    
+    if (result.leveledUp) {
+      const embed = new EmbedBuilder()
+        .setColor(client.color)
+        .setDescription(`🎉 **Congratulations ${message.author}!** You have leveled up to **Level ${result.level}**!`);
+      
+      const msg = await message.channel.send({ embeds: [embed] });
+      
+      // Auto-delete after 15 seconds
+      setTimeout(() => {
+        msg.delete().catch(err => console.log("Failed to delete level up message:", err));
+      }, 15000);
+    }
+  } catch (error) {
+    console.error("Error adding text XP:", error);
   }
 };

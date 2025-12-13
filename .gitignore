@@ -2,4 +2,5 @@ node_modules
 .env
 package-lock.json
 data/alarms.json
+data/levels.json
 api/jikan-api/data/jikan-schedule.json

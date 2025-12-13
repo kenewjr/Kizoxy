@@ -2,6 +2,7 @@
   "dependencies": {
     "@distube/ytsr": "^2.0.4",
     "axios": "^1.11.0",
+    "canvacord": "^6.0.4",
     "chillout": "^5.0.0",
     "dayjs": "^1.11.18",
     "discord-player": "^7.1.0",

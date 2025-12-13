@@ -74,6 +74,10 @@ module.exports = {
 
         // Save data
         try {
+          const dirPath = path.dirname(DATA_PATH);
+          if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+          }
           fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
 
           const embed = new EmbedBuilder()
