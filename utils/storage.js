@@ -6,7 +6,7 @@ const logger = new Logger("STORAGE");
 class JSONStorage {
   constructor(filename) {
     this.filepath = path.join(__dirname, "../data", filename);
-    this.data = null;
+    this.data = {}; // Initialize as object
     logger.info(`Initialized storage for: ${filename}`);
   }
 
@@ -15,13 +15,28 @@ class JSONStorage {
       await fs.mkdir(path.dirname(this.filepath), { recursive: true });
       const content = await fs.readFile(this.filepath, "utf8");
       this.data = JSON.parse(content);
+      
+      // Migration: If data is Array, convert to { guildId: [items] }
+      if (Array.isArray(this.data)) {
+        logger.warning(`Converting ${path.basename(this.filepath)} array structure to guild-indexed object`);
+        const oldData = this.data;
+        this.data = {};
+        for (const item of oldData) {
+          // Assume item has guildId, otherwise put in 'unknown' default
+          const gid = item.guildId || "global";
+          if (!this.data[gid]) this.data[gid] = [];
+          this.data[gid].push(item);
+        }
+        await this.save();
+      }
+
+      const totalItems = Object.values(this.data).reduce((acc, arr) => acc + arr.length, 0);
       logger.info(
-        `Loaded data from: ${this.filepath} (${this.data.length} items)`,
+        `Loaded data from: ${this.filepath} (${totalItems} items across ${Object.keys(this.data).length} guilds)`,
       );
     } catch (error) {
       if (error.code === "ENOENT") {
-        // File doesn't exist, create empty array
-        this.data = [];
+        this.data = {};
         await this.save();
         logger.info(`Created new storage file: ${this.filepath}`);
       } else {
@@ -37,8 +52,9 @@ class JSONStorage {
   async save() {
     try {
       await fs.writeFile(this.filepath, JSON.stringify(this.data, null, 2));
+      const totalItems = this.data ? Object.values(this.data).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0) : 0;
       logger.debug(
-        `Data saved to: ${this.filepath} (${this.data.length} items)`,
+        `Data saved to: ${this.filepath} (${totalItems} items)`,
       );
     } catch (error) {
       logger.error(`Error saving data to ${this.filepath}: ${error.message}`);
@@ -48,13 +64,16 @@ class JSONStorage {
 
   async getAll() {
     if (this.data === null) await this.load();
-    return this.data;
+    // Return all items as a flat array to maintain compatibility with some consumers if needed,
+    // BUT internally we work with object. 
+    // Wait, if other code expects getAll() to return array, this keeps compat.
+    return Object.values(this.data).flat();
   }
 
   async findByGuild(guildId) {
+    if (this.data === null) await this.load();
     try {
-      const items = await this.getAll();
-      const guildItems = items.filter((item) => item.guildId === guildId);
+      const guildItems = this.data[guildId] || [];
       logger.debug(`Found ${guildItems.length} items for guild: ${guildId}`);
       return guildItems;
     } catch (error) {
@@ -66,15 +85,18 @@ class JSONStorage {
   }
 
   async get(id) {
+    if (this.data === null) await this.load();
     try {
-      const items = await this.getAll();
-      const item = items.find((item) => item.id === id);
-      if (item) {
-        logger.debug(`Item retrieved: ${id}`);
-      } else {
-        logger.debug(`Item not found: ${id}`);
+      // iterate all guilds
+      for (const guildId in this.data) {
+        const item = this.data[guildId].find(i => i.id === id);
+        if (item) {
+             logger.debug(`Item retrieved: ${id}`);
+             return item;
+        }
       }
-      return item;
+      logger.debug(`Item not found: ${id}`);
+      return null;
     } catch (error) {
       logger.error(`Error getting item ${id}: ${error.message}`);
       return null;
@@ -82,10 +104,14 @@ class JSONStorage {
   }
 
   async create(item) {
+    if (this.data === null) await this.load();
     try {
-      const items = await this.getAll();
-      items.push(item);
-      this.data = items;
+      const gid = item.guildId;
+      if (!gid) throw new Error("Item missing guildId, cannot store in guild-indexed storage");
+      
+      if (!this.data[gid]) this.data[gid] = [];
+      this.data[gid].push(item);
+      
       await this.save();
       logger.info(`Item created: ${item.id}`);
       return item;
@@ -96,16 +122,18 @@ class JSONStorage {
   }
 
   async update(id, updates) {
+    if (this.data === null) await this.load();
     try {
-      const items = await this.getAll();
-      const index = items.findIndex((item) => item.id === id);
-      if (index !== -1) {
-        items[index] = { ...items[index], ...updates };
-        this.data = items;
-        await this.save();
-        logger.info(`Item updated: ${id}`);
-        return items[index];
+      for (const guildId in this.data) {
+        const index = this.data[guildId].findIndex(i => i.id === id);
+        if (index !== -1) {
+             this.data[guildId][index] = { ...this.data[guildId][index], ...updates };
+             await this.save();
+             logger.info(`Item updated: ${id}`);
+             return this.data[guildId][index];
+        }
       }
+      
       logger.warning(`Item not found for update: ${id}`);
       return null;
     } catch (error) {
@@ -115,13 +143,19 @@ class JSONStorage {
   }
 
   async delete(id) {
+    if (this.data === null) await this.load();
     try {
-      const items = await this.getAll();
-      const filtered = items.filter((item) => item.id !== id);
-      this.data = filtered;
-      await this.save();
-      logger.info(`Item deleted: ${id}`);
-      return true;
+      for (const guildId in this.data) {
+        const index = this.data[guildId].findIndex(i => i.id === id);
+        if (index !== -1) {
+             this.data[guildId].splice(index, 1);
+             // If guild empty, maybe delete key? prefer keeping it for now.
+             await this.save();
+             logger.info(`Item deleted: ${id}`);
+             return true;
+        }
+      }
+      return false; // Not found
     } catch (error) {
       logger.error(`Error deleting item ${id}: ${error.message}`);
       throw error;
@@ -129,9 +163,10 @@ class JSONStorage {
   }
 
   async findByUser(userId) {
+    if (this.data === null) await this.load();
     try {
-      const items = await this.getAll();
-      const userItems = items.filter((item) => item.userId === userId);
+      const allItems = Object.values(this.data).flat();
+      const userItems = allItems.filter((item) => item.userId === userId);
       logger.debug(`Found ${userItems.length} items for user: ${userId}`);
       return userItems;
     } catch (error) {
@@ -139,42 +174,10 @@ class JSONStorage {
       return [];
     }
   }
-
-  async findByGuild(guildId) {
-    try {
-      const items = await this.getAll();
-      const guildItems = items.filter((item) => item.guildId === guildId);
-      logger.debug(`Found ${guildItems.length} items for guild: ${guildId}`);
-      return guildItems;
-    } catch (error) {
-      logger.error(
-        `Error finding items for guild ${guildId}: ${error.message}`,
-      );
-      return [];
-    }
-  }
-
+  
   // Method untuk sync data dengan message embed
   async syncWithMessage(alarmId, messageId, channelId) {
-    try {
-      const alarm = await this.get(alarmId);
-      if (alarm) {
-        const updatedAlarm = {
-          ...alarm,
-          messageId,
-          embedChannelId: channelId,
-        };
-
-        await this.update(alarmId, updatedAlarm);
-        logger.info(`Alarm ${alarmId} synced with message ${messageId}`);
-        return updatedAlarm;
-      }
-      logger.warning(`Alarm not found for sync: ${alarmId}`);
-      return null;
-    } catch (error) {
-      logger.error(`Error syncing alarm ${alarmId}: ${error.message}`);
-      throw error;
-    }
+    return this.update(alarmId, { messageId, embedChannelId: channelId });
   }
 }
 

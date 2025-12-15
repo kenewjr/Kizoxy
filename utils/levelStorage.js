@@ -7,12 +7,52 @@ const JSONStorage = require("./storage");
 class LevelStorage extends JSONStorage {
   constructor(filename = "levels.json") {
     super(filename);
+    this.data = {}; // Initialize as object instead of array
+  }
+
+  // Override load to handle object structure
+  async load() {
+    try {
+      await fs.mkdir(path.dirname(this.filepath), { recursive: true });
+      const content = await fs.readFile(this.filepath, "utf8");
+      this.data = JSON.parse(content);
+      // Ensure data is object, if not (migration from array), reset or migrate
+      if (Array.isArray(this.data)) {
+        logger.warning("Converting old array structure to guild-indexed object");
+        const oldData = this.data;
+        this.data = {};
+        for (const user of oldData) {
+          if (!this.data[user.guildId]) this.data[user.guildId] = { users: {} };
+          this.data[user.guildId].users[user.userId] = user;
+        }
+        await this.save();
+      }
+      logger.info(`Loaded level data for ${Object.keys(this.data).length} guilds`);
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        this.data = {};
+        await this.save();
+        logger.info(`Created new storage file: ${this.filepath}`);
+      } else {
+        logger.error(`Error loading level data: ${error.message}`);
+        this.data = {}; // Fallback
+      }
+    }
+    return this.data;
   }
 
   async addXp(userId, guildId, amount) {
-    if (!this.data) await this.load();
+    if (!this.data || Object.keys(this.data).length === 0 && !this.initialized) {
+        // Simple check to ensure we loaded at least once or empty
+        await this.load();
+        this.initialized = true;
+    }
 
-    let user = await this.getUser(userId, guildId);
+    if (!this.data[guildId]) {
+      this.data[guildId] = { users: {} };
+    }
+
+    let user = this.data[guildId].users[userId];
     if (!user) {
       user = {
         userId,
@@ -21,7 +61,7 @@ class LevelStorage extends JSONStorage {
         level: 0,
         lastUpdated: new Date().toISOString(),
       };
-      this.data.push(user);
+      this.data[guildId].users[userId] = user;
     }
 
     user.xp += amount;
@@ -32,11 +72,7 @@ class LevelStorage extends JSONStorage {
 
     if (user.xp >= xpToNextLevel) {
       user.level++;
-      user.xp -= xpToNextLevel; // Reset XP or keep accumulated? Standard usually keeps accumulated, but formula implies "XP required for NEXT level".
-      // Correction: Standard formula usually calculates TOTAL XP needed.
-      // If we want "XP required for next level" to be the threshold, we usually keep total XP.
-      // However, usually detailed implementations store 'totalXP' and calculate level from that, OR store 'currentXP' and reset on level up.
-      // Let's stick to "current XP resets on level up" model for simplicity with the provided formula as "XP needed for NEXT level".
+      user.xp -= xpToNextLevel; // Reset XP approach
       leveledUp = true;
     }
 
@@ -45,15 +81,23 @@ class LevelStorage extends JSONStorage {
   }
 
   async getUser(userId, guildId) {
-    if (!this.data) await this.load();
-    return this.data.find((u) => u.userId === userId && u.guildId === guildId);
+    if (!this.data || Object.keys(this.data).length === 0 && !this.initialized) {
+        await this.load();
+        this.initialized = true;
+    }
+    return this.data[guildId]?.users[userId] || null;
   }
 
   async getLeaderboard(guildId) {
-    if (!this.data) await this.load();
-    return this.data
-      .filter((u) => u.guildId === guildId)
-      .sort((a, b) => b.level - a.level || b.xp - a.xp); // Sort by level desc, then XP desc
+    if (!this.data || Object.keys(this.data).length === 0 && !this.initialized) {
+        await this.load();
+        this.initialized = true;
+    }
+    const guildData = this.data[guildId];
+    if (!guildData || !guildData.users) return [];
+
+    return Object.values(guildData.users)
+      .sort((a, b) => b.level - a.level || b.xp - a.xp);
   }
 
   async getRank(userId, guildId) {

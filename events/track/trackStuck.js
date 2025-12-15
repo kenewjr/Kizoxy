@@ -10,6 +10,29 @@ module.exports = async (client, player, track, payload) => {
   const channel = client.channels.cache.get(player.textId);
   if (!channel) return;
 
+  if (player.data.get("stay") && track.isStream) {
+     const embed = new EmbedBuilder()
+      .setColor(client.color)
+      .setDescription(
+        `\`⚠️\` | *Track Stuck:* [${track.title}](${track.uri}) - \`${payload.thresholdMs}ms\`\n*Auto-restarting 24/7 stream...*`,
+      );
+
+    channel.send({ embeds: [embed] });
+
+     try {
+        const res = await player.search(track.uri, { requester: track.requester });
+        if (res.tracks.length) {
+          player.queue.add(res.tracks[0]);
+          if (!player.playing && !player.paused && !player.queue.size) {
+            player.play();
+          }
+        }
+      } catch (e) {
+        console.error("Failed to auto-restart stream on stuck:", e);
+      }
+    return;
+  }
+
   const embed = new EmbedBuilder()
     .setColor(client.color)
     .setDescription(
