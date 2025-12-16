@@ -11,17 +11,34 @@ module.exports = async (client, message) => {
   // --- PREFIX COMMAND HANDLING ---
   const prefix = client.prefix;
   if (message.content.startsWith(prefix)) {
-    const args = message.content.slice(prefix.length).trim().split(/ +/g);
+    const rawArgs = message.content.slice(prefix.length).trim().split(/ +/g);
+    // Create a copy for command matching to avoid mutating original if needed (though shift essentially consumes command)
+    const args = [...rawArgs];
     const cmd = args.shift().toLowerCase();
 
     if (cmd.length === 0) return;
 
-    let command = client.commands.get(cmd);
-    if (!command) command = client.commands.get(client.aliases.get(cmd));
+    if (cmd.length === 0) return;
+
+    // Check prefix commands FIRST (since this IS a prefix command)
+    let command = client.prefixCommands.get(cmd);
     
-    // Also check prefix commands map if they are stored separately
-    if (!command && client.prefixCommands) {
-        command = client.prefixCommands.get(cmd);
+    // Check aliases in prefix commands (if aliases usage isn't fully standardized in map, we check manually or if map handles it)
+    // Note: loadPrefix.js registers aliases into client.prefixCommands directly:
+    // client.prefixCommands.set(alias, command);
+    
+    // If not found in prefix commands, MAYBE check client.commands (slash) if you want dual-support?
+    // But in this case, "play" exists in both, and we specifically want the PREFIX version logic which handles arguments.
+    // So if we found it in prefixCommands, use it.
+    
+    // Fallback: Check client.commands (Slash) ONLY if not found in prefix.
+    // WARNING: Running a slash command code with a message object might fail if it relies on interaction-specific methods not mocked.
+    // But some bots design commands to be hybrid.
+    // In this specific case, "play" slash command ignores arguments, so we MUST use prefix version.
+    
+    if (!command) {
+        command = client.commands.get(cmd);
+        if (!command) command = client.commands.get(client.aliases.get(cmd));
     }
     
     // If command logic exists

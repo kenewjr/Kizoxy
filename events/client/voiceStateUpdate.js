@@ -47,9 +47,12 @@ module.exports = async (client, oldState, newState) => {
               oldState.guild.id,
               xpToAdd,
             );
-            console.log(
-              `Added ${xpToAdd} voice XP to ${oldState.member.user.tag} for ${minutes} minutes`,
+            await client.levelStorage.addXp(
+              oldState.member.id,
+              oldState.guild.id,
+              xpToAdd,
             );
+            // Log removed to keep console clean as per user request
           } catch (error) {
             console.error("Error adding voice XP:", error);
           }

@@ -8,6 +8,7 @@ module.exports = async function playLogic(client, ctx, args) {
 
     // Ambil query dari slash or prefix
     const query = isSlash ? ctx.options.getString("search") : args.join(" ");
+    
     if (!query) {
       const msg = "❌ | Please provide a song name or URL.";
       if (isSlash) return ctx.editReply({ content: msg });

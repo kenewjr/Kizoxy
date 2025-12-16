@@ -16,6 +16,9 @@ class Logger {
   }
 
   log(message, level = "info") {
+    // User requested only error logs to appear in console
+    if (level !== "error") return;
+
     const timestamp = new Date().toLocaleTimeString();
     let color = colors.white;
     let prefix = "ℹ️";
