@@ -123,6 +123,7 @@ node deploySlash.js global --clear-all
 | `/search [song]`     | Search for a song.                         |
 | `/247`               | Toggle 24/7 mode.                          |
 | `/remove [song]`     | Remove a song from the queue.              |
+| `/lofi`              | Toggle Lofi mode.                          |
 
 ### ⏺ Filter Commands
 
