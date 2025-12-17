@@ -22,6 +22,7 @@ client.color = client.config.EMBED_COLOR;
 if (!client.token) client.token = client.config.TOKEN;
 client.commands = new Collection();
 client.buttons = new Collection();
+client.aliases = new Collection();
 client.prefixCommands = new Map();
 
 // Initialize Shoukaku
@@ -51,7 +52,6 @@ client.manager = new Kazagumo(
   Nodes,
 );
 
-["commands"].forEach((x) => (client[x] = new Collection()));
 [
   "loadCommand",
   "loadPrefix",

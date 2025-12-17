@@ -6,16 +6,16 @@ module.exports = async function playLogic(client, ctx, args) {
     // Adding Defer Reply specifically for slash commands to prevent timeout
     if (isSlash) await ctx.deferReply();
 
-    // Ambil query dari slash or prefix
+    // Get query from slash or prefix
     const query = isSlash ? ctx.options.getString("search") : args.join(" ");
-    
+
     if (!query) {
       const msg = "❌ | Please provide a song name or URL.";
       if (isSlash) return ctx.editReply({ content: msg });
       else return ctx.channel.send(msg);
     }
 
-    // Ambil voice channel user
+    // Get user voice channel
     const member = ctx.member;
     const userVoice = member?.voice?.channel;
     if (!userVoice) {
@@ -24,7 +24,7 @@ module.exports = async function playLogic(client, ctx, args) {
       else return ctx.channel.send(msg);
     }
 
-    // Jika bot sudah di voice channel lain -> tolak
+    // Check if bot is already in another channel
     const botVoiceChannelId = ctx.guild.members.me?.voice?.channelId;
     if (botVoiceChannelId && botVoiceChannelId !== userVoice.id) {
       const msg = "❌ | You must be in the same voice channel as the bot.";
@@ -43,13 +43,13 @@ module.exports = async function playLogic(client, ctx, args) {
         deaf: true,
       });
     } else {
-      // Jika player ada tapi voice berbeda, coba update voiceId (tergantung library)
+      // Update voice ID if changed
       if (player.voiceId !== userVoice.id) {
         player.voiceId = userVoice.id;
       }
     }
 
-    // Search menggunakan manager (sesuaikan bila pakai player.search)
+    // Search track
     const result = await client.manager.search(query, {
       requester: isSlash ? ctx.user : ctx.author,
     });
@@ -67,7 +67,7 @@ module.exports = async function playLogic(client, ctx, args) {
       !!result.playlist?.name;
 
     if (isPlaylist) {
-      // Tambah semua track playlist
+      // Add all tracks from playlist
       let added = 0;
       for (const t of result.tracks) {
         player.queue.add(t);

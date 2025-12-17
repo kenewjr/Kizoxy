@@ -23,11 +23,6 @@ module.exports = async (client, oldState, newState) => {
     client.voiceSessions.set(newState.member.id, Date.now());
   }
 
-  // User left a voice channel (or switched, but we treat switch as continuous if handled carefully, or just session break)
-  // Simple approach: When leaving a channel (or switching), calculate duration.
-  // If switching, add XP for previous session and start new one?
-  // Let's handle "left channel" condition.
-
   if (oldState.channelId && !newState.channelId) {
     const joinTime = client.voiceSessions.get(oldState.member.id);
 
@@ -42,11 +37,6 @@ module.exports = async (client, oldState, newState) => {
 
         if (xpToAdd > 0) {
           try {
-            await client.levelStorage.addXp(
-              oldState.member.id,
-              oldState.guild.id,
-              xpToAdd,
-            );
             await client.levelStorage.addXp(
               oldState.member.id,
               oldState.guild.id,

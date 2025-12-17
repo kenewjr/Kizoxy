@@ -46,7 +46,7 @@ module.exports = {
 
       try {
         const response = await axios.get(
-          `https://516f08ca2909.ngrok-free.app/lyrics?q=${encodeURIComponent(trackTitle)}`,
+          `http://localhost:5000/lyrics?q=${encodeURIComponent(trackTitle)}`,
           {
             validateStatus: function (status) {
               return status < 500; // Reject only if status code >= 500

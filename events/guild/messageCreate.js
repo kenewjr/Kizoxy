@@ -18,50 +18,37 @@ module.exports = async (client, message) => {
 
     if (cmd.length === 0) return;
 
-    if (cmd.length === 0) return;
-
     // Check prefix commands FIRST (since this IS a prefix command)
     let command = client.prefixCommands.get(cmd);
-    
-    // Check aliases in prefix commands (if aliases usage isn't fully standardized in map, we check manually or if map handles it)
-    // Note: loadPrefix.js registers aliases into client.prefixCommands directly:
-    // client.prefixCommands.set(alias, command);
-    
-    // If not found in prefix commands, MAYBE check client.commands (slash) if you want dual-support?
-    // But in this case, "play" exists in both, and we specifically want the PREFIX version logic which handles arguments.
-    // So if we found it in prefixCommands, use it.
-    
-    // Fallback: Check client.commands (Slash) ONLY if not found in prefix.
-    // WARNING: Running a slash command code with a message object might fail if it relies on interaction-specific methods not mocked.
-    // But some bots design commands to be hybrid.
-    // In this specific case, "play" slash command ignores arguments, so we MUST use prefix version.
-    
+
     if (!command) {
-        command = client.commands.get(cmd);
-        if (!command) command = client.commands.get(client.aliases.get(cmd));
+      command = client.commands.get(cmd);
+      if (!command && client.aliases && client.aliases.has(cmd)) {
+        command = client.commands.get(client.aliases.get(cmd));
+      }
     }
-    
+
     // If command logic exists
     if (command) {
-        try {
-            // Check permissions if needed (simple check)
-            if (command.userPermissions) {
-               // ...
-            }
-            // Execute command
-            if (command.run) {
-                command.run(client, message, args, prefix);
-            } else if (command.exec) {
-                // Some frameworks use exec
-                 command.exec(client, message, args);
-            }
-        } catch (error) {
-            console.error(`Error executing prefix command ${cmd}:`, error);
-            message.reply("There was an error trying to execute that command!");
+      try {
+        if (command.userPermissions) {
+          if (!message.member.permissions.has(command.userPermissions)) {
+            return message.reply(
+              "❌ | You don't have enough permissions to use this command.",
+            );
+          }
         }
-        // Return here if you don't want XP for commands, 
-        // OR continue if you want XP even for running commands. 
-        // Usually commands give XP too, so we won't return.
+        // Execute command
+        if (command.run) {
+          command.run(client, message, args, prefix);
+        } else if (command.exec) {
+          // Some frameworks use exec
+          command.exec(client, message, args);
+        }
+      } catch (error) {
+        console.error(`Error executing prefix command ${cmd}:`, error);
+        message.reply("There was an error trying to execute that command!");
+      }
     }
   }
 

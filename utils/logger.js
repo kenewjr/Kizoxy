@@ -16,7 +16,7 @@ class Logger {
   }
 
   log(message, level = "info") {
-    // User requested only error logs to appear in console
+    // Only allow error logs
     if (level !== "error") return;
 
     const timestamp = new Date().toLocaleTimeString();

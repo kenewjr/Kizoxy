@@ -15,10 +15,12 @@ class JSONStorage {
       await fs.mkdir(path.dirname(this.filepath), { recursive: true });
       const content = await fs.readFile(this.filepath, "utf8");
       this.data = JSON.parse(content);
-      
+
       // Migration: If data is Array, convert to { guildId: [items] }
       if (Array.isArray(this.data)) {
-        logger.warning(`Converting ${path.basename(this.filepath)} array structure to guild-indexed object`);
+        logger.warning(
+          `Converting ${path.basename(this.filepath)} array structure to guild-indexed object`,
+        );
         const oldData = this.data;
         this.data = {};
         for (const item of oldData) {
@@ -30,7 +32,10 @@ class JSONStorage {
         await this.save();
       }
 
-      const totalItems = Object.values(this.data).reduce((acc, arr) => acc + arr.length, 0);
+      const totalItems = Object.values(this.data).reduce(
+        (acc, arr) => acc + arr.length,
+        0,
+      );
       logger.info(
         `Loaded data from: ${this.filepath} (${totalItems} items across ${Object.keys(this.data).length} guilds)`,
       );
@@ -52,10 +57,13 @@ class JSONStorage {
   async save() {
     try {
       await fs.writeFile(this.filepath, JSON.stringify(this.data, null, 2));
-      const totalItems = this.data ? Object.values(this.data).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0) : 0;
-      logger.debug(
-        `Data saved to: ${this.filepath} (${totalItems} items)`,
-      );
+      const totalItems = this.data
+        ? Object.values(this.data).reduce(
+            (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0),
+            0,
+          )
+        : 0;
+      logger.debug(`Data saved to: ${this.filepath} (${totalItems} items)`);
     } catch (error) {
       logger.error(`Error saving data to ${this.filepath}: ${error.message}`);
       throw error;
@@ -65,7 +73,7 @@ class JSONStorage {
   async getAll() {
     if (this.data === null) await this.load();
     // Return all items as a flat array to maintain compatibility with some consumers if needed,
-    // BUT internally we work with object. 
+    // BUT internally we work with object.
     // Wait, if other code expects getAll() to return array, this keeps compat.
     return Object.values(this.data).flat();
   }
@@ -89,10 +97,10 @@ class JSONStorage {
     try {
       // iterate all guilds
       for (const guildId in this.data) {
-        const item = this.data[guildId].find(i => i.id === id);
+        const item = this.data[guildId].find((i) => i.id === id);
         if (item) {
-             logger.debug(`Item retrieved: ${id}`);
-             return item;
+          logger.debug(`Item retrieved: ${id}`);
+          return item;
         }
       }
       logger.debug(`Item not found: ${id}`);
@@ -107,11 +115,14 @@ class JSONStorage {
     if (this.data === null) await this.load();
     try {
       const gid = item.guildId;
-      if (!gid) throw new Error("Item missing guildId, cannot store in guild-indexed storage");
-      
+      if (!gid)
+        throw new Error(
+          "Item missing guildId, cannot store in guild-indexed storage",
+        );
+
       if (!this.data[gid]) this.data[gid] = [];
       this.data[gid].push(item);
-      
+
       await this.save();
       logger.info(`Item created: ${item.id}`);
       return item;
@@ -125,15 +136,18 @@ class JSONStorage {
     if (this.data === null) await this.load();
     try {
       for (const guildId in this.data) {
-        const index = this.data[guildId].findIndex(i => i.id === id);
+        const index = this.data[guildId].findIndex((i) => i.id === id);
         if (index !== -1) {
-             this.data[guildId][index] = { ...this.data[guildId][index], ...updates };
-             await this.save();
-             logger.info(`Item updated: ${id}`);
-             return this.data[guildId][index];
+          this.data[guildId][index] = {
+            ...this.data[guildId][index],
+            ...updates,
+          };
+          await this.save();
+          logger.info(`Item updated: ${id}`);
+          return this.data[guildId][index];
         }
       }
-      
+
       logger.warning(`Item not found for update: ${id}`);
       return null;
     } catch (error) {
@@ -146,13 +160,13 @@ class JSONStorage {
     if (this.data === null) await this.load();
     try {
       for (const guildId in this.data) {
-        const index = this.data[guildId].findIndex(i => i.id === id);
+        const index = this.data[guildId].findIndex((i) => i.id === id);
         if (index !== -1) {
-             this.data[guildId].splice(index, 1);
-             // If guild empty, maybe delete key? prefer keeping it for now.
-             await this.save();
-             logger.info(`Item deleted: ${id}`);
-             return true;
+          this.data[guildId].splice(index, 1);
+          // If guild empty, maybe delete key? prefer keeping it for now.
+          await this.save();
+          logger.info(`Item deleted: ${id}`);
+          return true;
         }
       }
       return false; // Not found
@@ -174,7 +188,7 @@ class JSONStorage {
       return [];
     }
   }
-  
+
   // Method untuk sync data dengan message embed
   async syncWithMessage(alarmId, messageId, channelId) {
     return this.update(alarmId, { messageId, embedChannelId: channelId });

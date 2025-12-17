@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD033 -->
-
 # Kizoxy
 
 <p align="center">

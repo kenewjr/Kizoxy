@@ -9,25 +9,41 @@ async function deploySlashCommands() {
 
   // Parse arguments
   const args = process.argv.slice(2);
-  const mode = args[0]; // 'global' atau 'guild'
-  const guildId = args[1]; // guild ID jika mode 'guild'
-  const clearExisting = args.includes("--clear-all") || args.includes("-c"); // Opsi untuk clear semua commands
+  const mode = args[0]; // 'global', 'guild', or 'delete'
+  const guildId = args[1]; // guild ID if mode 'guild' or 'delete'
+  const clearExisting = args.includes("--clear-all") || args.includes("-c");
 
   // Validate arguments
-  if (!mode || (mode !== "global" && mode !== "guild")) {
+  if (!mode || (mode !== "global" && mode !== "guild" && mode !== "delete")) {
     console.error("❌ Invalid mode. Use:");
     console.error("   node deploySlash.js global [--clear-all]");
     console.error("   node deploySlash.js guild <guildId> [--clear-all]");
+    console.error("   node deploySlash.js delete <guildId>");
     process.exit(1);
   }
 
-  if (mode === "guild" && !guildId) {
-    console.error("❌ Guild ID is required for guild deployment.");
-    console.error("Usage: node deploySlash.js guild <guildId> [--clear-all]");
+  if ((mode === "guild" || mode === "delete") && !guildId) {
+    console.error(`❌ Guild ID is required for ${mode} mode.`);
+    console.error(`Usage: node deploySlash.js ${mode} <guildId>`);
     process.exit(1);
   }
 
   console.log(`📌 Mode: ${mode}`);
+
+  // Special handling for delete mode
+  if (mode === "delete") {
+    console.log(`🗑️ Deleting all commands for guild: ${guildId}`);
+    const rest = new REST({ version: "10" }).setToken(TOKEN);
+    try {
+        const client = await rest.get(Routes.user());
+        await rest.put(Routes.applicationGuildCommands(client.id, guildId), { body: [] });
+        console.log(`✅ Successfully deleted all commands for guild ${guildId}`);
+    } catch (error) {
+        console.error(`❌ Failed to delete commands: ${error.message}`);
+    }
+    return;
+  }
+
   console.log(`🧹 Clear existing: ${clearExisting ? "YES" : "NO"}`);
 
   // Step 1: Get client info

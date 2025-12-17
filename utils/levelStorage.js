@@ -18,7 +18,9 @@ class LevelStorage extends JSONStorage {
       this.data = JSON.parse(content);
       // Ensure data is object, if not (migration from array), reset or migrate
       if (Array.isArray(this.data)) {
-        logger.warning("Converting old array structure to guild-indexed object");
+        logger.warning(
+          "Converting old array structure to guild-indexed object",
+        );
         const oldData = this.data;
         this.data = {};
         for (const user of oldData) {
@@ -27,7 +29,9 @@ class LevelStorage extends JSONStorage {
         }
         await this.save();
       }
-      logger.info(`Loaded level data for ${Object.keys(this.data).length} guilds`);
+      logger.info(
+        `Loaded level data for ${Object.keys(this.data).length} guilds`,
+      );
     } catch (error) {
       if (error.code === "ENOENT") {
         this.data = {};
@@ -42,10 +46,13 @@ class LevelStorage extends JSONStorage {
   }
 
   async addXp(userId, guildId, amount) {
-    if (!this.data || Object.keys(this.data).length === 0 && !this.initialized) {
-        // Simple check to ensure we loaded at least once or empty
-        await this.load();
-        this.initialized = true;
+    if (
+      !this.data ||
+      (Object.keys(this.data).length === 0 && !this.initialized)
+    ) {
+      // Simple check to ensure we loaded at least once or empty
+      await this.load();
+      this.initialized = true;
     }
 
     if (!this.data[guildId]) {
@@ -81,23 +88,30 @@ class LevelStorage extends JSONStorage {
   }
 
   async getUser(userId, guildId) {
-    if (!this.data || Object.keys(this.data).length === 0 && !this.initialized) {
-        await this.load();
-        this.initialized = true;
+    if (
+      !this.data ||
+      (Object.keys(this.data).length === 0 && !this.initialized)
+    ) {
+      await this.load();
+      this.initialized = true;
     }
     return this.data[guildId]?.users[userId] || null;
   }
 
   async getLeaderboard(guildId) {
-    if (!this.data || Object.keys(this.data).length === 0 && !this.initialized) {
-        await this.load();
-        this.initialized = true;
+    if (
+      !this.data ||
+      (Object.keys(this.data).length === 0 && !this.initialized)
+    ) {
+      await this.load();
+      this.initialized = true;
     }
     const guildData = this.data[guildId];
     if (!guildData || !guildData.users) return [];
 
-    return Object.values(guildData.users)
-      .sort((a, b) => b.level - a.level || b.xp - a.xp);
+    return Object.values(guildData.users).sort(
+      (a, b) => b.level - a.level || b.xp - a.xp,
+    );
   }
 
   async getRank(userId, guildId) {

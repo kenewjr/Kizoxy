@@ -1,22 +1,22 @@
 const { EmbedBuilder } = require("discord.js");
 
 module.exports = async (client, player, track, payload) => {
-  // Auto-restart live streams if 24/7 is on
-  if (player.data.get("stay") && track.isStream) {
-    // Only restart if it finished or load failed (standard end)
-    // payload.reason can be "FINISHED", "LOAD_FAILED", "STOPPED", "REPLACED", "CLEANUP"
+  // Restart ONLY if Lofi Mode is enabled
+  if (player.data.get("lofi") && track.isStream) {
     if (payload.reason === "FINISHED" || payload.reason === "LOAD_FAILED") {
       const channel = client.channels.cache.get(player.textId);
       if (channel) {
         const embed = new EmbedBuilder()
           .setColor(client.color)
-          .setDescription("`🔄` | *Live stream ended, auto-restarting...*");
+          .setDescription("`🔄` | *Lofi stream interrupted, reconnecting...*");
         channel.send({ embeds: [embed] }).catch(() => {});
       }
-      
+
       // Re-play the track
       try {
-        const res = await player.search(track.uri, { requester: track.requester });
+        const res = await player.search(track.uri, {
+          requester: track.requester,
+        });
         if (res.tracks.length) {
           player.queue.add(res.tracks[0]);
           if (!player.playing && !player.paused && !player.queue.size) {
@@ -24,7 +24,7 @@ module.exports = async (client, player, track, payload) => {
           }
         }
       } catch (e) {
-        console.error("Failed to auto-restart stream:", e);
+        console.error("Failed to auto-restart Lofi stream:", e);
       }
       return;
     }
