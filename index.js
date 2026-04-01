@@ -25,6 +25,9 @@ client.buttons = new Collection();
 client.aliases = new Collection();
 client.prefixCommands = new Map();
 
+const LogStorage = require("./utils/logStorage.js");
+client.logStorage = new LogStorage();
+
 // Initialize Shoukaku
 const Nodes = client.config.NODES;
 
@@ -37,8 +40,8 @@ client.manager = new Kazagumo(
       new KazagumoSpotify({
         clientId: client.config.spotifyClientID,
         clientSecret: client.config.spotifySecret,
-        playlistPageLimit: 1, // optional ( 100 tracks per page )
-        albumPageLimit: 1, // optional ( 50 tracks per page )
+        playlistPageLimit: 50, // optional ( 100 tracks per page )
+        albumPageLimit: 50, // optional ( 50 tracks per page )
         searchLimit: 10, // optional ( track search limit. Max 50 )
         searchMarket: "US", // optional || default: US ( Enter the country you live in. [ Can only be of 2 letters. For eg: US, IN, EN ] )//
       }),
@@ -50,6 +53,10 @@ client.manager = new Kazagumo(
   },
   new Connectors.DiscordJS(client),
   Nodes,
+  {
+    reconnectTries: Infinity,   // terus mencoba selamanya
+    reconnectInterval: 15,       // jeda 5 detik antar percobaan
+  },
 );
 
 [

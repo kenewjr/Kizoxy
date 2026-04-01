@@ -16,8 +16,8 @@ class Logger {
   }
 
   log(message, level = "info") {
-    // Only allow error logs
-    if (level !== "error") return;
+    // Enable all logs for debugging
+    // if (level !== "error") return;
 
     const timestamp = new Date().toLocaleTimeString();
     let color = colors.white;

@@ -3,4 +3,5 @@ node_modules
 package-lock.json
 data/alarms.json
 data/levels.json
+data/logs.json
 api/jikan-api/data/jikan-schedule.json
