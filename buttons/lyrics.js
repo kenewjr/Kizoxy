@@ -25,7 +25,13 @@ const _BRAND_BLOCKLIST = new Set([
 
 function cleanTitle(raw) {
   let t = raw;
+  // Full-width brackets （）【】《》 + ASCII brackets
+  t = t.replace(/（[^）]*）/g, "");
+  t = t.replace(/《[^》]*》/g, "");
+  t = t.replace(/[「-』][^「-』]*[「-』]/g, "");
   t = t.replace(/【[^】]*】/g, "");
+  t = t.replace(/『[^』]*』/g, "");
+  t = t.replace(/〈[^〉]*〉/g, "");
   t = t.replace(/\([^)]*\)/g, "");
   t = t.replace(/\[[^\]]*\]/g, "");
   const slashIdx = t.indexOf("//");
@@ -34,7 +40,7 @@ function cleanTitle(raw) {
   if (pipeIdx  !== -1) t = t.slice(0, pipeIdx).trim();
   t = t.replace(/covered?\s*by\s*\S+/gi, "");
   t = t.replace(/歌いました|歌ってみた|歌ってみました|歌わせて|演奏してみた|弾いてみた|叩いてみた|踊ってみた|やってみた|カバー/g, "");
-  t = t.replace(/\b(official\s*video\s*clip|official\s*music\s*video|music\s*video|audio|extended|hd|covers?|MV)\b/gi, "");
+  t = t.replace(/\b(official\s*video\s*clip|official\s*music\s*video|music\s*video|audio|extended|hd|covers?|MV|lyric\s*video)\b/gi, "");
   t = t.replace(/\s+official\s*$/i, "");
   t = t.replace(/\s+lyrics?\s*$/i, "");
   t = t.replace(/[/\\|]\s*$/, "").replace(/^\s*[/\\|]\s*/, "");
@@ -101,7 +107,7 @@ function buildFullLyrics(data) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// Bangun daftar query fallback (4 strategi)
+// Bangun daftar query (4 strategi) — API menangani validasi judul
 // ══════════════════════════════════════════════════════════════════════════
 function splitTitleSegments(rawTitle) {
   return rawTitle
@@ -117,7 +123,7 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
 
   if (!author && !cover) author = extractFtArtist(rawTitle);
 
-  // Strategi 1 — current
+  // Strategi 1 — judul + artis
   const q1 = (!cover && author && !cleanedTitle.toLowerCase().includes(author.toLowerCase()))
     ? `${cleanedTitle} ${author}`.trim()
     : cleanedTitle;
@@ -139,17 +145,17 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
     lastSeg.toLowerCase() !== cleanedTitle.toLowerCase()
   ) ? `${cleanedTitle} ${lastSeg}`.trim() : null;
 
-  // Strategi 4 — cleanedTitle saja
+  // Strategi 4 — judul saja
   const q4 = cleanedTitle;
 
   const seen    = new Set();
   const queries = [];
   const labels  = [];
   for (const [q, label] of [
-    [q1, "current"],
-    [q2, "title-awal-as-author"],
-    [q3, "title-akhir-as-author"],
-    [q4, "full-title-no-author"],
+    [q1, "title+author"],
+    [q2, "first-seg-as-author"],
+    [q3, "last-seg-as-author"],
+    [q4, "title-only"],
   ]) {
     if (q && !seen.has(q)) {
       seen.add(q);
@@ -158,17 +164,24 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
     }
   }
 
-  return { queries, labels, cleanedTitle };
+  return { queries, labels, cleanedTitle, cleanedAuthor: author };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // Single fetch → null jika gagal / tidak ditemukan
 // ══════════════════════════════════════════════════════════════════════════
-async function fetchLyrics(query, rawAuthor) {
+async function fetchLyrics(query, rawAuthor, trackTitle, trackAuthor) {
   let res;
   try {
     res = await axios.get(UNIFIED_API, {
-      params: { q: query, lang: "all", page: 1, raw_author: rawAuthor },
+      params: {
+        q:            query,
+        lang:         "all",
+        page:         1,
+        raw_author:   rawAuthor,
+        track_title:  trackTitle  || "",
+        track_author: trackAuthor || "",
+      },
       timeout: TIMEOUT_MS,
       validateStatus: (s) => s < 500,
     });
@@ -184,15 +197,22 @@ async function fetchLyrics(query, rawAuthor) {
 // ══════════════════════════════════════════════════════════════════════════
 // Fetch semua halaman lalu merge
 // ══════════════════════════════════════════════════════════════════════════
-async function fetchAllPages(query, rawAuthor, firstData) {
-  const totalPages    = firstData.pages ?? 1;
+async function fetchAllPages(query, rawAuthor, firstData, trackTitle, trackAuthor) {
+  const MAX_PAGES  = 8;   // lagu nyata jarang >8 halaman; lebih = kompilasi/mix
+  const totalPages = Math.min(firstData.pages ?? 1, MAX_PAGES);
   const allLyricPages = [...firstData.lyrics];
 
   if (totalPages > 1) {
     const extras = await Promise.all(
       Array.from({ length: totalPages - 1 }, (_, i) =>
         axios.get(UNIFIED_API, {
-          params: { q: query, lang: "all", page: i + 2 },
+          params: {
+            q:            query,
+            lang:         "all",
+            page:         i + 2,
+            track_title:  trackTitle  || "",
+            track_author: trackAuthor || "",
+          },
           timeout: TIMEOUT_MS,
           validateStatus: (s) => s < 500,
         }).catch(() => null)
@@ -250,14 +270,26 @@ module.exports = {
       const rawTitle  = track.title  ?? "";
       const rawAuthor = track.author ?? "";
 
-      const { queries, labels } = buildQueryStrategies(rawTitle, rawAuthor);
+      const { queries, labels, cleanedTitle, cleanedAuthor } = buildQueryStrategies(rawTitle, rawAuthor);
 
-      console.log(`[lyrics] Track  : "${rawTitle}"`);
-      console.log(`[lyrics] Author : "${rawAuthor}"`);
+      // track_title: kirim HANYA nama lagu, bukan full title + artis.
+      const trackAuthor = cleanedAuthor || cleanAuthor(rawAuthor);
+      let trackTitle = cleanedTitle;
+      if (trackAuthor && cleanedTitle.toLowerCase().includes(trackAuthor.toLowerCase())) {
+        const parts = cleanedTitle.split(/\s[-–]\s/);
+        if (parts.length >= 2) {
+          const songPart = parts.find(p => !p.toLowerCase().includes(trackAuthor.toLowerCase()));
+          if (songPart) trackTitle = songPart.trim();
+        }
+      }
+
+      console.log(`[lyrics] Track    : "${rawTitle}"`);
+      console.log(`[lyrics] Author   : "${rawAuthor}"`);
+      console.log(`[lyrics] Ref title: "${trackTitle}" | ref author: "${trackAuthor}"`);
       console.log(`[lyrics] Strategies:`);
       queries.forEach((q, i) => console.log(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`));
 
-      // ── Loop strategi — lanjut jika data ada tapi lyrics kosong ────────
+      // ── Loop strategi
       let firstData    = null;
       let usedQuery    = null;
       let strategyUsed = 0;
@@ -265,7 +297,7 @@ module.exports = {
       for (let i = 0; i < queries.length; i++) {
         console.log(`[lyrics] Trying [${i + 1}/${queries.length}] (${labels[i]}): "${queries[i]}"`);
 
-        const candidate = await fetchLyrics(queries[i], rawAuthor);
+        const candidate = await fetchLyrics(queries[i], rawAuthor, trackTitle, trackAuthor);
 
         if (candidate) {
           const preview = buildFullLyrics(candidate);
@@ -287,7 +319,7 @@ module.exports = {
         return safeReply(interaction, { content: "🔹 No lyrics found for this track." });
       }
 
-      const allLyricPages = await fetchAllPages(usedQuery, rawAuthor, firstData);
+      const allLyricPages = await fetchAllPages(usedQuery, rawAuthor, firstData, trackTitle, trackAuthor);
 
       const lyricsData = {
         ...firstData,

@@ -1,0 +1,27 @@
+{
+  "220121223898726400": {
+    "enabled": true,
+    "disabledChannels": [
+      "448473765492424707",
+      "880355761908228106"
+    ],
+    "ignoredUsers": [],
+    "ignoredRoles": [
+      "331186197378498561"
+    ],
+    "ignoredKeywords": [],
+    "baseMessageAction": "delete_message",
+    "viewMode": "direct"
+  },
+  "388069892450025474": {
+    "enabled": true,
+    "disabledChannels": [
+      "402125466259030017"
+    ],
+    "ignoredUsers": [],
+    "ignoredRoles": [],
+    "ignoredKeywords": [],
+    "baseMessageAction": "delete_message",
+    "viewMode": "direct"
+  }
+}

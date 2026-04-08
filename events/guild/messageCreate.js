@@ -1,5 +1,7 @@
-const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const { EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const LevelStorage = require("../../utils/levelStorage");
+const fixembedStorage = require("../../utils/fixembedStorage");
+const { extractFixedLinks } = require("../../utils/fixembedResolver");
 
 // Map to store cooldowns: userId -> timestamp
 const cooldowns = new Map();
@@ -102,4 +104,93 @@ module.exports = async (client, message) => {
   } catch (error) {
     console.error("Error adding text XP:", error);
   }
+
+  // --- FIXEMBED: Social Media Embed Fixer ---
+  // Skip if message contains fxignore
+  if (message.content.toLowerCase().includes("fxignore")) return;
+
+  // Skip if disabled for this guild/channel/member
+  if (!fixembedStorage.isEnabled(message.guild.id, message.channel.id, message.member)) return;
+
+  // Skip if message contains an ignored keyword
+  if (fixembedStorage.hasIgnoredKeyword(message.guild.id, message.content)) return;
+
+  // Get guild settings
+  const fxSettings = fixembedStorage.getSettings(message.guild.id);
+
+  // Extract fixed links (pass viewMode so subdomains are adjusted)
+  const fixedLinks = await extractFixedLinks(message.content, fxSettings.viewMode);
+  if (fixedLinks.length === 0) return;
+
+  // Filter to only links that were actually changed
+  const changed = fixedLinks.filter((l) => l.changed);
+
+  // ── Apply base message action ──────────────────────────────────────────
+  const action = fxSettings.baseMessageAction;
+
+  if (action === 'nothing' && changed.length === 0) return;
+
+  if (action === 'remove_embed' || action === 'delete_message') {
+    try {
+      if (action === 'delete_message') {
+        await message.delete();
+      } else {
+        await message.suppressEmbeds(true);
+      }
+    } catch (_) {
+      // Missing permissions — silently skip
+    }
+  }
+
+  if (changed.length === 0) return;
+
+  // ── Build FixTweetBot-style hypertext reply ────────────────────────────
+  // Format: [Label](<orig>) • [@username](<profile>) • [Fixer](fixed)
+  const lines = changed.map((l) => {
+    let line = `[${l.originalLabel}](<${l.original}>)`;
+
+    if (l.authorUrl && l.authorName) {
+      line += ` • [@${l.authorName}](<${l.authorUrl}>)`;
+    }
+
+    line += ` • [${l.fixerName}](${l.fixed})`;
+
+    // Wrap in spoiler if the original link was inside ||…||
+    if (l.spoiler) {
+      line = `||${line} ||`;
+    }
+
+    return line;
+  });
+
+  const replyContent = lines.join("\n");
+
+  try {
+    // Build delete button — only the original author can use it
+    const deleteRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`fixembed_delete:${message.author.id}`)
+        .setLabel("🗑️ Delete")
+        .setStyle(ButtonStyle.Danger),
+    );
+
+    // When the original message was deleted we can no longer reply to it
+    // (Discord returns MESSAGE_REFERENCE_UNKNOWN_MESSAGE) — use channel.send instead
+    if (action === 'delete_message') {
+      await message.channel.send({
+        content: `-# ${message.author} •\n${replyContent}`,
+        allowedMentions: { users: [] },
+        components: [deleteRow],
+      });
+    } else {
+      await message.reply({
+        content: replyContent,
+        allowedMentions: { repliedUser: false },
+        components: [deleteRow],
+      });
+    }
+  } catch (err) {
+    console.error("[FixEmbed] Failed to send fixed link reply:", err);
+  }
 };
+

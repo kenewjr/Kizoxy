@@ -6,10 +6,14 @@ const logger = new Logger("BUTTON");
 
 module.exports = async (client, interaction) => {
   try {
-    // Check if this is a button interaction
-    if (!interaction.isButton()) {
-      return;
-    }
+    // Accept buttons and ALL select menu types (string, channel, user, role)
+    const isButton = interaction.isButton?.();
+    const isSelect =
+      interaction.isStringSelectMenu?.() ||
+      interaction.isChannelSelectMenu?.() ||
+      interaction.isUserSelectMenu?.()    ||
+      interaction.isRoleSelectMenu?.();
+    if (!isButton && !isSelect) return;
 
     logger.debug(
       `Received button interaction: ${interaction.customId} by ${interaction.user.tag}`,
@@ -35,8 +39,17 @@ module.exports = async (client, interaction) => {
       return;
     }
 
-    // Get the button handler
-    const button = client.buttons.get(interaction.customId);
+    // Get the button handler — support dynamic prefixed IDs (e.g. fxs:*, fixembed_delete:*)
+    const PREFIXED_HANDLERS = ["fxs", "fixembed_delete"];
+    let button = client.buttons.get(interaction.customId);
+
+    if (!button) {
+      // Try prefix-based lookup
+      const prefix = interaction.customId.split(":")[0];
+      if (PREFIXED_HANDLERS.includes(prefix)) {
+        button = client.buttons.get(prefix);
+      }
+    }
 
     if (!button) {
       logger.debug(
@@ -48,12 +61,18 @@ module.exports = async (client, interaction) => {
     logger.debug(`Found handler for: ${interaction.customId}`);
 
     try {
-      logger.debug(`Attempting to defer reply for: ${interaction.customId}`);
-      await interaction.deferReply({ ephemeral: true });
+      const prefix = interaction.customId.split(":")[0];
+      // fxs: update the existing settings message in-place
+      // everything else (including fixembed_delete) gets its own ephemeral reply
+      const useDeferUpdate = prefix === "fxs";
 
-      logger.debug(
-        `Deferred status - Replied: ${interaction.replied}, Deferred: ${interaction.deferred}`,
-      );
+      if (useDeferUpdate) {
+        logger.debug(`Deferring update (in-place) for: ${interaction.customId}`);
+        await interaction.deferUpdate();
+      } else {
+        logger.debug(`Deferring new ephemeral reply for: ${interaction.customId}`);
+        await interaction.deferReply({ ephemeral: true });
+      }
 
       logger.info(`Executing handler for: ${interaction.customId}`);
       await button.execute(interaction, client);

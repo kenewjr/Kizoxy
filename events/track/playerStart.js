@@ -72,11 +72,6 @@ module.exports = async (client, player, track) => {
         value: `${formatduration(player.queue.durationLength + track.length, true)}`,
         inline: true,
       },
-      {
-        name: `Current Duration: [0:00 / ${formatduration(track.length, true)}]`,
-        value: `\`\`\`🔴 | 🎶──────────────────────────────\`\`\``,
-        inline: true,
-      },
     )
     .setFooter({ text: `Engine: ${UpCase(source)}`, iconURL: src })
     .setTimestamp();

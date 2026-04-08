@@ -7,17 +7,24 @@ const logger = new Logger("INTERACTION");
 module.exports = async (client, interaction) => {
   logger.info(`Interaction created: ${interaction.type}`);
 
-  // ----- 1) Handle button interactions first -----
-  if (interaction.isButton && interaction.isButton()) {
+  // ----- 1) Handle button + all select menu interactions -----
+  const isAnySelectOrButton =
+    (interaction.isButton?.()) ||
+    (interaction.isStringSelectMenu?.()) ||
+    (interaction.isChannelSelectMenu?.()) ||
+    (interaction.isUserSelectMenu?.()) ||
+    (interaction.isRoleSelectMenu?.());
+
+  if (isAnySelectOrButton) {
     logger.debug(
-      `Button interaction: customId=${interaction.customId} by ${interaction.user?.tag || interaction.user?.id}`,
+      `Button/Select interaction: customId=${interaction.customId} by ${interaction.user?.tag || interaction.user?.id}`,
     );
 
     try {
       const buttonHandler = require("./buttonInteraction");
       await buttonHandler(client, interaction);
     } catch (err) {
-      logger.error(`Error handling button interaction: ${err.message}`);
+      logger.error(`Error handling button/select interaction: ${err.message}`);
     }
     return;
   }
