@@ -4,4 +4,5 @@ package-lock.json
 data/alarms.json
 data/levels.json
 data/logs.json
+data/fixembed.json
 api/jikan-api/data/jikan-schedule.json
