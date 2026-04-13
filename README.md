@@ -19,6 +19,8 @@
 - [x] **Music Systems**: High-quality music playback.
 - [x] **Alarm Systems**: Set reminders effectively.
 - [x] **Anime Systems**: Schedule and info.
+- [x] **Level Systems**: Rank tracking and leaderboards.
+- [x] **Social Embed Fixer**: Automatically fix broken social media embeds.
 - [x] **Slash Commands**: Full support for slash commands.
 - [x] **Prefix Commands**: Legacy support for prefix commands.
 - [x] **AutoComplete**: Smart completion for play commands.
@@ -124,26 +126,37 @@ node deploySlash.js global --clear-all
 | `/247`               | Toggle 24/7 mode.                          |
 | `/remove [song]`     | Remove a song from the queue.              |
 | `/lofi`              | Toggle Lofi mode.                          |
+| `/lyrics`            | Fetch lyrics for the playing song.         |
 
 ### ⏺ Filter Commands
 
-| Command       | Description               |
-| :------------ | :------------------------ |
-| `/nightcore`  | Toggle Nightcore filter.  |
-| `/bassboost`  | Adjust bass boost level.  |
-| `/reset`      | Reset all filters.        |
-| `/3d`         | Toggle 3D audio.          |
-| `/doubletime` | Toggle DoubleTime effect. |
-| `/vibrato`    | Toggle Vibrato effect.    |
-| `/karaoke`    | Toggle Karaoke mode.      |
-| `/slowmotion` | Toggle SlowMotion effect. |
+| Command            | Description                                  |
+| :----------------- | :------------------------------------------- |
+| `/filter [type]`   | Apply an audio filter (e.g., bassboost).     |
+
+*(Available filters: `reset`, `3d`, `bassboost`, `doubletime`, `karaoke`, `nightcore`, `slowmotion`, `vibrato`)*
+
+### 🏆 Level System
+
+| Command              | Description                                |
+| :------------------- | :----------------------------------------- |
+| `/rank [user]`       | View your current level and XP.            |
+| `/leaderboard`       | View the server leaderboard.               |
+| `/addxp [user] [xp]` | Add XP to a user (Admin).                  |
+
+### ⚙️ Settings Commands
+
+| Command              | Description                                |
+| :------------------- | :----------------------------------------- |
+| `/fixembed`          | Configure the social media embed fixer.    |
+| `/setlog [channel]`  | Sets the server log channel for events.    |
 
 ### 📑 Misc Commands
 
 | Command         | Description                 |
 | :-------------- | :-------------------------- |
 | `/help`         | Show help menu.             |
-| `/alarm [time]` | Set an alarm.               |
+| `/alarm [sub]`  | Manage your alarms.         |
 | `/anime`        | Anime schedule and options. |
 
 </details>
