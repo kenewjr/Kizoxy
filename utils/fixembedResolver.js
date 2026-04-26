@@ -108,11 +108,18 @@ const RESOLVERS = [
     originalLabel: 'TikTok',
     fixerName: 'fxTikTok',
     match: (u) =>
-      /https?:\/\/(?:www\.)?tiktok\.com\/@[^/\s]+\/(?:video|photo)\/\d+/i.test(u) ||
-      /https?:\/\/(?:www\.)?tiktok\.com\/(?:t|embed)\/[^/\s]+/i.test(u),
+      /https?:\/\/(?:(?:www|vt|vm)\.)?tiktok\.com\/@[^/\s]+\/(?:video|photo)\/\d+/i.test(u) ||
+      /https?:\/\/(?:(?:www|vt|vm)\.)?tiktok\.com\/(?:t|embed|[A-Za-z0-9]+)\/[^/\s]*/i.test(u) ||
+      /https?:\/\/(?:vt|vm)\.tiktok\.com\/[A-Za-z0-9]+\/?/i.test(u),
     resolve: async (u, viewMode) => {
+      // Expand short URL dulu jika dari vt.tiktok.com
+      if (/vt\.tiktok\.com|vm\.tiktok\.com/.test(u)) {
+        const res = await fetch(u, { method: 'HEAD', redirect: 'follow' });
+        u = res.url; // URL asli setelah redirect
+      }
+
       const subdomain = TIKTOK_SUBDOMAIN[viewMode] ?? 'a.';
-      const fixed = u.replace(/(?:www\.)?tiktok\.com/, `${subdomain}tnktok.com`);
+      const fixed = u.replace(/(?:(?:www|vt|vm)\.)?tiktok\.com/, `${subdomain}tnktok.com`);
       const m = u.match(/tiktok\.com\/@([^/\s?#]+)/i);
       const authorName = m ? m[1] : null;
       const authorUrl = authorName ? `https://www.tiktok.com/@${authorName}` : null;

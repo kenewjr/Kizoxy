@@ -4,7 +4,7 @@ const path = require("path");
 const DATA_PATH = path.join(__dirname, "../data/fixembed.json");
 
 const DEFAULT_SETTINGS = {
-  enabled: true,
+  enabled: false,
   disabledChannels: [],
   ignoredUsers: [],
   ignoredRoles: [],
