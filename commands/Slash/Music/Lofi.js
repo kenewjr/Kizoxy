@@ -44,7 +44,7 @@ module.exports = {
       try {
         player.connect();
       } catch (error) {
-        console.log("Player connection error (ignored):", error.message);
+        console.warn("Player connection error (ignored):", error.message);
       }
     }
 

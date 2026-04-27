@@ -16,7 +16,9 @@
     "sharp": "^0.34.3",
     "shoukaku": "^4.3.0",
     "stuffs": "^0.1.43",
-    "uuid": "^12.0.0"
+    "uuid": "^12.0.0",
+    "pg": "^8.13.0",
+    "prom-client": "^15.1.0"
   },
   "name": "kizoxy",
   "description": "✈ Join Discord: https://discord.gg/qeemvqq 👌",
@@ -24,6 +26,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "start:pm2": "pm2 start ecosystem.config.js",
+    "stop:pm2": "pm2 stop kizoxy",
+    "restart:pm2": "pm2 restart kizoxy",
+    "logs:pm2": "pm2 logs kizoxy",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write . "
   },
   "repository": {
@@ -37,6 +45,7 @@
   "author": "Kenewjr",
   "license": "Apache-2.0",
   "devDependencies": {
+    "eslint": "^8.57.0",
     "prettier": "3.6.2"
   }
 }

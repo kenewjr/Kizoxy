@@ -10,16 +10,35 @@ const colors = {
   white: "\x1b[37m",
 };
 
+const LOG_FORMAT = process.env.LOG_FORMAT || "pretty"; // "pretty" or "json"
+
 class Logger {
   constructor(moduleName) {
     this.moduleName = moduleName;
   }
 
   log(message, level = "info") {
-    // Enable all logs for debugging
-    // if (level !== "error") return;
+    const timestamp = new Date().toISOString();
 
-    const timestamp = new Date().toLocaleTimeString();
+    // JSON structured output for log aggregation (Logstash, PM2, etc.)
+    if (LOG_FORMAT === "json") {
+      const entry = {
+        timestamp,
+        level,
+        module: this.moduleName,
+        message,
+      };
+      // Use console.warn for all levels (PM2 compatibility)
+      // Use console.error only for actual errors
+      if (level === "error") {
+        console.error(JSON.stringify(entry));
+      } else {
+        console.warn(JSON.stringify(entry));
+      }
+      return;
+    }
+
+    // Pretty-print for local development
     let color = colors.white;
     let prefix = "ℹ️";
 
@@ -46,9 +65,13 @@ class Logger {
         prefix = "ℹ️";
     }
 
-    console.log(
-      `${colors.bright}${colors.white}[${timestamp}]${colors.reset} ${color}${prefix} [${this.moduleName}]${colors.reset} ${message}`,
-    );
+    const formatted = `${colors.bright}${colors.white}[${new Date().toLocaleTimeString()}]${colors.reset} ${color}${prefix} [${this.moduleName}]${colors.reset} ${message}`;
+
+    if (level === "error") {
+      console.error(formatted);
+    } else {
+      console.warn(formatted);
+    }
   }
 
   success(message) {

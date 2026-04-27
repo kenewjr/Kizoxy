@@ -6,3 +6,12 @@ data/levels.json
 data/logs.json
 data/fixembed.json
 api/jikan-api/data/jikan-schedule.json
+
+# PM2 logs
+logs/
+
+# ESLint cache
+.eslintcache
+
+# DevOps data (generated at runtime)
+devops/db/data/

@@ -21,14 +21,14 @@ async function getSchedule(filter) {
   let kids = false;
 
   try {
-    console.log(`📡 Fetching schedule for ${filter || "all"}...`);
+    console.warn(`📡 Fetching schedule for ${filter || "all"}...`);
 
     while (hasNextPage) {
       const url = filter
         ? `${BASE_URL}/schedules?filter=${filter}&page=${page}&kids=${kids}`
         : `${BASE_URL}/schedules?page=${page}&kids=${kids}`;
 
-      console.log(`   fetching page ${page}...`);
+      console.warn(`   fetching page ${page}...`);
       const response = await axios.get(url);
       const { data, pagination } = response.data;
 
@@ -44,7 +44,7 @@ async function getSchedule(filter) {
       if (hasNextPage) await delay(500);
     }
 
-    console.log(`✅ Fetched total ${allAnime.length} entries.`);
+    console.warn(`✅ Fetched total ${allAnime.length} entries.`);
 
     // Sort by Score (Descending), then by Members/Popularity (Descending)
     // Note: 'members' is usually available on anime objects.

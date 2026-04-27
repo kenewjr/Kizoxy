@@ -283,11 +283,11 @@ module.exports = {
         }
       }
 
-      console.log(`[lyrics] Track    : "${rawTitle}"`);
-      console.log(`[lyrics] Author   : "${rawAuthor}"`);
-      console.log(`[lyrics] Ref title: "${trackTitle}" | ref author: "${trackAuthor}"`);
-      console.log(`[lyrics] Strategies:`);
-      queries.forEach((q, i) => console.log(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`));
+      console.warn(`[lyrics] Track    : "${rawTitle}"`);
+      console.warn(`[lyrics] Author   : "${rawAuthor}"`);
+      console.warn(`[lyrics] Ref title: "${trackTitle}" | ref author: "${trackAuthor}"`);
+      console.warn(`[lyrics] Strategies:`);
+      queries.forEach((q, i) => console.warn(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`));
 
       // ── Loop strategi
       let firstData    = null;
@@ -295,7 +295,7 @@ module.exports = {
       let strategyUsed = 0;
 
       for (let i = 0; i < queries.length; i++) {
-        console.log(`[lyrics] Trying [${i + 1}/${queries.length}] (${labels[i]}): "${queries[i]}"`);
+        console.warn(`[lyrics] Trying [${i + 1}/${queries.length}] (${labels[i]}): "${queries[i]}"`);
 
         const candidate = await fetchLyrics(queries[i], rawAuthor, trackTitle, trackAuthor);
 
@@ -305,17 +305,17 @@ module.exports = {
             firstData    = candidate;
             usedQuery    = queries[i];
             strategyUsed = i + 1;
-            console.log(`[lyrics] ✅ Hit on strategy ${strategyUsed} (${labels[i]}) | len=${preview.length}`);
+            console.warn(`[lyrics] ✅ Hit on strategy ${strategyUsed} (${labels[i]}) | len=${preview.length}`);
             break;
           }
-          console.log(`[lyrics] ⚠️  Data found but lyrics empty on strategy ${i + 1} (${labels[i]}) — continuing...`);
+          console.warn(`[lyrics] ⚠️  Data found but lyrics empty on strategy ${i + 1} (${labels[i]}) — continuing...`);
         } else {
-          console.log(`[lyrics] ❌ Miss on strategy ${i + 1} (${labels[i]})`);
+          console.warn(`[lyrics] ❌ Miss on strategy ${i + 1} (${labels[i]})`);
         }
       }
 
       if (!firstData) {
-        console.log(`[lyrics] All ${queries.length} strategies exhausted — no lyrics found.`);
+        console.warn(`[lyrics] All ${queries.length} strategies exhausted — no lyrics found.`);
         return safeReply(interaction, { content: "🔹 No lyrics found for this track." });
       }
 
@@ -328,7 +328,7 @@ module.exports = {
       };
 
       const fullLyrics = buildFullLyrics(lyricsData);
-      console.log(
+      console.warn(
         `[lyrics] source=${lyricsData.source} | is_jp=${lyricsData.is_japanese}` +
         ` | artist="${lyricsData.artist}" | len=${fullLyrics.length} | strategy=${strategyUsed}`,
       );

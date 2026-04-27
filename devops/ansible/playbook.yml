@@ -1,0 +1,142 @@
+---
+# Kizoxy Discord Bot — Ansible Deployment Playbook
+# Usage: ansible-playbook -i devops/ansible/inventory.yml devops/ansible/playbook.yml
+
+- name: Deploy Kizoxy Discord Bot
+  hosts: all
+  become: true
+  vars:
+    app_name: kizoxy
+    app_dir: /opt/kizoxy
+    app_repo: "https://github.com/kenewjr/Kizoxy.git"
+    app_branch: main
+    node_version: "20"
+
+  tasks:
+    # ── System Dependencies ──────────────────────────────
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system packages
+      apt:
+        name:
+          - git
+          - curl
+          - build-essential
+          - postgresql-client
+        state: present
+
+    # ── Node.js via NodeSource ────────────────────────────
+    - name: Check if Node.js is installed
+      command: node --version
+      register: node_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install NodeSource repository
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_{{ node_version }}.x | bash -
+      when: node_check.rc != 0
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+      when: node_check.rc != 0
+
+    # ── PM2 ──────────────────────────────────────────────
+    - name: Install PM2 globally
+      npm:
+        name: pm2
+        global: yes
+        state: present
+
+    - name: Setup PM2 startup script
+      command: pm2 startup systemd -u {{ ansible_user }} --hp /home/{{ ansible_user }}
+      become: true
+      changed_when: false
+
+    # ── Application ──────────────────────────────────────
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Clone or update repository
+      git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dir }}"
+        version: "{{ app_branch }}"
+        force: yes
+      become_user: "{{ ansible_user }}"
+
+    - name: Install npm dependencies
+      npm:
+        path: "{{ app_dir }}"
+        production: yes
+      become_user: "{{ ansible_user }}"
+
+    - name: Create logs directory
+      file:
+        path: "{{ app_dir }}/logs"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: "0755"
+
+    # ── Environment File ─────────────────────────────────
+    - name: Check if .env exists
+      stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file
+
+    - name: Warn if .env is missing
+      debug:
+        msg: "⚠️  .env file not found at {{ app_dir }}/.env — please create it manually!"
+      when: not env_file.stat.exists
+
+    # ── PostgreSQL Schema ────────────────────────────────
+    - name: Check if PostgreSQL is configured
+      shell: grep -q 'POSTGRES_HOST' {{ app_dir }}/.env 2>/dev/null
+      register: pg_configured
+      ignore_errors: true
+      changed_when: false
+
+    - name: Apply PostgreSQL schema
+      shell: |
+        source {{ app_dir }}/.env
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p ${POSTGRES_PORT:-5432} -U $POSTGRES_USER -d $POSTGRES_DB -f {{ app_dir }}/devops/db/init.sql
+      when: pg_configured.rc == 0
+      ignore_errors: true
+
+    # ── Start / Restart PM2 ──────────────────────────────
+    - name: Stop existing PM2 process
+      command: pm2 stop {{ app_name }}
+      become_user: "{{ ansible_user }}"
+      ignore_errors: true
+      changed_when: false
+
+    - name: Start app with PM2
+      command: pm2 start ecosystem.config.js
+      args:
+        chdir: "{{ app_dir }}"
+      become_user: "{{ ansible_user }}"
+
+    - name: Save PM2 process list
+      command: pm2 save
+      become_user: "{{ ansible_user }}"
+      changed_when: false
+
+    - name: Display deployment status
+      command: pm2 list
+      become_user: "{{ ansible_user }}"
+      register: pm2_status
+      changed_when: false
+
+    - name: Show PM2 status
+      debug:
+        var: pm2_status.stdout_lines

@@ -12,7 +12,21 @@ NODE_NAME=insertyournodehere
 NODE_URL=0.0.0.0:2333
 NODE_AUTH=youshallnotpass
 
-#SPOTIFY
-spotifyClientID= ""
-spotifySecret= ""
+# Spotify
+spotifyClientID=""
+spotifySecret=""
 
+# PostgreSQL (optional — leave empty to use JSON file storage)
+POSTGRES_HOST=
+POSTGRES_PORT=5432
+POSTGRES_DB=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+
+# Logging
+# "pretty" = colored terminal output (dev)
+# "json"   = structured JSON output (production / PM2)
+LOG_FORMAT=pretty
+
+# Error Webhook (Discord webhook URL for error notifications)
+ERROR_WEBHOOK_URL=

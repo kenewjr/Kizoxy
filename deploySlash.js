@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 async function deploySlashCommands() {
-  console.log("🚀 Starting slash command deployment...");
+  console.warn("🚀 Starting slash command deployment...");
 
   // Parse arguments
   const args = process.argv.slice(2);
@@ -28,30 +28,30 @@ async function deploySlashCommands() {
     process.exit(1);
   }
 
-  console.log(`📌 Mode: ${mode}`);
+  console.warn(`📌 Mode: ${mode}`);
 
   // Special handling for delete mode
   if (mode === "delete") {
-    console.log(`🗑️ Deleting all commands for guild: ${guildId}`);
+    console.warn(`🗑️ Deleting all commands for guild: ${guildId}`);
     const rest = new REST({ version: "10" }).setToken(TOKEN);
     try {
         const client = await rest.get(Routes.user());
         await rest.put(Routes.applicationGuildCommands(client.id, guildId), { body: [] });
-        console.log(`✅ Successfully deleted all commands for guild ${guildId}`);
+        console.warn(`✅ Successfully deleted all commands for guild ${guildId}`);
     } catch (error) {
         console.error(`❌ Failed to delete commands: ${error.message}`);
     }
     return;
   }
 
-  console.log(`🧹 Clear existing: ${clearExisting ? "YES" : "NO"}`);
+  console.warn(`🧹 Clear existing: ${clearExisting ? "YES" : "NO"}`);
 
   // Step 1: Get client info
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   let client;
   try {
     client = await rest.get(Routes.user());
-    console.log(
+    console.warn(
       `👤 Logged in as: ${client.username}#${client.discriminator} (${client.id})`,
     );
   } catch (error) {
@@ -68,11 +68,11 @@ async function deploySlashCommands() {
   const commands = await loadAndValidateCommands();
 
   if (commands.length === 0) {
-    console.log("⚠️ No valid commands to deploy.");
+    console.warn("⚠️ No valid commands to deploy.");
     return;
   }
 
-  console.log(`📦 Ready to deploy ${commands.length} commands`);
+  console.warn(`📦 Ready to deploy ${commands.length} commands`);
 
   // Step 4: Deploy commands
   await deployCommands(client.id, commands, mode, guildId);
@@ -86,63 +86,63 @@ async function deploySlashCommands() {
 // ============================================
 
 async function cleanupExistingCommands(clientId, mode, guildId) {
-  console.log("\n🧹 CLEANUP: Removing existing commands...");
+  console.warn("\n🧹 CLEANUP: Removing existing commands...");
   const rest = new REST({ version: "10" }).setToken(TOKEN);
 
   try {
     // Clean global commands (regardless of mode)
-    console.log("🌍 Cleaning global commands...");
+    console.warn("🌍 Cleaning global commands...");
     const globalCommands = await rest.get(Routes.applicationCommands(clientId));
 
     if (globalCommands.length > 0) {
-      console.log(`   Found ${globalCommands.length} global commands`);
+      console.warn(`   Found ${globalCommands.length} global commands`);
 
       // Delete all global commands
       await rest.put(Routes.applicationCommands(clientId), { body: [] });
-      console.log("   ✅ All global commands removed");
+      console.warn("   ✅ All global commands removed");
 
       // Alternative: Delete one by one (more reliable)
       /*
       for (const cmd of globalCommands) {
         try {
           await rest.delete(Routes.applicationCommand(clientId, cmd.id));
-          console.log(`   Deleted: ${cmd.name} (${cmd.id})`);
+          console.warn(`   Deleted: ${cmd.name} (${cmd.id})`);
         } catch (error) {
-          console.log(`   Failed to delete ${cmd.name}: ${error.message}`);
+          console.warn(`   Failed to delete ${cmd.name}: ${error.message}`);
         }
         await new Promise(resolve => setTimeout(resolve, 200));
       }
       */
     } else {
-      console.log("   No global commands found");
+      console.warn("   No global commands found");
     }
 
     // Clean guild commands if in guild mode
     if (mode === "guild") {
-      console.log(`🎯 Cleaning guild commands for ${guildId}...`);
+      console.warn(`🎯 Cleaning guild commands for ${guildId}...`);
       try {
         const guildCommands = await rest.get(
           Routes.applicationGuildCommands(clientId, guildId),
         );
 
         if (guildCommands.length > 0) {
-          console.log(`   Found ${guildCommands.length} guild commands`);
+          console.warn(`   Found ${guildCommands.length} guild commands`);
 
           // Delete all guild commands
           await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
             body: [],
           });
-          console.log("   ✅ All guild commands removed");
+          console.warn("   ✅ All guild commands removed");
         } else {
-          console.log("   No guild commands found");
+          console.warn("   No guild commands found");
         }
       } catch (error) {
-        console.log(`   Could not fetch guild commands: ${error.message}`);
+        console.warn(`   Could not fetch guild commands: ${error.message}`);
       }
     }
 
     // Wait for cleanup to propagate
-    console.log("⏳ Waiting 3 seconds for cleanup to complete...");
+    console.warn("⏳ Waiting 3 seconds for cleanup to complete...");
     await new Promise((resolve) => setTimeout(resolve, 3000));
   } catch (error) {
     console.error("❌ Cleanup failed:", error.message);
@@ -161,7 +161,7 @@ async function loadAndValidateCommands() {
     process.exit(1);
   }
 
-  console.log(`\n📂 Loading commands from: ${slashCommandsPath}`);
+  console.warn(`\n📂 Loading commands from: ${slashCommandsPath}`);
 
   let rawCommands = [];
 
@@ -205,7 +205,7 @@ async function loadAndValidateCommands() {
   }
 
   readCommandFiles(slashCommandsPath);
-  console.log(`📊 Found ${rawCommands.length} valid command files`);
+  console.warn(`📊 Found ${rawCommands.length} valid command files`);
 
   // Group commands by main name
   const commandGroups = new Map();
@@ -220,7 +220,7 @@ async function loadAndValidateCommands() {
     commandGroups.get(mainName).push(cmd);
   }
 
-  console.log(`📦 Grouped into ${commandGroups.size} command groups`);
+  console.warn(`📦 Grouped into ${commandGroups.size} command groups`);
 
   // Build Discord API command structure
   const discordCommands = [];
@@ -360,39 +360,39 @@ function cleanOptions(options) {
 // ============================================
 
 async function deployCommands(clientId, commands, mode, guildId) {
-  console.log("\n🚀 DEPLOYING COMMANDS...");
+  console.warn("\n🚀 DEPLOYING COMMANDS...");
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
 
   // Show what we're deploying
-  console.log(`📋 Commands to deploy (${commands.length}):`);
+  console.warn(`📋 Commands to deploy (${commands.length}):`);
   commands.forEach((cmd, index) => {
     const optionCount = cmd.options?.length || 0;
-    console.log(
+    console.warn(
       `  ${index + 1}. /${cmd.name} - ${cmd.description} (${optionCount} options)`,
     );
   });
 
   try {
     if (mode === "global") {
-      console.log("🌍 Deploying globally...");
+      console.warn("🌍 Deploying globally...");
 
       const result = await rest.put(Routes.applicationCommands(clientId), {
         body: commands,
       });
 
-      console.log(
+      console.warn(
         `✅ Successfully deployed ${result.length} commands globally`,
       );
     } else if (mode === "guild") {
-      console.log(`🎯 Deploying to guild ${guildId}...`);
+      console.warn(`🎯 Deploying to guild ${guildId}...`);
 
       const result = await rest.put(
         Routes.applicationGuildCommands(clientId, guildId),
         { body: commands },
       );
 
-      console.log(
+      console.warn(
         `✅ Successfully deployed ${result.length} commands to guild ${guildId}`,
       );
     }
@@ -401,7 +401,7 @@ async function deployCommands(clientId, commands, mode, guildId) {
 
     // Try batch deployment if single deployment fails
     if (commands.length > 1) {
-      console.log("🔄 Trying batch deployment...");
+      console.warn("🔄 Trying batch deployment...");
       await deployInBatches(clientId, commands, mode, guildId);
     } else {
       process.exit(1);
@@ -416,7 +416,7 @@ async function deployInBatches(clientId, commands, mode, guildId) {
 
   for (let i = 0; i < commands.length; i += batchSize) {
     const batch = commands.slice(i, i + batchSize);
-    console.log(
+    console.warn(
       `\n📦 Batch ${Math.floor(i / batchSize) + 1} (${batch.length} commands)...`,
     );
 
@@ -430,7 +430,7 @@ async function deployInBatches(clientId, commands, mode, guildId) {
       }
 
       successful += batch.length;
-      console.log(`✅ Batch ${Math.floor(i / batchSize) + 1} deployed`);
+      console.warn(`✅ Batch ${Math.floor(i / batchSize) + 1} deployed`);
 
       // Rate limit delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -452,16 +452,16 @@ async function deployInBatches(clientId, commands, mode, guildId) {
             });
           }
           successful++;
-          console.log(`   ✅ /${cmd.name} deployed individually`);
+          console.warn(`   ✅ /${cmd.name} deployed individually`);
         } catch (cmdError) {
-          console.log(`   ❌ /${cmd.name} failed: ${cmdError.message}`);
+          console.warn(`   ❌ /${cmd.name} failed: ${cmdError.message}`);
         }
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
   }
 
-  console.log(
+  console.warn(
     `\n📊 Batch deployment complete: ${successful}/${commands.length} commands deployed`,
   );
 }
@@ -471,7 +471,7 @@ async function deployInBatches(clientId, commands, mode, guildId) {
 // ============================================
 
 async function verifyDeployment(clientId, mode, guildId) {
-  console.log("\n🔍 VERIFYING DEPLOYMENT...");
+  console.warn("\n🔍 VERIFYING DEPLOYMENT...");
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
 
@@ -480,14 +480,14 @@ async function verifyDeployment(clientId, mode, guildId) {
 
     if (mode === "global") {
       deployedCommands = await rest.get(Routes.applicationCommands(clientId));
-      console.log(
+      console.warn(
         `🌍 Found ${deployedCommands.length} global commands on Discord`,
       );
     } else {
       deployedCommands = await rest.get(
         Routes.applicationGuildCommands(clientId, guildId),
       );
-      console.log(
+      console.warn(
         `🎯 Found ${deployedCommands.length} guild commands on Discord`,
       );
     }
@@ -495,22 +495,22 @@ async function verifyDeployment(clientId, mode, guildId) {
     // Show deployed commands
     deployedCommands.forEach((cmd, index) => {
       const optionsText = cmd.options ? ` (${cmd.options.length} options)` : "";
-      console.log(`  ${index + 1}. /${cmd.name}${optionsText}`);
+      console.warn(`  ${index + 1}. /${cmd.name}${optionsText}`);
     });
 
-    console.log("\n✅ DEPLOYMENT COMPLETE!");
+    console.warn("\n✅ DEPLOYMENT COMPLETE!");
 
     // Show timing info
     if (mode === "global") {
-      console.log(
+      console.warn(
         "⏰ Global commands may take up to 1 hour to appear everywhere",
       );
-      console.log("💡 Tip: Kick and re-invite bot for immediate update");
+      console.warn("💡 Tip: Kick and re-invite bot for immediate update");
     } else {
-      console.log("⏰ Guild commands should appear within a few seconds");
+      console.warn("⏰ Guild commands should appear within a few seconds");
     }
   } catch (error) {
-    console.log("⚠️ Could not verify deployment:", error.message);
+    console.warn("⚠️ Could not verify deployment:", error.message);
   }
 }
 

@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, Events } = require("discord.js");
+const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
 const KazagumoSpotify = require("kazagumo-spotify");
@@ -71,4 +71,44 @@ client.manager = new Kazagumo(
 
 require("./api/jikan-api/handlers/loadJikanSchedule")(client);
 
+// ── Webhook Error Reporter ──────────────────────────────
+const { sendErrorWebhook } = require("./utils/webhookReporter");
+
+// Global: uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("[FATAL] Uncaught Exception:", error);
+  sendErrorWebhook("Uncaught Exception", error);
+});
+
+// Global: unhandled promise rejections
+process.on("unhandledRejection", (reason, _promise) => {
+  console.error("[FATAL] Unhandled Rejection:", reason);
+  sendErrorWebhook("Unhandled Rejection", reason instanceof Error ? reason : new Error(String(reason)));
+});
+
+// Discord.js: client error
+client.on("error", (error) => {
+  console.error("[DISCORD] Client Error:", error);
+  sendErrorWebhook("Discord Client Error", error);
+});
+
+// Discord.js: client warn
+client.on("warn", (message) => {
+  console.warn("[DISCORD] Warning:", message);
+  sendErrorWebhook("Discord Warning", message);
+});
+
+// Discord.js: shard error
+client.on("shardError", (error, shardId) => {
+  console.error(`[DISCORD] Shard ${shardId} Error:`, error);
+  sendErrorWebhook("Shard Error", error, { "Shard ID": shardId });
+});
+
+// Kazagumo/Shoukaku: node error
+client.manager.shoukaku.on("error", (name, error) => {
+  console.error(`[LAVALINK] Node "${name}" Error:`, error);
+  sendErrorWebhook("Lavalink Node Error", error instanceof Error ? error : new Error(String(error)), { "Node": name });
+});
+
 client.login(client.token);
+

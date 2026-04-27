@@ -50,4 +50,59 @@ module.exports = async (client, oldState, newState) => {
       }
     }
   }
+
+  // --- Server Logs ---
+  if (!client.logStorage) return;
+  const logChannelId = client.logStorage.getChannel(newState.guild.id);
+  if (!logChannelId) return;
+
+  const logChannel = newState.guild.channels.cache.get(logChannelId);
+  if (!logChannel) return;
+
+  const { EmbedBuilder } = require("discord.js");
+  const embed = new EmbedBuilder()
+    .setAuthor({
+      name: newState.member.user.tag,
+      iconURL: newState.member.user.displayAvatarURL({ dynamic: true }),
+    })
+    .setTimestamp()
+    .setFooter({ text: `User ID: ${newState.member.id}` });
+
+  let sendLog = false;
+
+  // Joined VC
+  if (!oldState.channelId && newState.channelId) {
+    embed.setTitle("Joined Voice Channel");
+    embed.setDescription(`${newState.member} joined ${newState.channel}`);
+    embed.setColor("Green");
+    sendLog = true;
+  }
+  // Left VC
+  else if (oldState.channelId && !newState.channelId) {
+    embed.setTitle("Left Voice Channel");
+    embed.setDescription(`${oldState.member} left ${oldState.channel}`);
+    embed.setColor("Red");
+    sendLog = true;
+  }
+  // Moved VC
+  else if (
+    oldState.channelId &&
+    newState.channelId &&
+    oldState.channelId !== newState.channelId
+  ) {
+    embed.setTitle("Moved Voice Channel");
+    embed.setDescription(
+      `${newState.member} moved from ${oldState.channel} to ${newState.channel}`,
+    );
+    embed.setColor("Blue");
+    sendLog = true;
+  }
+
+  if (sendLog) {
+    try {
+      await logChannel.send({ embeds: [embed] });
+    } catch (err) {
+      console.error(`Could not send voiceStateUpdate log:`, err);
+    }
+  }
 };

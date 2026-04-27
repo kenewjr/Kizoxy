@@ -4,6 +4,6 @@ title Kizoxy
 
 :StartBot
 
-node --no-warnings index.js
+npm run start:pm2
 
 goto StartBot

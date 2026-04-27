@@ -17,4 +17,16 @@ module.exports = {
       auth: process.env.NODE_AUTH || "nanospace",
     },
   ],
+
+  // ── PostgreSQL (optional) ─────────────────────────
+  POSTGRES: {
+    host: process.env.POSTGRES_HOST || "",
+    port: parseInt(process.env.POSTGRES_PORT || "5432", 10),
+    database: process.env.POSTGRES_DB || "kizoxy",
+    user: process.env.POSTGRES_USER || "kizoxy",
+    password: process.env.POSTGRES_PASSWORD || "",
+  },
+
+  // ── Logging ───────────────────────────────────────
+  LOG_FORMAT: process.env.LOG_FORMAT || "pretty", // "pretty" or "json"
 };

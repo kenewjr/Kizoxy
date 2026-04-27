@@ -27,7 +27,7 @@ function getScheduleData() {
 function initScheduler(client) {
   // Schedule the job to run every day at 08:00 AM
   schedule.scheduleJob("0 8 * * *", async () => {
-    console.log("Running daily anime schedule task...");
+    console.warn("Running daily anime schedule task...");
 
     const data = getScheduleData();
 
@@ -38,7 +38,7 @@ function initScheduler(client) {
 
       if (!animeData || animeData.length === 0) return;
 
-      console.log(`Fetched ${animeData.length} anime for today.`);
+      console.warn(`Fetched ${animeData.length} anime for today.`);
 
       // Format all anime into embeds
       const allEmbeds = animeData.map((anime) => formatAnimeEmbed(anime));
@@ -90,7 +90,7 @@ function initScheduler(client) {
     }
   });
 
-  console.log("Jikan Schedule Handler Loaded. Scheduled for 08:00 AM daily.");
+  console.warn("Jikan Schedule Handler Loaded. Scheduled for 08:00 AM daily.");
 }
 
 module.exports = { initScheduler };

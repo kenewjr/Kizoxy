@@ -97,7 +97,7 @@ module.exports = async (client, message) => {
         msg
           .delete()
           .catch((err) =>
-            console.log("Failed to delete level up message:", err),
+            console.warn("Failed to delete level up message:", err),
           );
       }, 15000);
     }
