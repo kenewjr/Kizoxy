@@ -12,6 +12,3 @@ logs/
 
 # ESLint cache
 .eslintcache
-
-# DevOps data (generated at runtime)
-devops/db/data/
