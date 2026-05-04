@@ -15,15 +15,9 @@ module.exports = (client) => {
   try {
     const files = fs.readdirSync(buttonsDir).filter((f) => f.endsWith(".js"));
 
-    // Filter out buttons that are handled by specific commands
-    const excludedButtons = ["refreshAlarms.js", "closeAlarms.js"];
-    const filteredFiles = files.filter(
-      (file) => !excludedButtons.includes(file),
-    );
+    logger.info(`Loading ${files.length} buttons...`);
 
-    logger.info(`Loading ${filteredFiles.length} buttons...`);
-
-    for (const file of filteredFiles) {
+    for (const file of files) {
       try {
         const filePath = path.join(buttonsDir, file);
         delete require.cache[require.resolve(filePath)];

@@ -1,4 +1,3 @@
-const { InteractionType } = require("discord.js");
 const Logger = require("../../utils/logger");
 
 // Initialize logger
@@ -20,27 +19,17 @@ module.exports = async (client, interaction) => {
     );
 
     // Ignore buttons that are handled by specific command collectors
-    if (
-      interaction.customId === "refresh_alarms" ||
-      interaction.customId === "cancel_alarms"
-    ) {
-      logger.debug(
-        `Ignoring collector-handled button: ${interaction.customId}`,
-      );
-      return;
-    }
-
-    // Dalam buttonInteraction.js, tambahkan ignore untuk button admin
-    if (
-      interaction.customId === "refresh_admin_alarms" ||
-      interaction.customId === "cancel_admin_alarms"
-    ) {
-      logger.debug(`Ignoring admin button: ${interaction.customId}`);
+    const COLLECTOR_BUTTONS = [
+      "refresh_alarms", "cancel_alarms",
+      "refresh_admin_alarms", "cancel_admin_alarms",
+    ];
+    if (COLLECTOR_BUTTONS.includes(interaction.customId)) {
+      logger.debug(`Ignoring collector-handled button: ${interaction.customId}`);
       return;
     }
 
     // Get the button handler — support dynamic prefixed IDs (e.g. fxs:*, fixembed_delete:*)
-    const PREFIXED_HANDLERS = ["fxs", "fixembed_delete"];
+    const PREFIXED_HANDLERS = ["fxs", "fixembed_delete", "alarm"];
     let button = client.buttons.get(interaction.customId);
 
     if (!button) {
@@ -62,9 +51,9 @@ module.exports = async (client, interaction) => {
 
     try {
       const prefix = interaction.customId.split(":")[0];
-      // fxs: update the existing settings message in-place
+      // fxs + alarm: update the existing message in-place
       // everything else (including fixembed_delete) gets its own ephemeral reply
-      const useDeferUpdate = prefix === "fxs";
+      const useDeferUpdate = prefix === "fxs" || interaction.customId.startsWith("alarm_");
 
       if (useDeferUpdate) {
         logger.debug(`Deferring update (in-place) for: ${interaction.customId}`);

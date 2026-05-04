@@ -1,5 +1,4 @@
 const {
-  EmbedBuilder,
   ApplicationCommandOptionType,
   PermissionsBitField,
   ChannelType,
@@ -7,6 +6,7 @@ const {
   StringSelectMenuBuilder,
   ComponentType,
 } = require("discord.js");
+const { buildAlarmEditEmbed, buildAlarmDetailEmbed, formatAlarmDate } = require("../../../services/alarm/alarmFormatter");
 const Logger = require("../../../utils/logger");
 const logger = new Logger("ALARM");
 
@@ -91,9 +91,8 @@ module.exports = {
         }
 
         // Create select menu options
-        const options = alarms.map((alarm, index) => {
-          const alarmDate = new Date(alarm.time);
-          const formattedTime = `${alarmDate.getDate().toString().padStart(2, "0")}/${(alarmDate.getMonth() + 1).toString().padStart(2, "0")}/${alarmDate.getFullYear()} ${alarmDate.getHours().toString().padStart(2, "0")}:${alarmDate.getMinutes().toString().padStart(2, "0")}`;
+        const options = alarms.map((alarm, _index) => {
+          const formattedTime = formatAlarmDate(alarm.time);
 
           return {
             label: `${alarm.name || alarm.message}`.substring(0, 100),
@@ -140,47 +139,7 @@ module.exports = {
             });
           }
 
-          // Tampilkan embed dengan informasi alarm yang dipilih
-          const alarmDate = new Date(alarmToEdit.time);
-          const formattedDate = `${alarmDate.getDate().toString().padStart(2, "0")}/${(alarmDate.getMonth() + 1).toString().padStart(2, "0")}/${alarmDate.getFullYear()}`;
-          const formattedTime = `${alarmDate.getHours().toString().padStart(2, "0")}:${alarmDate.getMinutes().toString().padStart(2, "0")}`;
-
-          const embed = new EmbedBuilder()
-            .setTitle("📝 Edit Alarm")
-            .setColor(0x0099ff)
-            .setDescription(
-              `Anda memilih alarm **${alarmToEdit.name || alarmToEdit.message}**\nGunakan command \`/alarm edit\` dengan parameter ID: \`${alarmToEdit.id}\` dan parameter yang ingin diubah.`,
-            )
-            .addFields(
-              { name: "ID", value: alarmToEdit.id, inline: true },
-              { name: "Tanggal", value: formattedDate, inline: true },
-              { name: "Waktu", value: formattedTime, inline: true },
-              {
-                name: "Channel",
-                value: `<#${alarmToEdit.channelId}>`,
-                inline: true,
-              },
-              {
-                name: "Role",
-                value: alarmToEdit.roleId
-                  ? `<@&${alarmToEdit.roleId}>`
-                  : "Tidak ada",
-                inline: true,
-              },
-              {
-                name: "Jenis",
-                value:
-                  alarmToEdit.recurring === "none"
-                    ? "Tidak Berulang"
-                    : alarmToEdit.recurring.charAt(0).toUpperCase() +
-                      alarmToEdit.recurring.slice(1),
-                inline: true,
-              },
-            )
-            .setFooter({
-              text: `Gunakan /alarm edit id_alarm:${alarmToEdit.id} [parameter] untuk mengubah alarm ini`,
-              iconURL: interaction.user.displayAvatarURL(),
-            });
+          const embed = buildAlarmDetailEmbed(alarmToEdit);
 
           await i.update({
             content: "",
@@ -391,51 +350,8 @@ module.exports = {
       alarmScheduler.cancelAlarm(alarmId);
       await alarmScheduler.scheduleAlarm(updatedAlarm);
 
-      // Format waktu untuk display
-      const alarmDate = new Date(updatedAlarm.time);
-      const formattedDate = `${alarmDate.getDate().toString().padStart(2, "0")}/${(alarmDate.getMonth() + 1).toString().padStart(2, "0")}/${alarmDate.getFullYear()}`;
-      const formattedTime = `${alarmDate.getHours().toString().padStart(2, "0")}:${alarmDate.getMinutes().toString().padStart(2, "0")}`;
-
       // Buat embed konfirmasi
-      const embed = new EmbedBuilder()
-        .setTitle("✅ Alarm Berhasil Diupdate")
-        .setColor(0x00ff00)
-        .addFields(
-          {
-            name: "Nama Alarm",
-            value: updatedAlarm.name || updatedAlarm.message,
-            inline: true,
-          },
-          { name: "Tanggal", value: formattedDate, inline: true },
-          { name: "Waktu", value: formattedTime, inline: true },
-          {
-            name: "Channel",
-            value: `<#${updatedAlarm.channelId}>`,
-            inline: true,
-          },
-          {
-            name: "Role",
-            value: updatedAlarm.roleId
-              ? `<@&${updatedAlarm.roleId}>`
-              : "Tidak ada",
-            inline: true,
-          },
-          {
-            name: "Jenis",
-            value:
-              updatedAlarm.recurring === "none"
-                ? "Tidak Berulang"
-                : updatedAlarm.recurring.charAt(0).toUpperCase() +
-                  updatedAlarm.recurring.slice(1),
-            inline: true,
-          },
-          { name: "ID", value: updatedAlarm.id, inline: true },
-        )
-        .setFooter({
-          text: `Diupdate oleh ${interaction.user.tag}`,
-          iconURL: interaction.user.displayAvatarURL(),
-        })
-        .setTimestamp();
+      const embed = buildAlarmEditEmbed(updatedAlarm, interaction.user);
 
       await interaction.editReply({
         content: "Alarm Anda telah berhasil diperbarui!",

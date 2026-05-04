@@ -212,13 +212,44 @@ const RESOLVERS = [
     originalLabel: 'YouTube',
     fixerName: 'Koutube',
     match: (u) =>
-      /https?:\/\/(?:www\.)?youtube\.com\/(?:watch|playlist|shorts\/[^/\s]+)/i.test(u) ||
+      /https?:\/\/(?:(?:www|m|music)\.)?youtube\.com\/(?:watch|playlist|shorts\/[^/\s]+)/i.test(u) ||
       /https?:\/\/youtu\.be\/[^/\s?#]+/i.test(u),
     resolve: async (u) => {
-      const fixed = u
-        .replace(/(?:www\.)?youtube\.com/, 'koutube.com')
-        .replace(/youtu\.be/, 'koutube.com');
-      return { fixed, authorUrl: null, authorName: null };
+      // Normalize youtu.be → youtube.com/watch?v= first
+      const youtuBeMatch = u.match(/https?:\/\/youtu\.be\/([^/\s?#]+)(.*)?/i);
+      let normalizedUrl = u;
+      if (youtuBeMatch) {
+        const videoId = youtuBeMatch[1];
+        const rest = youtuBeMatch[2] || '';
+        // Preserve query params (e.g. ?t=120)
+        const separator = rest.startsWith('?') ? '' : (rest ? '?' : '');
+        normalizedUrl = `https://youtube.com/watch?v=${videoId}${separator}${rest.replace(/^\?/, '&')}`;
+      }
+
+      // Normalize m.youtube.com / music.youtube.com → youtube.com
+      normalizedUrl = normalizedUrl.replace(/(?:m|music|www)\.youtube\.com/i, 'youtube.com');
+
+      // Primary: Koutube
+      const koutubUrl = normalizedUrl.replace(/youtube\.com/i, 'koutube.com');
+
+      // Verify Koutube is responding (lightweight HEAD check)
+      try {
+        const check = await axios.head(koutubUrl, { timeout: 3000, maxRedirects: 2, validateStatus: (s) => s < 500 });
+        if (check.status < 400) {
+          return { fixed: koutubUrl, authorUrl: null, authorName: null };
+        }
+      } catch (_) {
+        // Koutube down — fall through to EmbedEZ
+      }
+
+      // Fallback: EmbedEZ
+      const embedEzUrl = await resolveEmbedEZ(normalizedUrl);
+      if (embedEzUrl) {
+        return { fixed: embedEzUrl, authorUrl: null, authorName: null };
+      }
+
+      // Last resort: return Koutube URL anyway (it may work for Discord's fetcher even if HEAD failed)
+      return { fixed: koutubUrl, authorUrl: null, authorName: null };
     },
   },
 
