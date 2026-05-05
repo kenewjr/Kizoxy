@@ -54,11 +54,13 @@ checkDir(path.join(__dirname, "../../commands/Prefix"), (cmd, file) => {
   }
 });
 
-console.log('Validating Events...');
-checkDir(path.join(__dirname, '../../events'), (event, file) => {
+console.log("Validating Events...");
+checkDir(path.join(__dirname, "../../events"), (event, file) => {
   // Events export a single function, not an object with name and run
-  if (typeof event !== 'function') {
-    console.error(`❌ Invalid event structure in ${file}: expected a function export.`);
+  if (typeof event !== "function") {
+    console.error(
+      `❌ Invalid event structure in ${file}: expected a function export.`,
+    );
     errors++;
   }
 });
