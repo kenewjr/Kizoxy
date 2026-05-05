@@ -27,7 +27,10 @@ module.exports = async (client, oldUser, newUser) => {
     let updated = false;
 
     // Username or Discriminator changes
-    if (oldUser.username !== newUser.username || oldUser.discriminator !== newUser.discriminator) {
+    if (
+      oldUser.username !== newUser.username ||
+      oldUser.discriminator !== newUser.discriminator
+    ) {
       embed.setTitle("User Profile Updated: Username");
       embed.addFields(
         { name: "Old Username", value: `\`${oldUser.tag}\``, inline: true },
@@ -61,12 +64,16 @@ module.exports = async (client, oldUser, newUser) => {
       embed.setTitle("User Profile Updated: Avatar");
       embed.setDescription(`${newUser} changed their avatar.`);
       embed.setColor("Orange");
-      
+
       if (oldUser.avatar) {
-          embed.setThumbnail(oldUser.displayAvatarURL({ dynamic: true, format: 'png' }));
+        embed.setThumbnail(
+          oldUser.displayAvatarURL({ dynamic: true, format: "png" }),
+        );
       }
-      
-      embed.setImage(newUser.displayAvatarURL({ dynamic: true, format: 'png', size: 512 }));
+
+      embed.setImage(
+        newUser.displayAvatarURL({ dynamic: true, format: "png", size: 512 }),
+      );
       updated = true;
     }
 
@@ -75,7 +82,10 @@ module.exports = async (client, oldUser, newUser) => {
       try {
         await logChannel.send({ embeds: [embed] });
       } catch (err) {
-        console.error(`Could not send log to ${guild.name} (${guild.id}):`, err);
+        console.error(
+          `Could not send log to ${guild.name} (${guild.id}):`,
+          err,
+        );
       }
     }
   });

@@ -102,7 +102,7 @@ module.exports = async function playLogic(client, ctx, args) {
                 isrc: t.isrc,
               },
             },
-            requester
+            requester,
           );
           kazTrack.setKazagumo(client.manager);
           player.queue.add(kazTrack);
@@ -110,7 +110,11 @@ module.exports = async function playLogic(client, ctx, args) {
         }
 
         if (!player.playing && !player.paused) {
-          try { player.play(); } catch (e) { /* ignore */ }
+          try {
+            player.play();
+          } catch (e) {
+            /* ignore */
+          }
         }
 
         const msg = `📃 Added Spotify playlist **${playlist.name}** with **${added}** tracks to the queue. (via YouTube)`;
@@ -129,14 +133,20 @@ module.exports = async function playLogic(client, ctx, args) {
       try {
         const trackInfo = await getTrackInfoFromOEmbed(query);
         if (trackInfo) {
-          console.warn(`[SPOTIFY] Track detected, searching YouTube for: "${trackInfo}"`);
+          console.warn(
+            `[SPOTIFY] Track detected, searching YouTube for: "${trackInfo}"`,
+          );
           const result = await client.manager.search(trackInfo, { requester });
 
           if (result && result.tracks && result.tracks.length > 0) {
             const track = result.tracks[0];
             player.queue.add(track);
             if (!player.playing && !player.paused) {
-              try { player.play(); } catch (e) { /* ignore */ }
+              try {
+                player.play();
+              } catch (e) {
+                /* ignore */
+              }
             }
             const msg = `🎵 Added **${track.title}** to the queue. (Spotify → YouTube)`;
             if (isSlash) return ctx.editReply({ content: msg });
@@ -171,7 +181,11 @@ module.exports = async function playLogic(client, ctx, args) {
         added++;
       }
       if (!player.playing && !player.paused) {
-        try { player.play(); } catch (e) { /* ignore */ }
+        try {
+          player.play();
+        } catch (e) {
+          /* ignore */
+        }
       }
       const name = result.playlistName || result.playlist?.name || "Playlist";
       const msg = `📃 Added playlist **${name}** with **${added}** tracks to the queue.`;
@@ -181,7 +195,11 @@ module.exports = async function playLogic(client, ctx, args) {
       const track = result.tracks[0];
       player.queue.add(track);
       if (!player.playing && !player.paused) {
-        try { player.play(); } catch (e) { /* ignore */ }
+        try {
+          player.play();
+        } catch (e) {
+          /* ignore */
+        }
       }
       const msg = `🎵 Added **${track.title}** to the queue.`;
       if (isSlash) return ctx.editReply({ content: msg });

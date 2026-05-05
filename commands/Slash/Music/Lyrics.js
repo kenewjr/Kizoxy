@@ -1,4 +1,7 @@
-const { searchLyrics, validatePlayerForLyrics } = require("../../../services/lyrics/lyricsService");
+const {
+  searchLyrics,
+  validatePlayerForLyrics,
+} = require("../../../services/lyrics/lyricsService");
 
 module.exports = {
   name: ["music", "lyric"],
@@ -33,7 +36,9 @@ module.exports = {
         if (interaction.deferred || interaction.replied) {
           return interaction.editReply({ content: msg }).catch(() => {});
         } else {
-          return interaction.reply({ content: msg, ephemeral: true }).catch(() => {});
+          return interaction
+            .reply({ content: msg, ephemeral: true })
+            .catch(() => {});
         }
       } catch (e) {
         console.error("[lyrics] Failed to send error reply:", e.message);

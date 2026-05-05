@@ -35,11 +35,13 @@ async function deploySlashCommands() {
     console.warn(`🗑️ Deleting all commands for guild: ${guildId}`);
     const rest = new REST({ version: "10" }).setToken(TOKEN);
     try {
-        const client = await rest.get(Routes.user());
-        await rest.put(Routes.applicationGuildCommands(client.id, guildId), { body: [] });
-        console.warn(`✅ Successfully deleted all commands for guild ${guildId}`);
+      const client = await rest.get(Routes.user());
+      await rest.put(Routes.applicationGuildCommands(client.id, guildId), {
+        body: [],
+      });
+      console.warn(`✅ Successfully deleted all commands for guild ${guildId}`);
     } catch (error) {
-        console.error(`❌ Failed to delete commands: ${error.message}`);
+      console.error(`❌ Failed to delete commands: ${error.message}`);
     }
     return;
   }

@@ -1,7 +1,9 @@
 const { Client, ActivityType } = require("discord.js");
 
 module.exports = async (client) => {
-  console.warn(`[INFO] - ${client.user.username} (${client.user.id}) is Ready!`);
+  console.warn(
+    `[INFO] - ${client.user.username} (${client.user.id}) is Ready!`,
+  );
 
   // Array of activities to cycle through
   const activities = [

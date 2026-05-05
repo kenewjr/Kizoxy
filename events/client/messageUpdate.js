@@ -19,7 +19,9 @@ module.exports = async (client, oldMessage, newMessage) => {
       iconURL: oldMessage.author.displayAvatarURL({ dynamic: true }),
     })
     .setTitle("Message Edited")
-    .setDescription(`[Jump to Message](${newMessage.url}) in ${newMessage.channel}`)
+    .setDescription(
+      `[Jump to Message](${newMessage.url}) in ${newMessage.channel}`,
+    )
     .addFields(
       {
         name: "Before",
@@ -28,10 +30,12 @@ module.exports = async (client, oldMessage, newMessage) => {
       {
         name: "After",
         value: newMessage.content ? newMessage.content : "`No text content`",
-      }
+      },
     )
     .setColor("Yellow")
-    .setFooter({ text: `Message ID: ${newMessage.id} | Author ID: ${newMessage.author.id}` })
+    .setFooter({
+      text: `Message ID: ${newMessage.id} | Author ID: ${newMessage.author.id}`,
+    })
     .setTimestamp();
 
   try {

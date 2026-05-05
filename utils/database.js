@@ -11,7 +11,9 @@ let pool = null;
 function initDatabase() {
   const host = process.env.POSTGRES_HOST;
   if (!host) {
-    logger.info("PostgreSQL disabled (POSTGRES_HOST not set). Using JSON file storage.");
+    logger.info(
+      "PostgreSQL disabled (POSTGRES_HOST not set). Using JSON file storage.",
+    );
     return null;
   }
 
@@ -34,7 +36,9 @@ function initDatabase() {
     logger.success("PostgreSQL client connected");
   });
 
-  logger.info(`PostgreSQL pool initialized → ${host}:${process.env.POSTGRES_PORT || 5432}/${process.env.POSTGRES_DB || "kizoxy"}`);
+  logger.info(
+    `PostgreSQL pool initialized → ${host}:${process.env.POSTGRES_PORT || 5432}/${process.env.POSTGRES_DB || "kizoxy"}`,
+  );
   return pool;
 }
 
@@ -49,7 +53,8 @@ function getPool() {
  * Check if PostgreSQL is available and healthy.
  */
 async function healthCheck() {
-  if (!pool) return { status: "disabled", message: "PostgreSQL not configured" };
+  if (!pool)
+    return { status: "disabled", message: "PostgreSQL not configured" };
 
   try {
     const client = await pool.connect();

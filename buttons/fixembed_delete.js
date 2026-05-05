@@ -26,7 +26,8 @@ module.exports = {
       await interaction.deleteReply().catch(() => {});
     } catch (err) {
       return interaction.editReply({
-        content: "❌ Failed to delete — I may be missing `Manage Messages` permission.",
+        content:
+          "❌ Failed to delete — I may be missing `Manage Messages` permission.",
       });
     }
   },

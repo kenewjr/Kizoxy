@@ -13,15 +13,32 @@ const axios = require("axios");
 // Config
 // ══════════════════════════════════════════════════════════════════════════
 const UNIFIED_API = "http://localhost:8000/lyrics";
-const TIMEOUT_MS  = 15_000;
+const TIMEOUT_MS = 15_000;
 
 // ══════════════════════════════════════════════════════════════════════════
 // Helpers — cleaning & strategy building
 // ══════════════════════════════════════════════════════════════════════════
 const _BRAND_BLOCKLIST = new Set([
-  "valorant","riot games","minecraft","roblox","fortnite","league of legends",
-  "youtube","google","spotify","apple","amazon","netflix","disney",
-  "warner","sony","universal","epic games","steam","twitch","bandai namco",
+  "valorant",
+  "riot games",
+  "minecraft",
+  "roblox",
+  "fortnite",
+  "league of legends",
+  "youtube",
+  "google",
+  "spotify",
+  "apple",
+  "amazon",
+  "netflix",
+  "disney",
+  "warner",
+  "sony",
+  "universal",
+  "epic games",
+  "steam",
+  "twitch",
+  "bandai namco",
 ]);
 
 function cleanTitle(raw) {
@@ -36,11 +53,17 @@ function cleanTitle(raw) {
   t = t.replace(/\[[^\]]*\]/g, "");
   const slashIdx = t.indexOf("//");
   if (slashIdx !== -1) t = t.slice(0, slashIdx).trim();
-  const pipeIdx  = t.indexOf("||");
-  if (pipeIdx  !== -1) t = t.slice(0, pipeIdx).trim();
+  const pipeIdx = t.indexOf("||");
+  if (pipeIdx !== -1) t = t.slice(0, pipeIdx).trim();
   t = t.replace(/covered?\s*by\s*\S+/gi, "");
-  t = t.replace(/歌いました|歌ってみた|歌ってみました|歌わせて|演奏してみた|弾いてみた|叩いてみた|踊ってみた|やってみた|カバー/g, "");
-  t = t.replace(/\b(official\s*video\s*clip|official\s*music\s*video|music\s*video|audio|extended|hd|covers?|MV|lyric\s*video)\b/gi, "");
+  t = t.replace(
+    /歌いました|歌ってみた|歌ってみました|歌わせて|演奏してみた|弾いてみた|叩いてみた|踊ってみた|やってみた|カバー/g,
+    "",
+  );
+  t = t.replace(
+    /\b(official\s*video\s*clip|official\s*music\s*video|music\s*video|audio|extended|hd|covers?|MV|lyric\s*video)\b/gi,
+    "",
+  );
   t = t.replace(/\s+official\s*$/i, "");
   t = t.replace(/\s+lyrics?\s*$/i, "");
   t = t.replace(/[/\\|]\s*$/, "").replace(/^\s*[/\\|]\s*/, "");
@@ -48,7 +71,9 @@ function cleanTitle(raw) {
 }
 
 function extractFtArtist(rawTitle) {
-  const m = rawTitle.match(/\b(?:ft|feat)\.\s*([A-Za-z][^\s/|\\]+(?:\s+[A-Za-z][^\s/|\\]+)*)/i);
+  const m = rawTitle.match(
+    /\b(?:ft|feat)\.\s*([A-Za-z][^\s/|\\]+(?:\s+[A-Za-z][^\s/|\\]+)*)/i,
+  );
   return m ? m[1].trim() : "";
 }
 
@@ -58,7 +83,10 @@ function cleanAuthor(raw) {
   t = t.replace(/hololive.*/i, "");
   t = t.replace(/nijisanji.*/i, "");
   t = t.replace(/\s*[-–]\s*topic$/i, "");
-  t = t.replace(/\s*[-–]\s*(official|music|mv|vevo|records?|entertainment|video).*/i, "");
+  t = t.replace(
+    /\s*[-–]\s*(official|music|mv|vevo|records?|entertainment|video).*/i,
+    "",
+  );
   t = t.replace(/\s*official\s*(channel|music|mv|youtube|audio|video)?$/i, "");
   t = t.replace(/\s*(official\s*)?youtube\s*channel$/i, "");
   t = t.replace(/\s*official\s*youtube.*$/i, "");
@@ -71,14 +99,16 @@ function cleanAuthor(raw) {
 }
 
 function isCover(rawTitle) {
-  return /歌いました|歌ってみた|歌ってみました|カバー|covered?\s*by/i.test(rawTitle);
+  return /歌いました|歌ってみた|歌ってみました|カバー|covered?\s*by/i.test(
+    rawTitle,
+  );
 }
 
 function sourceLabel(source = "") {
   const map = {
     lyrical_nonsense: "LyricalNonsense",
-    lrclib:           "LRCLIB",
-    genius:           "Genius",
+    lrclib: "LRCLIB",
+    genius: "Genius",
   };
   return map[source.toLowerCase()] ?? source;
 }
@@ -118,34 +148,40 @@ function splitTitleSegments(rawTitle) {
 
 function buildQueryStrategies(rawTitle, rawAuthor) {
   const cleanedTitle = cleanTitle(rawTitle);
-  const cover        = isCover(rawTitle);
-  let   author       = cleanAuthor(rawAuthor);
+  const cover = isCover(rawTitle);
+  let author = cleanAuthor(rawAuthor);
 
   if (!author && !cover) author = extractFtArtist(rawTitle);
 
-  const q1 = (!cover && author && !cleanedTitle.toLowerCase().includes(author.toLowerCase()))
-    ? `${cleanedTitle} ${author}`.trim()
-    : cleanedTitle;
+  const q1 =
+    !cover &&
+    author &&
+    !cleanedTitle.toLowerCase().includes(author.toLowerCase())
+      ? `${cleanedTitle} ${author}`.trim()
+      : cleanedTitle;
 
   const segments = splitTitleSegments(rawTitle);
   const firstSeg = segments.length > 0 ? cleanTitle(segments[0]) : "";
-  const lastSeg  = segments.length > 1 ? cleanTitle(segments[segments.length - 1]) : "";
+  const lastSeg =
+    segments.length > 1 ? cleanTitle(segments[segments.length - 1]) : "";
 
-  const q2 = (firstSeg && firstSeg.toLowerCase() !== cleanedTitle.toLowerCase())
-    ? `${cleanedTitle} ${firstSeg}`.trim()
-    : null;
+  const q2 =
+    firstSeg && firstSeg.toLowerCase() !== cleanedTitle.toLowerCase()
+      ? `${cleanedTitle} ${firstSeg}`.trim()
+      : null;
 
-  const q3 = (
+  const q3 =
     lastSeg &&
     lastSeg.toLowerCase() !== firstSeg.toLowerCase() &&
     lastSeg.toLowerCase() !== cleanedTitle.toLowerCase()
-  ) ? `${cleanedTitle} ${lastSeg}`.trim() : null;
+      ? `${cleanedTitle} ${lastSeg}`.trim()
+      : null;
 
   const q4 = cleanedTitle;
 
-  const seen    = new Set();
+  const seen = new Set();
   const queries = [];
-  const labels  = [];
+  const labels = [];
   for (const [q, label] of [
     [q1, "title+author"],
     [q2, "first-seg-as-author"],
@@ -170,11 +206,11 @@ async function fetchLyrics(query, rawAuthor, trackTitle, trackAuthor) {
   try {
     res = await axios.get(UNIFIED_API, {
       params: {
-        q:            query,
-        lang:         "all",
-        page:         1,
-        raw_author:   rawAuthor,
-        track_title:  trackTitle  || "",
+        q: query,
+        lang: "all",
+        page: 1,
+        raw_author: rawAuthor,
+        track_title: trackTitle || "",
         track_author: trackAuthor || "",
       },
       timeout: TIMEOUT_MS,
@@ -184,31 +220,39 @@ async function fetchLyrics(query, rawAuthor, trackTitle, trackAuthor) {
     console.warn(`[lyrics] Network error for query "${query}":`, err.message);
     return null;
   }
-  if (res.status !== 200)        return null;
+  if (res.status !== 200) return null;
   if (!res.data?.lyrics?.length) return null;
   return res.data;
 }
 
-async function fetchAllPages(query, _rawAuthor, firstData, trackTitle, trackAuthor) {
-  const MAX_PAGES  = 8;
+async function fetchAllPages(
+  query,
+  _rawAuthor,
+  firstData,
+  trackTitle,
+  trackAuthor,
+) {
+  const MAX_PAGES = 8;
   const totalPages = Math.min(firstData.pages ?? 1, MAX_PAGES);
   const allLyricPages = [...firstData.lyrics];
 
   if (totalPages > 1) {
     const extras = await Promise.all(
       Array.from({ length: totalPages - 1 }, (_, i) =>
-        axios.get(UNIFIED_API, {
-          params: {
-            q:            query,
-            lang:         "all",
-            page:         i + 2,
-            track_title:  trackTitle  || "",
-            track_author: trackAuthor || "",
-          },
-          timeout: TIMEOUT_MS,
-          validateStatus: (s) => s < 500,
-        }).catch(() => null)
-      )
+        axios
+          .get(UNIFIED_API, {
+            params: {
+              q: query,
+              lang: "all",
+              page: i + 2,
+              track_title: trackTitle || "",
+              track_author: trackAuthor || "",
+            },
+            timeout: TIMEOUT_MS,
+            validateStatus: (s) => s < 500,
+          })
+          .catch(() => null),
+      ),
     );
     for (const res of extras) {
       if (res?.data?.lyrics?.length) allLyricPages.push(...res.data.lyrics);
@@ -229,58 +273,89 @@ async function fetchAllPages(query, _rawAuthor, firstData, trackTitle, trackAuth
  * @returns {{ embed: EmbedBuilder } | { error: string }}
  */
 async function searchLyrics(track, color) {
-  const rawTitle  = track.title  ?? "";
+  const rawTitle = track.title ?? "";
   const rawAuthor = track.author ?? "";
 
-  const { queries, labels, cleanedTitle, cleanedAuthor } = buildQueryStrategies(rawTitle, rawAuthor);
+  const { queries, labels, cleanedTitle, cleanedAuthor } = buildQueryStrategies(
+    rawTitle,
+    rawAuthor,
+  );
 
   const trackAuthor = cleanedAuthor || cleanAuthor(rawAuthor);
   let trackTitle = cleanedTitle;
-  if (trackAuthor && cleanedTitle.toLowerCase().includes(trackAuthor.toLowerCase())) {
+  if (
+    trackAuthor &&
+    cleanedTitle.toLowerCase().includes(trackAuthor.toLowerCase())
+  ) {
     const parts = cleanedTitle.split(/\s[-–]\s/);
     if (parts.length >= 2) {
-      const songPart = parts.find(p => !p.toLowerCase().includes(trackAuthor.toLowerCase()));
+      const songPart = parts.find(
+        (p) => !p.toLowerCase().includes(trackAuthor.toLowerCase()),
+      );
       if (songPart) trackTitle = songPart.trim();
     }
   }
 
   console.warn(`[lyrics] Track    : "${rawTitle}"`);
   console.warn(`[lyrics] Author   : "${rawAuthor}"`);
-  console.warn(`[lyrics] Ref title: "${trackTitle}" | ref author: "${trackAuthor}"`);
+  console.warn(
+    `[lyrics] Ref title: "${trackTitle}" | ref author: "${trackAuthor}"`,
+  );
   console.warn(`[lyrics] Strategies:`);
-  queries.forEach((q, i) => console.warn(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`));
+  queries.forEach((q, i) =>
+    console.warn(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`),
+  );
 
   // Strategy loop
-  let firstData    = null;
-  let usedQuery    = null;
+  let firstData = null;
+  let usedQuery = null;
   let strategyUsed = 0;
 
   for (let i = 0; i < queries.length; i++) {
-    console.warn(`[lyrics] Trying [${i + 1}/${queries.length}] (${labels[i]}): "${queries[i]}"`);
+    console.warn(
+      `[lyrics] Trying [${i + 1}/${queries.length}] (${labels[i]}): "${queries[i]}"`,
+    );
 
-    const candidate = await fetchLyrics(queries[i], rawAuthor, trackTitle, trackAuthor);
+    const candidate = await fetchLyrics(
+      queries[i],
+      rawAuthor,
+      trackTitle,
+      trackAuthor,
+    );
 
     if (candidate) {
       const preview = buildFullLyrics(candidate);
       if (preview?.trim()) {
-        firstData    = candidate;
-        usedQuery    = queries[i];
+        firstData = candidate;
+        usedQuery = queries[i];
         strategyUsed = i + 1;
-        console.warn(`[lyrics] ✅ Hit on strategy ${strategyUsed} (${labels[i]}) | len=${preview.length}`);
+        console.warn(
+          `[lyrics] ✅ Hit on strategy ${strategyUsed} (${labels[i]}) | len=${preview.length}`,
+        );
         break;
       }
-      console.warn(`[lyrics] ⚠️  Data found but lyrics empty on strategy ${i + 1} (${labels[i]}) — continuing...`);
+      console.warn(
+        `[lyrics] ⚠️  Data found but lyrics empty on strategy ${i + 1} (${labels[i]}) — continuing...`,
+      );
     } else {
       console.warn(`[lyrics] ❌ Miss on strategy ${i + 1} (${labels[i]})`);
     }
   }
 
   if (!firstData) {
-    console.warn(`[lyrics] All ${queries.length} strategies exhausted — no lyrics found.`);
+    console.warn(
+      `[lyrics] All ${queries.length} strategies exhausted — no lyrics found.`,
+    );
     return { error: "🔹 No lyrics found for this track." };
   }
 
-  const allLyricPages = await fetchAllPages(usedQuery, rawAuthor, firstData, trackTitle, trackAuthor);
+  const allLyricPages = await fetchAllPages(
+    usedQuery,
+    rawAuthor,
+    firstData,
+    trackTitle,
+    trackAuthor,
+  );
 
   const lyricsData = {
     ...firstData,
@@ -291,7 +366,7 @@ async function searchLyrics(track, color) {
   const fullLyrics = buildFullLyrics(lyricsData);
   console.warn(
     `[lyrics] source=${lyricsData.source} | is_jp=${lyricsData.is_japanese}` +
-    ` | artist="${lyricsData.artist}" | len=${fullLyrics.length} | strategy=${strategyUsed}`,
+      ` | artist="${lyricsData.artist}" | len=${fullLyrics.length} | strategy=${strategyUsed}`,
   );
 
   if (!fullLyrics?.trim()) {
@@ -300,7 +375,7 @@ async function searchLyrics(track, color) {
 
   // Build embed
   const flag = lyricsData.is_japanese ? "🇯🇵 " : "";
-  const src  = sourceLabel(lyricsData.source ?? "");
+  const src = sourceLabel(lyricsData.source ?? "");
 
   const footerParts = [
     `${flag}${lyricsData.artist}`,

@@ -18,10 +18,8 @@ let processing = false;
 async function sendErrorWebhook(title, error, extra = {}) {
   if (!WEBHOOK_URL) return; // Webhook not configured — silently skip
 
-  const errorMessage =
-    error instanceof Error ? error.message : String(error);
-  const errorStack =
-    error instanceof Error ? error.stack : null;
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : null;
 
   const embed = {
     title: `❌ ${title}`.slice(0, 256),

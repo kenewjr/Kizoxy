@@ -9,11 +9,11 @@ module.exports = async (client, interaction) => {
 
   // ----- 1) Handle button + all select menu interactions -----
   const isAnySelectOrButton =
-    (interaction.isButton?.()) ||
-    (interaction.isStringSelectMenu?.()) ||
-    (interaction.isChannelSelectMenu?.()) ||
-    (interaction.isUserSelectMenu?.()) ||
-    (interaction.isRoleSelectMenu?.());
+    interaction.isButton?.() ||
+    interaction.isStringSelectMenu?.() ||
+    interaction.isChannelSelectMenu?.() ||
+    interaction.isUserSelectMenu?.() ||
+    interaction.isRoleSelectMenu?.();
 
   if (isAnySelectOrButton) {
     logger.debug(

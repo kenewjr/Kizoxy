@@ -54,8 +54,8 @@ client.manager = new Kazagumo(
   new Connectors.DiscordJS(client),
   Nodes,
   {
-    reconnectTries: Infinity,   // terus mencoba selamanya
-    reconnectInterval: 15,       // jeda 5 detik antar percobaan
+    reconnectTries: Infinity, // terus mencoba selamanya
+    reconnectInterval: 15, // jeda 5 detik antar percobaan
   },
 );
 
@@ -83,7 +83,10 @@ process.on("uncaughtException", (error) => {
 // Global: unhandled promise rejections
 process.on("unhandledRejection", (reason, _promise) => {
   console.error("[FATAL] Unhandled Rejection:", reason);
-  sendErrorWebhook("Unhandled Rejection", reason instanceof Error ? reason : new Error(String(reason)));
+  sendErrorWebhook(
+    "Unhandled Rejection",
+    reason instanceof Error ? reason : new Error(String(reason)),
+  );
 });
 
 // Discord.js: client error
@@ -107,8 +110,11 @@ client.on("shardError", (error, shardId) => {
 // Kazagumo/Shoukaku: node error
 client.manager.shoukaku.on("error", (name, error) => {
   console.error(`[LAVALINK] Node "${name}" Error:`, error);
-  sendErrorWebhook("Lavalink Node Error", error instanceof Error ? error : new Error(String(error)), { "Node": name });
+  sendErrorWebhook(
+    "Lavalink Node Error",
+    error instanceof Error ? error : new Error(String(error)),
+    { Node: name },
+  );
 });
 
 client.login(client.token);
-

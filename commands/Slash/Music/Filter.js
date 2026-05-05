@@ -34,34 +34,45 @@ module.exports = {
   run: async (client, interaction) => {
     // Get the selected filter type from options
     const subcommand = interaction.options.getString("type");
-    
+
     // Map choice value to filename
     const fileMap = {
-        "reset": "Reset.js",
-        "3d": "3d.js",
-        "bassboost": "BassBoost.js",
-        "doubletime": "DoubleTime.js",
-        "karaoke": "Karaoke.js",
-        "nightcore": "Nightcore.js",
-        "slowmotion": "SlowMotion.js",
-        "vibrato": "Vibrato.js"
+      reset: "Reset.js",
+      "3d": "3d.js",
+      bassboost: "BassBoost.js",
+      doubletime: "DoubleTime.js",
+      karaoke: "Karaoke.js",
+      nightcore: "Nightcore.js",
+      slowmotion: "SlowMotion.js",
+      vibrato: "Vibrato.js",
     };
 
     const fileName = fileMap[subcommand];
-    if (!fileName) return interaction.reply({ content: "❌ Unknown filter type.", ephemeral: true });
+    if (!fileName)
+      return interaction.reply({
+        content: "❌ Unknown filter type.",
+        ephemeral: true,
+      });
 
     try {
-        const cmd = require(path.join(__dirname, "../../../modules/Filter", fileName));
-        // Execute the command logic
-        await cmd.run(client, interaction);
+      const cmd = require(
+        path.join(__dirname, "../../../modules/Filter", fileName),
+      );
+      // Execute the command logic
+      await cmd.run(client, interaction);
     } catch (error) {
-        console.error(`Error loading/executing filter ${subcommand}:`, error);
-        // Reply only if not already replied
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: "❌ Failed to execute filter.", ephemeral: true });
-        } else {
-             await interaction.editReply({ content: "❌ Failed to execute filter." });
-        }
+      console.error(`Error loading/executing filter ${subcommand}:`, error);
+      // Reply only if not already replied
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: "❌ Failed to execute filter.",
+          ephemeral: true,
+        });
+      } else {
+        await interaction.editReply({
+          content: "❌ Failed to execute filter.",
+        });
+      }
     }
   },
 };

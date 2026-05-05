@@ -1,4 +1,8 @@
-const { ApplicationCommandOptionType, EmbedBuilder, PermissionsBitField } = require("discord.js");
+const {
+  ApplicationCommandOptionType,
+  EmbedBuilder,
+  PermissionsBitField,
+} = require("discord.js");
 
 module.exports = {
   name: ["setlog"],

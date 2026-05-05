@@ -1,7 +1,10 @@
 // buttons/lyrics.js
 // Button handler for lyrics — delegates to shared lyricsService
 
-const { searchLyrics, validatePlayerForLyrics } = require("../services/lyrics/lyricsService");
+const {
+  searchLyrics,
+  validatePlayerForLyrics,
+} = require("../services/lyrics/lyricsService");
 
 async function safeReply(interaction, payload) {
   try {

@@ -26,12 +26,16 @@ async function getAnonymousToken() {
     const data = await res.json();
     cachedToken = data.accessToken;
     // Renew 60 seconds before actual expiry
-    tokenExpiry = Date.now() + (data.accessTokenExpirationTimestampMs - Date.now()) - 60000;
+    tokenExpiry =
+      Date.now() + (data.accessTokenExpirationTimestampMs - Date.now()) - 60000;
 
     console.warn("[SPOTIFY-RESOLVER] Anonymous token refreshed successfully");
     return cachedToken;
   } catch (err) {
-    console.error("[SPOTIFY-RESOLVER] Failed to get anonymous token:", err.message);
+    console.error(
+      "[SPOTIFY-RESOLVER] Failed to get anonymous token:",
+      err.message,
+    );
     return null;
   }
 }
@@ -46,7 +50,7 @@ async function spotifyFetch(url, retries = 3) {
   if (banUntil > Date.now()) {
     const remainMin = Math.ceil((banUntil - Date.now()) / 60000);
     throw new Error(
-      `Spotify masih di-ban. Coba lagi dalam ~${remainMin} menit. (Tidak ada request yang dikirim ke Spotify)`
+      `Spotify masih di-ban. Coba lagi dalam ~${remainMin} menit. (Tidak ada request yang dikirim ke Spotify)`,
     );
   }
 
@@ -66,14 +70,18 @@ async function spotifyFetch(url, retries = 3) {
         // Save ban timestamp so we don't make any more requests
         banUntil = Date.now() + retryAfter * 1000;
         const hours = Math.round(retryAfter / 3600);
-        console.warn(`[SPOTIFY-RESOLVER] Spotify ban detected: ${hours}h. All requests blocked until ban expires.`);
+        console.warn(
+          `[SPOTIFY-RESOLVER] Spotify ban detected: ${hours}h. All requests blocked until ban expires.`,
+        );
         throw new Error(
-          `Spotify rate limit: banned for ${hours}h. Semua request di-block sampai ban selesai.`
+          `Spotify rate limit: banned for ${hours}h. Semua request di-block sampai ban selesai.`,
         );
       }
 
       const waitMs = Math.min(retryAfter + 1, 30) * 1000; // cap at 30s
-      console.warn(`[SPOTIFY-RESOLVER] Rate limited (429). Waiting ${Math.min(retryAfter + 1, 30)}s before retry ${attempt + 1}/${retries}...`);
+      console.warn(
+        `[SPOTIFY-RESOLVER] Rate limited (429). Waiting ${Math.min(retryAfter + 1, 30)}s before retry ${attempt + 1}/${retries}...`,
+      );
       await new Promise((r) => setTimeout(r, waitMs));
       continue;
     }
@@ -94,7 +102,7 @@ async function spotifyFetch(url, retries = 3) {
  */
 function extractPlaylistId(url) {
   const match = url.match(
-    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/,
   );
   return match ? match[1] : null;
 }
@@ -103,7 +111,9 @@ function extractPlaylistId(url) {
  * Check if a URL is a Spotify playlist URL.
  */
 function isSpotifyPlaylist(query) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(query);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(
+    query,
+  );
 }
 
 /**
@@ -112,11 +122,15 @@ function isSpotifyPlaylist(query) {
  */
 async function getPlaylistTracks(playlistId) {
   // Get playlist metadata
-  const playlist = await spotifyFetch(`${SPOTIFY_API}/playlists/${playlistId}?fields=name,tracks.total`);
+  const playlist = await spotifyFetch(
+    `${SPOTIFY_API}/playlists/${playlistId}?fields=name,tracks.total`,
+  );
   const playlistName = playlist.name;
   const totalTracks = playlist.tracks.total;
 
-  console.warn(`[SPOTIFY-RESOLVER] Loading playlist "${playlistName}" (${totalTracks} tracks)`);
+  console.warn(
+    `[SPOTIFY-RESOLVER] Loading playlist "${playlistName}" (${totalTracks} tracks)`,
+  );
 
   const tracks = [];
   let offset = 0;
@@ -138,7 +152,9 @@ async function getPlaylistTracks(playlistId) {
         author: track.artists?.[0]?.name || "Unknown",
         duration: track.duration_ms || 0,
         identifier: track.id,
-        uri: track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
+        uri:
+          track.external_urls?.spotify ||
+          `https://open.spotify.com/track/${track.id}`,
         artworkUrl: track.album?.images?.[0]?.url || null,
         isrc: track.external_ids?.isrc || null,
       });
@@ -147,10 +163,14 @@ async function getPlaylistTracks(playlistId) {
     offset += PAGE_SIZE;
     pages++;
 
-    console.warn(`[SPOTIFY-RESOLVER] Loaded page ${pages}: ${tracks.length}/${totalTracks} tracks`);
+    console.warn(
+      `[SPOTIFY-RESOLVER] Loaded page ${pages}: ${tracks.length}/${totalTracks} tracks`,
+    );
   }
 
-  console.warn(`[SPOTIFY-RESOLVER] Finished loading "${playlistName}": ${tracks.length} tracks total`);
+  console.warn(
+    `[SPOTIFY-RESOLVER] Finished loading "${playlistName}": ${tracks.length} tracks total`,
+  );
 
   return { name: playlistName, tracks };
 }
@@ -159,7 +179,9 @@ async function getPlaylistTracks(playlistId) {
  * Check if a URL is a Spotify single track URL.
  */
 function isSpotifyTrack(query) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(query);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(
+    query,
+  );
 }
 
 /**

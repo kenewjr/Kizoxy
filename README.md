@@ -130,34 +130,34 @@ node deploySlash.js global --clear-all
 
 ### ⏺ Filter Commands
 
-| Command            | Description                                  |
-| :----------------- | :------------------------------------------- |
-| `/filter [type]`   | Apply an audio filter (e.g., bassboost).     |
+| Command          | Description                              |
+| :--------------- | :--------------------------------------- |
+| `/filter [type]` | Apply an audio filter (e.g., bassboost). |
 
-*(Available filters: `reset`, `3d`, `bassboost`, `doubletime`, `karaoke`, `nightcore`, `slowmotion`, `vibrato`)*
+_(Available filters: `reset`, `3d`, `bassboost`, `doubletime`, `karaoke`, `nightcore`, `slowmotion`, `vibrato`)_
 
 ### 🏆 Level System
 
-| Command              | Description                                |
-| :------------------- | :----------------------------------------- |
-| `/rank [user]`       | View your current level and XP.            |
-| `/leaderboard`       | View the server leaderboard.               |
-| `/addxp [user] [xp]` | Add XP to a user (Admin).                  |
+| Command              | Description                     |
+| :------------------- | :------------------------------ |
+| `/rank [user]`       | View your current level and XP. |
+| `/leaderboard`       | View the server leaderboard.    |
+| `/addxp [user] [xp]` | Add XP to a user (Admin).       |
 
 ### ⚙️ Settings Commands
 
-| Command              | Description                                |
-| :------------------- | :----------------------------------------- |
-| `/fixembed`          | Configure the social media embed fixer.    |
-| `/setlog [channel]`  | Sets the server log channel for events.    |
+| Command             | Description                             |
+| :------------------ | :-------------------------------------- |
+| `/fixembed`         | Configure the social media embed fixer. |
+| `/setlog [channel]` | Sets the server log channel for events. |
 
 ### 📑 Misc Commands
 
-| Command         | Description                 |
-| :-------------- | :-------------------------- |
-| `/help`         | Show help menu.             |
-| `/alarm [sub]`  | Manage your alarms.         |
-| `/anime`        | Anime schedule and options. |
+| Command        | Description                 |
+| :------------- | :-------------------------- |
+| `/help`        | Show help menu.             |
+| `/alarm [sub]` | Manage your alarms.         |
+| `/anime`       | Anime schedule and options. |
 
 </details>
 

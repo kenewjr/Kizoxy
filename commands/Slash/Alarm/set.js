@@ -1,6 +1,12 @@
 const { ApplicationCommandOptionType } = require("discord.js");
-const { createAlarm, validateTime, checkChannelPermissions } = require("../../../services/alarm/alarmService");
-const { buildAlarmSetEmbed } = require("../../../services/alarm/alarmFormatter");
+const {
+  createAlarm,
+  validateTime,
+  checkChannelPermissions,
+} = require("../../../services/alarm/alarmService");
+const {
+  buildAlarmSetEmbed,
+} = require("../../../services/alarm/alarmFormatter");
 
 module.exports = {
   name: ["alarm", "set"],
@@ -33,7 +39,8 @@ module.exports = {
     },
     {
       name: "tanggal",
-      description: "Tanggal alarm (Format: DD/MM/YYYY, kosongkan untuk hari ini)",
+      description:
+        "Tanggal alarm (Format: DD/MM/YYYY, kosongkan untuk hari ini)",
       type: ApplicationCommandOptionType.String,
       required: false,
     },
@@ -105,7 +112,9 @@ module.exports = {
       }
     } catch (error) {
       console.error("Error setting alarm:", error);
-      await interaction.editReply("❌ Terjadi error saat menyetel alarm. Silakan coba lagi.");
+      await interaction.editReply(
+        "❌ Terjadi error saat menyetel alarm. Silakan coba lagi.",
+      );
     }
   },
 };

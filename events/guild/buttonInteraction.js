@@ -10,7 +10,7 @@ module.exports = async (client, interaction) => {
     const isSelect =
       interaction.isStringSelectMenu?.() ||
       interaction.isChannelSelectMenu?.() ||
-      interaction.isUserSelectMenu?.()    ||
+      interaction.isUserSelectMenu?.() ||
       interaction.isRoleSelectMenu?.();
     if (!isButton && !isSelect) return;
 
@@ -20,11 +20,15 @@ module.exports = async (client, interaction) => {
 
     // Ignore buttons that are handled by specific command collectors
     const COLLECTOR_BUTTONS = [
-      "refresh_alarms", "cancel_alarms",
-      "refresh_admin_alarms", "cancel_admin_alarms",
+      "refresh_alarms",
+      "cancel_alarms",
+      "refresh_admin_alarms",
+      "cancel_admin_alarms",
     ];
     if (COLLECTOR_BUTTONS.includes(interaction.customId)) {
-      logger.debug(`Ignoring collector-handled button: ${interaction.customId}`);
+      logger.debug(
+        `Ignoring collector-handled button: ${interaction.customId}`,
+      );
       return;
     }
 
@@ -53,13 +57,18 @@ module.exports = async (client, interaction) => {
       const prefix = interaction.customId.split(":")[0];
       // fxs + alarm: update the existing message in-place
       // everything else (including fixembed_delete) gets its own ephemeral reply
-      const useDeferUpdate = prefix === "fxs" || interaction.customId.startsWith("alarm_");
+      const useDeferUpdate =
+        prefix === "fxs" || interaction.customId.startsWith("alarm_");
 
       if (useDeferUpdate) {
-        logger.debug(`Deferring update (in-place) for: ${interaction.customId}`);
+        logger.debug(
+          `Deferring update (in-place) for: ${interaction.customId}`,
+        );
         await interaction.deferUpdate();
       } else {
-        logger.debug(`Deferring new ephemeral reply for: ${interaction.customId}`);
+        logger.debug(
+          `Deferring new ephemeral reply for: ${interaction.customId}`,
+        );
         await interaction.deferReply({ ephemeral: true });
       }
 

@@ -110,10 +110,22 @@ function buildAlarmEditEmbed(alarm, editedBy) {
     .setColor(0x00ff00)
     .addFields(
       { name: "Nama Alarm", value: alarm.name || alarm.message, inline: true },
-      { name: "Tanggal", value: formatAlarmDate(alarm.time).split(" ")[0], inline: true },
-      { name: "Waktu", value: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`, inline: true },
+      {
+        name: "Tanggal",
+        value: formatAlarmDate(alarm.time).split(" ")[0],
+        inline: true,
+      },
+      {
+        name: "Waktu",
+        value: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+        inline: true,
+      },
       { name: "Channel", value: `<#${alarm.channelId}>`, inline: true },
-      { name: "Role", value: alarm.roleId ? `<@&${alarm.roleId}>` : "Tidak ada", inline: true },
+      {
+        name: "Role",
+        value: alarm.roleId ? `<@&${alarm.roleId}>` : "Tidak ada",
+        inline: true,
+      },
       { name: "Jenis", value: recurringLabel(alarm.recurring), inline: true },
       { name: "ID", value: alarm.id, inline: true },
     )
@@ -134,15 +146,25 @@ function buildAlarmDetailEmbed(alarm) {
       { name: "ID", value: `\`${alarm.id}\``, inline: false },
       { name: "Waktu", value: formatAlarmDate(alarm.time), inline: true },
       { name: "Channel", value: `<#${alarm.channelId}>`, inline: true },
-      { name: "Role", value: alarm.roleId ? `<@&${alarm.roleId}>` : "Tidak ada", inline: true },
+      {
+        name: "Role",
+        value: alarm.roleId ? `<@&${alarm.roleId}>` : "Tidak ada",
+        inline: true,
+      },
       { name: "Jenis", value: recurringLabel(alarm.recurring), inline: true },
-      { name: "Countdown", value: `<t:${Math.floor(d.getTime() / 1000)}:R>`, inline: true },
+      {
+        name: "Countdown",
+        value: `<t:${Math.floor(d.getTime() / 1000)}:R>`,
+        inline: true,
+      },
     )
     .setDescription(
       "Gunakan command berikut untuk mengedit:\n" +
         `\`/alarm edit id_alarm:${alarm.id}\` + parameter yang ingin diubah`,
     )
-    .setFooter({ text: "Parameter: waktu, nama_alarm, tanggal, role, channel, recurring" });
+    .setFooter({
+      text: "Parameter: waktu, nama_alarm, tanggal, role, channel, recurring",
+    });
 }
 
 // ══════════════════════════════════════════════════════════
@@ -152,11 +174,34 @@ function buildAlarmDetailEmbed(alarm) {
 /** Main alarm panel buttons: Refresh, Batalkan, Edit, On/Off, Tutup */
 function buildAlarmButtons(hasAlarms) {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("alarm_refresh").setLabel("Refresh").setEmoji("🔄").setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId("alarm_cancel_select").setLabel("Batalkan").setEmoji("🗑️").setStyle(ButtonStyle.Danger).setDisabled(!hasAlarms),
-    new ButtonBuilder().setCustomId("alarm_edit_select").setLabel("Edit").setEmoji("✏️").setStyle(ButtonStyle.Secondary).setDisabled(!hasAlarms),
-    new ButtonBuilder().setCustomId("alarm_toggle_select").setLabel("On/Off").setEmoji("⏯️").setStyle(ButtonStyle.Secondary).setDisabled(!hasAlarms),
-    new ButtonBuilder().setCustomId("alarm_close").setLabel("Tutup").setEmoji("❌").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("alarm_refresh")
+      .setLabel("Refresh")
+      .setEmoji("🔄")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("alarm_cancel_select")
+      .setLabel("Batalkan")
+      .setEmoji("🗑️")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!hasAlarms),
+    new ButtonBuilder()
+      .setCustomId("alarm_edit_select")
+      .setLabel("Edit")
+      .setEmoji("✏️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!hasAlarms),
+    new ButtonBuilder()
+      .setCustomId("alarm_toggle_select")
+      .setLabel("On/Off")
+      .setEmoji("⏯️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!hasAlarms),
+    new ButtonBuilder()
+      .setCustomId("alarm_close")
+      .setLabel("Tutup")
+      .setEmoji("❌")
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 
@@ -180,7 +225,11 @@ function buildAlarmToggleSelect(alarms) {
     const isEnabled = alarm.enabled !== false;
     return {
       label: `${i + 1}. ${alarm.message}`.slice(0, 100),
-      description: `${isEnabled ? "✅ Aktif" : "⏸️ Non-aktif"} • ${formatAlarmDate(alarm.time)}`.slice(0, 100),
+      description:
+        `${isEnabled ? "✅ Aktif" : "⏸️ Non-aktif"} • ${formatAlarmDate(alarm.time)}`.slice(
+          0,
+          100,
+        ),
       value: alarm.id,
     };
   });
@@ -194,15 +243,24 @@ function buildAlarmToggleSelect(alarms) {
 /** Single "⬅️ Kembali" button row */
 function buildBackButton() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("alarm_refresh").setLabel("⬅️ Kembali").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("alarm_refresh")
+      .setLabel("⬅️ Kembali")
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 
 /** Detail view buttons: Kembali ke Daftar + Tutup */
 function buildDetailButtons() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("alarm_refresh").setLabel("⬅️ Kembali ke Daftar").setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId("alarm_close").setLabel("❌ Tutup").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("alarm_refresh")
+      .setLabel("⬅️ Kembali ke Daftar")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("alarm_close")
+      .setLabel("❌ Tutup")
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 

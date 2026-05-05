@@ -29,7 +29,10 @@ function validateTime(waktu) {
 function parseDate(tanggal) {
   const match = tanggal.match(TANGGAL_REGEX);
   if (!match) {
-    return { error: "❌ Format tanggal tidak valid! Gunakan format DD/MM/YYYY atau DD/MM" };
+    return {
+      error:
+        "❌ Format tanggal tidak valid! Gunakan format DD/MM/YYYY atau DD/MM",
+    };
   }
 
   let day = parseInt(match[1]);
@@ -59,26 +62,48 @@ function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
   if (tanggal) {
     const parsed = parseDate(tanggal);
     if (parsed.error) return parsed;
-    alarmDate = new Date(parsed.year, parsed.month - 1, parsed.day, hours, minutes);
+    alarmDate = new Date(
+      parsed.year,
+      parsed.month - 1,
+      parsed.day,
+      hours,
+      minutes,
+    );
 
     // Validate calendar date (e.g. no Feb 31)
-    if (alarmDate.getMonth() !== parsed.month - 1 || alarmDate.getDate() !== parsed.day) {
-      return { error: "❌ Tanggal tidak valid! Pastikan tanggal sesuai dengan kalender." };
+    if (
+      alarmDate.getMonth() !== parsed.month - 1 ||
+      alarmDate.getDate() !== parsed.day
+    ) {
+      return {
+        error:
+          "❌ Tanggal tidak valid! Pastikan tanggal sesuai dengan kalender.",
+      };
     }
   } else {
-    alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+    alarmDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      hours,
+      minutes,
+    );
   }
 
   // For recurring alarms with past time, advance to next occurrence
   if (alarmDate <= now && recurring !== "none") {
     if (recurring === "daily") alarmDate.setDate(alarmDate.getDate() + 1);
     else if (recurring === "weekly") alarmDate.setDate(alarmDate.getDate() + 7);
-    else if (recurring === "monthly") alarmDate.setMonth(alarmDate.getMonth() + 1);
+    else if (recurring === "monthly")
+      alarmDate.setMonth(alarmDate.getMonth() + 1);
   }
 
   // Non-recurring alarms can't be in the past
   if (alarmDate <= now && recurring === "none") {
-    return { error: "❌ Waktu alarm tidak boleh di masa lalu untuk alarm tidak berulang!" };
+    return {
+      error:
+        "❌ Waktu alarm tidak boleh di masa lalu untuk alarm tidak berulang!",
+    };
   }
 
   return { alarmDate };
@@ -110,7 +135,19 @@ function checkChannelPermissions(channel, guild) {
  * Create a new alarm.
  * @returns {{ alarm, alarmDate }|{ error: string }}
  */
-async function createAlarm(scheduler, { guildId, channelId, roleId, userId, message, waktu, tanggal, recurring = "none" }) {
+async function createAlarm(
+  scheduler,
+  {
+    guildId,
+    channelId,
+    roleId,
+    userId,
+    message,
+    waktu,
+    tanggal,
+    recurring = "none",
+  },
+) {
   const dateResult = buildAlarmDate({ waktu, tanggal, recurring });
   if (dateResult.error) return dateResult;
 

@@ -9,8 +9,8 @@ const DEFAULT_SETTINGS = {
   ignoredUsers: [],
   ignoredRoles: [],
   ignoredKeywords: [],
-  baseMessageAction: 'remove_embed', // 'nothing' | 'remove_embed' | 'delete_message'
-  viewMode: 'normal',               // 'normal' | 'direct' | 'gallery' | 'text'
+  baseMessageAction: "remove_embed", // 'nothing' | 'remove_embed' | 'delete_message'
+  viewMode: "normal", // 'normal' | 'direct' | 'gallery' | 'text'
 };
 
 class FixEmbedStorage {
@@ -111,13 +111,13 @@ class FixEmbedStorage {
   }
 
   setBaseMessageAction(guildId, action) {
-    const valid = ['nothing', 'remove_embed', 'delete_message'];
+    const valid = ["nothing", "remove_embed", "delete_message"];
     if (!valid.includes(action)) throw new Error(`Invalid action: ${action}`);
     this.saveSettings(guildId, { baseMessageAction: action });
   }
 
   setViewMode(guildId, mode) {
-    const valid = ['normal', 'direct', 'gallery', 'text'];
+    const valid = ["normal", "direct", "gallery", "text"];
     if (!valid.includes(mode)) throw new Error(`Invalid view mode: ${mode}`);
     this.saveSettings(guildId, { viewMode: mode });
   }

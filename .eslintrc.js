@@ -17,8 +17,5 @@ module.exports = {
     "no-constant-condition": ["error", { checkLoops: false }],
     "no-prototype-builtins": "off",
   },
-  ignorePatterns: [
-    "node_modules/",
-    "data/",
-  ],
+  ignorePatterns: ["node_modules/", "data/"],
 };

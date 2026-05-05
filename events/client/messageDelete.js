@@ -18,9 +18,12 @@ module.exports = async (client, message) => {
     .setTitle("Message Deleted")
     .setDescription(`A message was deleted in ${message.channel}.`)
     .addFields(
-      { name: "Content", value: message.content ? message.content : "`No text content`" },
+      {
+        name: "Content",
+        value: message.content ? message.content : "`No text content`",
+      },
       { name: "Message ID", value: message.id, inline: true },
-      { name: "Author ID", value: message.author.id, inline: true }
+      { name: "Author ID", value: message.author.id, inline: true },
     )
     .setColor("Red")
     .setTimestamp();

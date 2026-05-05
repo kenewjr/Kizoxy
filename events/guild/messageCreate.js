@@ -1,4 +1,10 @@
-const { EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const {
+  EmbedBuilder,
+  PermissionsBitField,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const LevelStorage = require("../../utils/levelStorage");
 const fixembedStorage = require("../../utils/fixembedStorage");
 const { extractFixedLinks } = require("../../utils/fixembedResolver");
@@ -110,16 +116,27 @@ module.exports = async (client, message) => {
   if (message.content.toLowerCase().includes("fxignore")) return;
 
   // Skip if disabled for this guild/channel/member
-  if (!fixembedStorage.isEnabled(message.guild.id, message.channel.id, message.member)) return;
+  if (
+    !fixembedStorage.isEnabled(
+      message.guild.id,
+      message.channel.id,
+      message.member,
+    )
+  )
+    return;
 
   // Skip if message contains an ignored keyword
-  if (fixembedStorage.hasIgnoredKeyword(message.guild.id, message.content)) return;
+  if (fixembedStorage.hasIgnoredKeyword(message.guild.id, message.content))
+    return;
 
   // Get guild settings
   const fxSettings = fixembedStorage.getSettings(message.guild.id);
 
   // Extract fixed links (pass viewMode so subdomains are adjusted)
-  const fixedLinks = await extractFixedLinks(message.content, fxSettings.viewMode);
+  const fixedLinks = await extractFixedLinks(
+    message.content,
+    fxSettings.viewMode,
+  );
   if (fixedLinks.length === 0) return;
 
   // Filter to only links that were actually changed
@@ -128,11 +145,11 @@ module.exports = async (client, message) => {
   // ── Apply base message action ──────────────────────────────────────────
   const action = fxSettings.baseMessageAction;
 
-  if (action === 'nothing' && changed.length === 0) return;
+  if (action === "nothing" && changed.length === 0) return;
 
-  if (action === 'remove_embed' || action === 'delete_message') {
+  if (action === "remove_embed" || action === "delete_message") {
     try {
-      if (action === 'delete_message') {
+      if (action === "delete_message") {
         await message.delete();
       } else {
         await message.suppressEmbeds(true);
@@ -176,7 +193,7 @@ module.exports = async (client, message) => {
 
     // When the original message was deleted we can no longer reply to it
     // (Discord returns MESSAGE_REFERENCE_UNKNOWN_MESSAGE) — use channel.send instead
-    if (action === 'delete_message') {
+    if (action === "delete_message") {
       await message.channel.send({
         content: `-# ${message.author} •\n${replyContent}`,
         allowedMentions: { users: [] },
@@ -193,4 +210,3 @@ module.exports = async (client, message) => {
     console.error("[FixEmbed] Failed to send fixed link reply:", err);
   }
 };
-
