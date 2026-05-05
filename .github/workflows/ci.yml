@@ -49,3 +49,6 @@ jobs:
 
       - name: Validate deploy script
         run: node --check deploySlash.js
+
+      - name: Validate commands
+        run: find commands -type f -name "*.js" -exec node --check {} \;
