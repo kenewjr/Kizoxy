@@ -19,10 +19,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Run Prettier check
+        run: npx prettier --check .
 
       - name: Run ESLint
         run: npm run lint
@@ -40,15 +43,17 @@ jobs:
         with:
           node-version: "20"
 
-
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Validate main entry point
-        run: node --check index.js
+      - name: Validate all JavaScript syntax
+        run: find . -type f -name "*.js" ! -path "*/node_modules/*" -exec node --check {} \;
 
-      - name: Validate deploy script
-        run: node --check deploySlash.js
+      - name: Validate Module Structures
+        run: npm run validate:modules
 
-      - name: Validate commands
-        run: find commands -type f -name "*.js" -exec node --check {} \;
+      - name: Validate ENV Structure
+        run: npm run validate:env
+
+      - name: Run Unit Tests (Jest)
+        run: npm run test

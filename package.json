@@ -8,17 +8,17 @@
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.1",
     "kazagumo": "^3.4.3",
-    "kazagumo-spotify": "^2.1.1", 
+    "kazagumo-spotify": "^2.1.1",
     "multer": "^2.0.2",
     "node-schedule": "^2.1.1",
+    "pg": "^8.13.0",
     "plsargs": "^0.1.6",
+    "prom-client": "^15.1.0",
     "recursive-readdir": "^2.2.3",
     "sharp": "^0.34.3",
     "shoukaku": "^4.3.0",
     "stuffs": "^0.1.43",
-    "uuid": "^12.0.0",
-    "pg": "^8.13.0",
-    "prom-client": "^15.1.0"
+    "uuid": "^12.0.0"
   },
   "name": "kizoxy",
   "description": "✈ Join Discord: https://discord.gg/qeemvqq 👌",
@@ -32,7 +32,10 @@
     "logs:pm2": "pm2 logs kizoxy",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write . "
+    "format": "prettier --write .",
+    "test": "jest .github/tests/",
+    "validate:modules": "node .github/scripts/validateModules.js",
+    "validate:env": "node .github/scripts/validateEnv.js"
   },
   "repository": {
     "type": "git",
@@ -46,6 +49,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "eslint": "^8.57.0",
+    "jest": "^30.3.0",
     "prettier": "3.6.2"
   }
 }
