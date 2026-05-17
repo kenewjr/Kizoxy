@@ -1,61 +1,67 @@
 // utils/spotifyResolver.js
-// Custom Spotify playlist resolver using anonymous token from tokener container
-// Bypasses LavaSrc's 50-track limitation by calling Spotify v1 API with pagination
+// Spotify resolver menggunakan Official Client Credentials Flow
+// Tidak menggunakan anonymous token — tidak akan kena IP ban dari Spotify
 
-const TOKENER_URL = "http://127.0.0.1:8080/api/token";
+require("dotenv").config();
+
 const SPOTIFY_API = "https://api.spotify.com/v1";
+const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const PAGE_SIZE = 100; // Spotify max per page
 const MAX_PAGES = 100; // Safety limit: 100 pages × 100 tracks = 10,000 max
 
 let cachedToken = null;
 let tokenExpiry = 0;
-let banUntil = 0; // Timestamp when the ban expires — no API calls until then
 
 /**
- * Get an anonymous access token from the spotify-tokener container.
+ * Ambil access token menggunakan Client Credentials Flow (official Spotify API).
+ * Token berlaku 1 jam. Di-cache secara in-memory dan diperbarui otomatis.
  */
-async function getAnonymousToken() {
+async function getClientCredentialsToken() {
   if (cachedToken && Date.now() < tokenExpiry) {
     return cachedToken;
   }
 
-  try {
-    const res = await fetch(TOKENER_URL);
-    if (!res.ok) throw new Error(`Tokener returned ${res.status}`);
+  const clientId = process.env.spotifyClientID?.trim();
+  const clientSecret = process.env.spotifySecret?.trim();
 
-    const data = await res.json();
-    cachedToken = data.accessToken;
-    // Renew 60 seconds before actual expiry
-    tokenExpiry =
-      Date.now() + (data.accessTokenExpirationTimestampMs - Date.now()) - 60000;
-
-    console.warn("[SPOTIFY-RESOLVER] Anonymous token refreshed successfully");
-    return cachedToken;
-  } catch (err) {
-    console.error(
-      "[SPOTIFY-RESOLVER] Failed to get anonymous token:",
-      err.message,
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "spotifyClientID atau spotifySecret tidak ada di .env. Tambahkan keduanya untuk menggunakan Spotify API."
     );
-    return null;
   }
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+
+  const res = await fetch(SPOTIFY_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Spotify token request failed (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  cachedToken = data.access_token;
+  // Renew 60 detik sebelum expired (biasanya 3600 detik)
+  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+
+  console.warn("[SPOTIFY-RESOLVER] Client Credentials token refreshed successfully");
+  return cachedToken;
 }
 
 /**
- * Fetch a Spotify API endpoint using the anonymous token.
- * Automatically retries on 429 (rate limit) with backoff, up to 30s max wait.
- * Blocks all requests locally while an active ban is in effect.
+ * Fetch Spotify API endpoint menggunakan official token.
+ * Retry otomatis pada 429 (rate limit) — max 30s wait per retry.
  */
 async function spotifyFetch(url, retries = 3) {
-  // Check if we're still in a ban period — don't make ANY request to Spotify
-  if (banUntil > Date.now()) {
-    const remainMin = Math.ceil((banUntil - Date.now()) / 60000);
-    throw new Error(
-      `Spotify masih di-ban. Coba lagi dalam ~${remainMin} menit. (Tidak ada request yang dikirim ke Spotify)`,
-    );
-  }
-
-  const token = await getAnonymousToken();
-  if (!token) throw new Error("No anonymous token available");
+  const token = await getClientCredentialsToken();
+  if (!token) throw new Error("Gagal mendapatkan Spotify access token");
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const res = await fetch(url, {
@@ -64,72 +70,107 @@ async function spotifyFetch(url, retries = 3) {
 
     if (res.status === 429) {
       const retryAfter = parseInt(res.headers.get("retry-after") || "5", 10);
-
-      // If Spotify is asking us to wait more than 60 seconds, it's a temporary IP ban
-      if (retryAfter > 60) {
-        // Save ban timestamp so we don't make any more requests
-        banUntil = Date.now() + retryAfter * 1000;
-        const hours = Math.round(retryAfter / 3600);
-        console.warn(
-          `[SPOTIFY-RESOLVER] Spotify ban detected: ${hours}h. All requests blocked until ban expires.`,
-        );
-        throw new Error(
-          `Spotify rate limit: banned for ${hours}h. Semua request di-block sampai ban selesai.`,
-        );
-      }
-
-      const waitMs = Math.min(retryAfter + 1, 30) * 1000; // cap at 30s
+      const waitSec = Math.min(retryAfter + 1, 30); // cap 30 detik
       console.warn(
-        `[SPOTIFY-RESOLVER] Rate limited (429). Waiting ${Math.min(retryAfter + 1, 30)}s before retry ${attempt + 1}/${retries}...`,
+        `[SPOTIFY-RESOLVER] Rate limited (429). Menunggu ${waitSec}s, retry ${attempt + 1}/${retries}...`
       );
-      await new Promise((r) => setTimeout(r, waitMs));
+      await new Promise((r) => setTimeout(r, waitSec * 1000));
       continue;
     }
 
+    if (res.status === 401) {
+      // Token expired — force refresh lalu retry sekali
+      cachedToken = null;
+      tokenExpiry = 0;
+      if (attempt < retries) {
+        console.warn("[SPOTIFY-RESOLVER] Token expired, refreshing...");
+        continue;
+      }
+    }
+
     if (!res.ok) {
-      throw new Error(`Spotify API returned ${res.status}: ${res.statusText}`);
+      throw new Error(`Spotify API error ${res.status}: ${res.statusText}`);
     }
 
     return res.json();
   }
 
-  throw new Error("Spotify API rate limit exceeded after all retries");
+  throw new Error("Spotify API gagal setelah semua retry");
 }
 
 /**
- * Extract playlist ID from a Spotify URL.
- * Supports: https://open.spotify.com/playlist/ID?si=xxx  and  spotify:playlist:ID
+ * Extract playlist ID dari Spotify URL.
+ * Support: https://open.spotify.com/playlist/ID?si=xxx  dan  spotify:playlist:ID
  */
 function extractPlaylistId(url) {
   const match = url.match(
-    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/,
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/
   );
   return match ? match[1] : null;
 }
 
 /**
- * Check if a URL is a Spotify playlist URL.
+ * Cek apakah query adalah Spotify playlist URL.
  */
 function isSpotifyPlaylist(query) {
   return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(
-    query,
+    query
   );
 }
 
 /**
- * Fetch all tracks from a Spotify playlist with full pagination.
- * Returns { name, tracks: [{ title, author, duration, uri, artworkUrl, isrc }] }
+ * Extract album ID dari Spotify URL.
+ */
+function extractAlbumId(url) {
+  const match = url.match(
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/
+  );
+  return match ? match[1] : null;
+}
+
+/**
+ * Cek apakah query adalah Spotify album URL.
+ */
+function isSpotifyAlbum(query) {
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/.test(
+    query
+  );
+}
+
+/**
+ * Cek apakah query adalah Spotify single track URL.
+ */
+function isSpotifyTrack(query) {
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(
+    query
+  );
+}
+
+/**
+ * Extract track ID dari Spotify URL.
+ */
+function extractTrackId(url) {
+  const match = url.match(
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/
+  );
+  return match ? match[1] : null;
+}
+
+/**
+ * Ambil semua track dari Spotify playlist dengan full pagination.
+ * Menggunakan official Spotify API — tidak kena IP ban.
+ * Returns { name, tracks: [{ title, author, duration, uri, artworkUrl, isrc, identifier }] }
  */
 async function getPlaylistTracks(playlistId) {
-  // Get playlist metadata
+  // Ambil metadata playlist
   const playlist = await spotifyFetch(
-    `${SPOTIFY_API}/playlists/${playlistId}?fields=name,tracks.total`,
+    `${SPOTIFY_API}/playlists/${playlistId}?fields=name,tracks.total`
   );
   const playlistName = playlist.name;
   const totalTracks = playlist.tracks.total;
 
   console.warn(
-    `[SPOTIFY-RESOLVER] Loading playlist "${playlistName}" (${totalTracks} tracks)`,
+    `[SPOTIFY-RESOLVER] Loading playlist "${playlistName}" (${totalTracks} tracks)`
   );
 
   const tracks = [];
@@ -137,15 +178,14 @@ async function getPlaylistTracks(playlistId) {
   let pages = 0;
 
   while (offset < totalTracks && pages < MAX_PAGES) {
-    const url = `${SPOTIFY_API}/playlists/${playlistId}/tracks?limit=${PAGE_SIZE}&offset=${offset}&fields=items(track(name,artists,duration_ms,id,external_urls,album(images),external_ids)),next,total`;
+    const url = `${SPOTIFY_API}/playlists/${playlistId}/tracks?limit=${PAGE_SIZE}&offset=${offset}&fields=items(track(name,artists,duration_ms,id,external_urls,album(images),external_ids,is_local,type)),next,total`;
 
     const page = await spotifyFetch(url);
 
     for (const item of page.items || []) {
-      const track = item.track;
-      if (!track || !track.name || track.type === "episode") continue;
-      // Skip local files
-      if (track.is_local) continue;
+      const track = item?.track;
+      // Skip: null, episode, local file
+      if (!track || !track.name || track.type === "episode" || track.is_local) continue;
 
       tracks.push({
         title: track.name,
@@ -164,29 +204,93 @@ async function getPlaylistTracks(playlistId) {
     pages++;
 
     console.warn(
-      `[SPOTIFY-RESOLVER] Loaded page ${pages}: ${tracks.length}/${totalTracks} tracks`,
+      `[SPOTIFY-RESOLVER] Page ${pages}: ${tracks.length}/${totalTracks} tracks loaded`
     );
   }
 
   console.warn(
-    `[SPOTIFY-RESOLVER] Finished loading "${playlistName}": ${tracks.length} tracks total`,
+    `[SPOTIFY-RESOLVER] Done loading "${playlistName}": ${tracks.length} tracks total`
   );
 
   return { name: playlistName, tracks };
 }
 
 /**
- * Check if a URL is a Spotify single track URL.
+ * Ambil semua track dari Spotify album.
+ * Returns { name, tracks: [...] }
  */
-function isSpotifyTrack(query) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(
-    query,
+async function getAlbumTracks(albumId) {
+  const album = await spotifyFetch(
+    `${SPOTIFY_API}/albums/${albumId}`
   );
+  const albumName = album.name;
+  const artworkUrl = album.images?.[0]?.url || null;
+  const totalTracks = album.tracks?.total || 0;
+
+  console.warn(
+    `[SPOTIFY-RESOLVER] Loading album "${albumName}" (${totalTracks} tracks)`
+  );
+
+  const tracks = [];
+  let offset = 0;
+  let pages = 0;
+
+  while (offset < totalTracks && pages < MAX_PAGES) {
+    const url = `${SPOTIFY_API}/albums/${albumId}/tracks?limit=${PAGE_SIZE}&offset=${offset}`;
+    const page = await spotifyFetch(url);
+
+    for (const track of page.items || []) {
+      if (!track || !track.name) continue;
+      tracks.push({
+        title: track.name,
+        author: track.artists?.[0]?.name || "Unknown",
+        duration: track.duration_ms || 0,
+        identifier: track.id,
+        uri:
+          track.external_urls?.spotify ||
+          `https://open.spotify.com/track/${track.id}`,
+        artworkUrl,
+        isrc: null,
+      });
+    }
+
+    offset += PAGE_SIZE;
+    pages++;
+  }
+
+  console.warn(
+    `[SPOTIFY-RESOLVER] Done loading album "${albumName}": ${tracks.length} tracks total`
+  );
+
+  return { name: albumName, tracks };
 }
 
 /**
- * Get track title from Spotify oEmbed API (free, no auth, not rate-limited).
- * Returns a search string like "Track Name - Artist" suitable for YouTube search.
+ * Ambil info single track dari Spotify API.
+ * Returns search string "Title Artist" untuk YouTube search.
+ */
+async function getTrackInfo(spotifyUrl) {
+  try {
+    const trackId = extractTrackId(spotifyUrl);
+    if (!trackId) return null;
+
+    const track = await spotifyFetch(`${SPOTIFY_API}/tracks/${trackId}`);
+    if (!track || !track.name) return null;
+
+    const artist = track.artists?.[0]?.name || "";
+    const searchQuery = artist ? `${track.name} ${artist}` : track.name;
+
+    console.warn(`[SPOTIFY-RESOLVER] Track resolved: "${searchQuery}"`);
+    return searchQuery;
+  } catch (err) {
+    console.error("[SPOTIFY-RESOLVER] getTrackInfo failed:", err.message);
+    return null;
+  }
+}
+
+/**
+ * Fallback: ambil info track dari Spotify oEmbed (tidak butuh token, tidak rate-limited).
+ * Hanya dipakai jika getTrackInfo gagal.
  */
 async function getTrackInfoFromOEmbed(spotifyUrl) {
   try {
@@ -195,9 +299,7 @@ async function getTrackInfoFromOEmbed(spotifyUrl) {
     if (!res.ok) return null;
 
     const data = await res.json();
-    // oEmbed returns title like "Track Name" and description like "Track · Artist · Album · Year"
     if (data.title) {
-      // Try to extract artist from description (format: "Song · Artist · Album · Year")
       let searchQuery = data.title;
       if (data.description) {
         const parts = data.description.split(" · ");
@@ -217,8 +319,13 @@ async function getTrackInfoFromOEmbed(spotifyUrl) {
 
 module.exports = {
   isSpotifyPlaylist,
+  isSpotifyAlbum,
   isSpotifyTrack,
   extractPlaylistId,
+  extractAlbumId,
+  extractTrackId,
   getPlaylistTracks,
+  getAlbumTracks,
+  getTrackInfo,
   getTrackInfoFromOEmbed,
 };

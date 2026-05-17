@@ -4,7 +4,7 @@ const Logger = require("../utils/logger");
 const logger = new Logger("PREFIX");
 
 module.exports = (client) => {
-  const basePath = path.join(__dirname, "../commands/prefix");
+  const basePath = path.join(__dirname, "../commands/Prefix");
   let totalLoaded = 0;
   let failedLoads = [];
 

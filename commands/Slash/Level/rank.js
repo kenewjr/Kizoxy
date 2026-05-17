@@ -5,8 +5,7 @@ const {
 const { RankCardBuilder, Font } = require("canvacord");
 const LevelStorage = require("../../../utils/levelStorage");
 
-// Load font (Canvacord v6 often requires font loading)
-Font.loadDefault();
+if (Font?.loadDefault) Font.loadDefault();
 
 module.exports = {
   name: ["rank"],

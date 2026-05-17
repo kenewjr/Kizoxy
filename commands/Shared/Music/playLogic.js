@@ -1,9 +1,13 @@
 // shared/music/playLogic.js
 const {
   isSpotifyPlaylist,
-  extractPlaylistId,
-  getPlaylistTracks,
+  isSpotifyAlbum,
   isSpotifyTrack,
+  extractPlaylistId,
+  extractAlbumId,
+  getPlaylistTracks,
+  getAlbumTracks,
+  getTrackInfo,
   getTrackInfoFromOEmbed,
 } = require("../../../utils/spotifyResolver");
 const { KazagumoTrack } = require("kazagumo");
@@ -11,38 +15,36 @@ const { KazagumoTrack } = require("kazagumo");
 module.exports = async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();
 
+  // Helper: kirim pesan (slash atau prefix)
+  const reply = async (msg, edit = false) => {
+    try {
+      if (isSlash) {
+        if (edit || ctx.deferred || ctx.replied) return ctx.editReply({ content: msg });
+        return ctx.reply({ content: msg, ephemeral: false });
+      }
+      return ctx.channel.send(msg);
+    } catch (_) { /* ignore double-reply error */ }
+  };
+
   try {
-    // Adding Defer Reply specifically for slash commands to prevent timeout
     if (isSlash) await ctx.deferReply();
 
-    // Get query from slash or prefix
+    // ── Ambil query ──────────────────────────────────────────
     const query = isSlash ? ctx.options.getString("search") : args.join(" ");
+    if (!query) return reply("❌ | Masukkan nama lagu atau URL.", true);
 
-    if (!query) {
-      const msg = "❌ | Please provide a song name or URL.";
-      if (isSlash) return ctx.editReply({ content: msg });
-      else return ctx.channel.send(msg);
-    }
-
-    // Get user voice channel
+    // ── Cek voice channel ────────────────────────────────────
     const member = ctx.member;
     const userVoice = member?.voice?.channel;
-    if (!userVoice) {
-      const msg = "❌ | You must be in a voice channel.";
-      if (isSlash) return ctx.editReply({ content: msg });
-      else return ctx.channel.send(msg);
-    }
+    if (!userVoice) return reply("❌ | Kamu harus berada di voice channel.", true);
 
-    // Check if bot is already in another channel
-    const botVoiceChannelId = ctx.guild.members.me?.voice?.channelId;
-    if (botVoiceChannelId && botVoiceChannelId !== userVoice.id) {
-      const msg = "❌ | You must be in the same voice channel as the bot.";
-      if (isSlash) return ctx.editReply({ content: msg });
-      else return ctx.channel.send(msg);
-    }
+    // ── Cek bot sudah di channel lain ────────────────────────
+    const botVoiceId = ctx.guild.members.me?.voice?.channelId;
+    if (botVoiceId && botVoiceId !== userVoice.id)
+      return reply("❌ | Kamu harus di voice channel yang sama dengan bot.", true);
 
+    // ── Buat / ambil player ──────────────────────────────────
     let player = client.manager.players.get(ctx.guild.id);
-
     if (!player) {
       player = await client.manager.createPlayer({
         guildId: ctx.guild.id,
@@ -51,124 +53,121 @@ module.exports = async function playLogic(client, ctx, args) {
         volume: 100,
         deaf: true,
       });
-    } else {
-      if (player.voiceId !== userVoice.id) {
-        player.voiceId = userVoice.id;
-      }
+    } else if (player.voiceId !== userVoice.id) {
+      player.voiceId = userVoice.id;
     }
 
     const requester = isSlash ? ctx.user : ctx.author;
 
-    // ─── Spotify Playlist: use custom resolver ───
+    // Helper: tambah banyak track ke queue lalu play jika belum jalan
+    const bulkAdd = (tracks) => {
+      for (const t of tracks) player.queue.add(t);
+      if (!player.playing && !player.paused) {
+        try { player.play(); } catch (_) { /* ignore */ }
+      }
+    };
+
+    // Helper: bangun KazagumoTrack dari data mentah Spotify
+    const buildSpotifyTrack = (t) =>
+      new KazagumoTrack(
+        {
+          encoded: "",
+          pluginInfo: {},
+          info: {
+            sourceName: "spotify",
+            identifier: t.identifier,
+            isSeekable: true,
+            author: t.author,
+            length: t.duration,
+            isStream: false,
+            position: 0,
+            title: t.title,
+            uri: t.uri,
+            artworkUrl: t.artworkUrl,
+            isrc: t.isrc,
+          },
+        },
+        requester,
+        client.manager,
+      );
+
+    // ═══════════════════════════════════════════════════════════
+    // SPOTIFY PLAYLIST
+    // ═══════════════════════════════════════════════════════════
     if (isSpotifyPlaylist(query)) {
       const playlistId = extractPlaylistId(query);
-      if (!playlistId) {
-        const msg = "❌ | Invalid Spotify playlist URL.";
-        if (isSlash) return ctx.editReply({ content: msg });
-        else return ctx.channel.send(msg);
-      }
+      if (!playlistId) return reply("❌ | URL Spotify playlist tidak valid.", true);
 
-      const loadMsg = "⏳ | Loading Spotify playlist via YouTube...";
-      if (isSlash) await ctx.editReply({ content: loadMsg });
-      else await ctx.channel.send(loadMsg);
+      await reply("⏳ | Memuat Spotify playlist...", true);
 
-      try {
-        const playlist = await getPlaylistTracks(playlistId);
+      const playlist = await getPlaylistTracks(playlistId);
+      if (!playlist.tracks.length)
+        return reply("❌ | Playlist kosong atau gagal dimuat.", true);
 
-        if (!playlist.tracks.length) {
-          const msg = "❌ | Playlist is empty or failed to load.";
-          if (isSlash) return ctx.editReply({ content: msg });
-          else return ctx.channel.send(msg);
-        }
+      const kazTracks = playlist.tracks.map(buildSpotifyTrack);
+      bulkAdd(kazTracks);
 
-        // Build KazagumoTrack objects — each will auto-resolve to YouTube when played
-        let added = 0;
-        for (const t of playlist.tracks) {
-          const kazTrack = new KazagumoTrack(
-            {
-              encoded: "",
-              pluginInfo: {},
-              info: {
-                sourceName: "spotify",
-                identifier: t.identifier,
-                isSeekable: true,
-                author: t.author,
-                length: t.duration,
-                isStream: false,
-                position: 0,
-                title: t.title,
-                uri: t.uri,
-                artworkUrl: t.artworkUrl,
-                isrc: t.isrc,
-              },
-            },
-            requester,
-          );
-          kazTrack.setKazagumo(client.manager);
-          player.queue.add(kazTrack);
-          added++;
-        }
-
-        if (!player.playing && !player.paused) {
-          try {
-            player.play();
-          } catch (e) {
-            /* ignore */
-          }
-        }
-
-        const msg = `📃 Added Spotify playlist **${playlist.name}** with **${added}** tracks to the queue. (via YouTube)`;
-        if (isSlash) return ctx.editReply({ content: msg });
-        else return ctx.channel.send(msg);
-      } catch (spotifyErr) {
-        console.error("[SPOTIFY-RESOLVER ERROR]", spotifyErr.message);
-        const msg = `❌ | ${spotifyErr.message}`;
-        if (isSlash) return ctx.editReply({ content: msg });
-        else return ctx.channel.send(msg);
-      }
+      return reply(
+        `📃 Menambahkan playlist Spotify **${playlist.name}** dengan **${kazTracks.length}** lagu ke queue.`,
+        true,
+      );
     }
 
-    // ─── Spotify Single Track: use oEmbed → YouTube search ───
+    // ═══════════════════════════════════════════════════════════
+    // SPOTIFY ALBUM
+    // ═══════════════════════════════════════════════════════════
+    if (isSpotifyAlbum(query)) {
+      const albumId = extractAlbumId(query);
+      if (!albumId) return reply("❌ | URL Spotify album tidak valid.", true);
+
+      await reply("⏳ | Memuat Spotify album...", true);
+
+      const album = await getAlbumTracks(albumId);
+      if (!album.tracks.length)
+        return reply("❌ | Album kosong atau gagal dimuat.", true);
+
+      const kazTracks = album.tracks.map(buildSpotifyTrack);
+      bulkAdd(kazTracks);
+
+      return reply(
+        `💿 Menambahkan album Spotify **${album.name}** dengan **${kazTracks.length}** lagu ke queue.`,
+        true,
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SPOTIFY SINGLE TRACK
+    // ═══════════════════════════════════════════════════════════
     if (isSpotifyTrack(query)) {
-      try {
-        const trackInfo = await getTrackInfoFromOEmbed(query);
-        if (trackInfo) {
-          console.warn(
-            `[SPOTIFY] Track detected, searching YouTube for: "${trackInfo}"`,
-          );
-          const result = await client.manager.search(trackInfo, { requester });
+      // Coba lewat official API dulu, fallback ke oEmbed
+      let searchQuery = await getTrackInfo(query);
+      if (!searchQuery) searchQuery = await getTrackInfoFromOEmbed(query);
 
-          if (result && result.tracks && result.tracks.length > 0) {
-            const track = result.tracks[0];
-            player.queue.add(track);
-            if (!player.playing && !player.paused) {
-              try {
-                player.play();
-              } catch (e) {
-                /* ignore */
-              }
-            }
-            const msg = `🎵 Added **${track.title}** to the queue. (Spotify → YouTube)`;
-            if (isSlash) return ctx.editReply({ content: msg });
-            else return ctx.channel.send(msg);
+      if (searchQuery) {
+        const result = await client.manager.search(searchQuery, { requester });
+        if (result?.tracks?.length) {
+          const track = result.tracks[0];
+          player.queue.add(track);
+          if (!player.playing && !player.paused) {
+            try { player.play(); } catch (_) { /* ignore */ }
           }
+          return reply(
+            `🎵 Menambahkan **${track.title}** ke queue. (Spotify → YouTube)`,
+            true,
+          );
         }
-      } catch (e) {
-        console.error("[SPOTIFY-OEMBED ERROR]", e.message);
-        // Fall through to normal search
       }
+      // Jika semua gagal, fall-through ke default search
     }
 
-    // ─── Default: search via Kazagumo/Lavalink ───
+    // ═══════════════════════════════════════════════════════════
+    // DEFAULT: search via Kazagumo / Lavalink
+    // ═══════════════════════════════════════════════════════════
     const result = await client.manager.search(query, { requester });
 
-    if (!result || !result.tracks || result.tracks.length === 0) {
-      const msg = "❌ | No results found.";
-      if (isSlash) return ctx.editReply({ content: msg });
-      else return ctx.channel.send(msg);
-    }
+    if (!result?.tracks?.length)
+      return reply("❌ | Tidak ada hasil ditemukan.", true);
 
-    // Detect playlist robustly
     const isPlaylist =
       (result.type && String(result.type).toUpperCase().includes("PLAYLIST")) ||
       !!result.playlistName ||
@@ -181,37 +180,25 @@ module.exports = async function playLogic(client, ctx, args) {
         added++;
       }
       if (!player.playing && !player.paused) {
-        try {
-          player.play();
-        } catch (e) {
-          /* ignore */
-        }
+        try { player.play(); } catch (_) { /* ignore */ }
       }
       const name = result.playlistName || result.playlist?.name || "Playlist";
-      const msg = `📃 Added playlist **${name}** with **${added}** tracks to the queue.`;
-      if (isSlash) return ctx.editReply({ content: msg });
-      else return ctx.channel.send(msg);
+      return reply(`📃 Menambahkan playlist **${name}** dengan **${added}** lagu ke queue.`, true);
     } else {
       const track = result.tracks[0];
       player.queue.add(track);
       if (!player.playing && !player.paused) {
-        try {
-          player.play();
-        } catch (e) {
-          /* ignore */
-        }
+        try { player.play(); } catch (_) { /* ignore */ }
       }
-      const msg = `🎵 Added **${track.title}** to the queue.`;
-      if (isSlash) return ctx.editReply({ content: msg });
-      else return ctx.channel.send(msg);
+      return reply(`🎵 Menambahkan **${track.title}** ke queue.`, true);
     }
   } catch (err) {
     console.error("[PLAY ERROR]", err);
-    const msg = "❌ | Failed to play the song.";
+    const msg = `❌ | ${err.message || "Gagal memutar lagu."}`;
     try {
       if (isSlash) {
         if (ctx.deferred || ctx.replied) return ctx.editReply({ content: msg });
-        else return ctx.reply({ content: msg, ephemeral: true });
+        return ctx.reply({ content: msg, ephemeral: true });
       } else {
         return ctx.channel.send(msg);
       }

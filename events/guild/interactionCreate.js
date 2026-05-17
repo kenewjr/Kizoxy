@@ -1,8 +1,34 @@
 const { InteractionType } = require("discord.js");
-const ytsr = require("@distube/ytsr");
 const { SEARCH_DEFAULT } = require("../../settings/config.js");
 const Logger = require("../../utils/logger");
 const logger = new Logger("INTERACTION");
+
+const CHOICE_LEN = 100;
+
+function truncateChoice(str, max = CHOICE_LEN) {
+  if (str == null || str === "") return "";
+  const s = String(str);
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+/**
+ * Autocomplete via Lavalink (same path as playback). Avoids @distube/ytsr
+ * breaking when YouTube changes search HTML.
+ */
+async function playSearchAutocompleteChoices(manager, query) {
+  const q = (query || "").trim();
+  if (!q) return [];
+  const res = await manager.search(q, { requester: null }).catch(() => null);
+  if (!res?.tracks?.length) return [];
+  return res.tracks.slice(0, 25).map((t) => {
+    const title = t.title || "Track";
+    const value = t.uri || t.identifier || title;
+    return {
+      name: truncateChoice(title),
+      value: truncateChoice(value),
+    };
+  });
+}
 
 module.exports = async (client, interaction) => {
   logger.info(`Interaction created: ${interaction.type}`);
@@ -37,44 +63,58 @@ module.exports = async (client, interaction) => {
       SEARCH_DEFAULT[Math.floor(Math.random() * SEARCH_DEFAULT.length)];
 
     if (interaction.commandName === "play") {
-      let choice = [];
       try {
-        await ytsr(interaction.options.getString("search") || Random, {
-          safeSearch: true,
-          limit: 10,
-        }).then((result) =>
-          result.items.forEach((x) =>
-            choice.push({ name: x.name, value: x.url }),
-          ),
+        const raw = interaction.options.getString("search") || Random;
+        let choice = await playSearchAutocompleteChoices(
+          client.manager,
+          raw,
         );
-        await interaction.respond(choice);
+        if (!choice.length) {
+          choice = await playSearchAutocompleteChoices(
+            client.manager,
+            Random,
+          );
+        }
+        await interaction.respond(choice.length ? choice : []);
         logger.debug(`Autocomplete results sent for play command`);
       } catch (error) {
         logger.warning(
           `Autocomplete failed for play command: ${error.message}`,
         );
+        try {
+          await interaction.respond([]);
+        } catch (_) {
+          /* ignore */
+        }
       }
       return;
     } else {
       try {
         const sub = interaction.options.getSubcommand();
         if (sub === "playskip" || sub === "playtop") {
-          let choice = [];
           try {
-            await ytsr(interaction.options.getString("search") || Random, {
-              safeSearch: true,
-              limit: 10,
-            }).then((result) =>
-              result.items.forEach((x) =>
-                choice.push({ name: x.name, value: x.url }),
-              ),
+            const raw = interaction.options.getString("search") || Random;
+            let choice = await playSearchAutocompleteChoices(
+              client.manager,
+              raw,
             );
-            await interaction.respond(choice);
+            if (!choice.length) {
+              choice = await playSearchAutocompleteChoices(
+                client.manager,
+                Random,
+              );
+            }
+            await interaction.respond(choice.length ? choice : []);
             logger.debug(`Autocomplete results sent for ${sub} command`);
           } catch (error) {
             logger.warning(
               `Autocomplete failed for ${sub} command: ${error.message}`,
             );
+            try {
+              await interaction.respond([]);
+            } catch (_) {
+              /* ignore */
+            }
           }
           return;
         }
