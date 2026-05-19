@@ -1,172 +1,270 @@
-# Kizoxy
+<div align="center">
 
-<p align="center">
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&text=Kizoxy&textBg=false&fontSize=80&fontAlignY=40&animation=twinkling&strokeWidth=2" alt="Kizoxy Banner"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:6366f1,50:8b5cf6,100:ec4899&text=Kizoxy&textBg=false&fontSize=90&fontAlignY=38&fontColor=ffffff&animation=fadeIn&strokeWidth=0&desc=A%20premium%20multipurpose%20Discord%20bot&descAlignY=62&descSize=18" alt="Kizoxy Banner" />
+
+<br />
+
+<p>
+  <a href="https://github.com/kenewjr/Kizoxy/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-6366f1?style=for-the-badge&logo=apache&logoColor=white" alt="License" />
+  </a>
+  <img src="https://img.shields.io/badge/Node.js-18%2B-43853d?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js Version" />
+  <img src="https://img.shields.io/badge/Discord.js-14-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.js" />
+  <a href="https://discord.gg/qeemvqq">
+    <img src="https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Server" />
+  </a>
 </p>
 
-<p align="center">
-    <a href="https://github.com/kenewjr/kizoxy-bot/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
-    </a>
-    <img src="https://img.shields.io/badge/Node.js-18+-green.svg" alt="Node.js Version">
-    <a href="https://discord.gg/qeemvqq">
-        <img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord Server">
-    </a>
+<p>
+  <b>High-quality music · Smart utilities · Beautiful embeds</b><br />
+  <sub>Built with Discord.js, Kazagumo, Shoukaku, and a Lavalink v4 backend.</sub>
 </p>
 
-## 📑 Features
+<a href="#-quick-start"><img src="https://img.shields.io/badge/Quick%20Start-→-ec4899?style=flat-square" /></a>
+<a href="#-features"><img src="https://img.shields.io/badge/Features-→-8b5cf6?style=flat-square" /></a>
+<a href="#-commands"><img src="https://img.shields.io/badge/Commands-→-6366f1?style=flat-square" /></a>
+<a href="#-configuration"><img src="https://img.shields.io/badge/Configuration-→-3b82f6?style=flat-square" /></a>
 
-- [x] **Music Systems**: High-quality music playback.
-- [x] **Alarm Systems**: Set reminders effectively.
-- [x] **Anime Systems**: Schedule and info.
-- [x] **Level Systems**: Rank tracking and leaderboards.
-- [x] **Social Embed Fixer**: Automatically fix broken social media embeds.
-- [x] **Slash Commands**: Full support for slash commands.
-- [x] **Prefix Commands**: Legacy support for prefix commands.
-- [x] **AutoComplete**: Smart completion for play commands.
-- [x] **Custom Filters**: Nightcore, Bassboost, and more.
-- [x] **Ease of Use**: Simple setup and configuration.
+</div>
 
-## 🎶 Supported Sources
+<br />
 
-- [x] YouTube
-- [x] SoundCloud
-- [x] Spotify (_Requires Plugin_)
-- [x] Deezer (_Requires Plugin_)
+## ✨ Features
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+
+#### 🎵 Music
+- High-quality Lavalink v4 playback
+- YouTube · SoundCloud · Spotify · Deezer
+- Custom audio filters (Nightcore, Bassboost, 3D, Vibrato)
+- Lofi 24/7 mode with auto-reconnect
+- Synced lyrics with romaji conversion
+
+#### 🏆 Engagement
+- Level & XP system with rank cards
+- Server leaderboards
+- Anime schedule via Jikan API
+
+  </td>
+  <td width="50%" valign="top">
+
+#### ⏰ Utility
+- Alarm system with auto-update countdown
+- Social media embed fixer (Twitter, IG, TikTok)
+- Per-guild log channels
+
+#### 🛠️ Developer Experience
+- Slash & prefix command support
+- AutoComplete suggestions on `/play`
+- PM2-ready ecosystem config
+- Webhook error reporting
+- Hot-reloadable handlers
+
+  </td>
+  </tr>
+</table>
 
 ---
 
-<details>
-<summary><h2>📎 Requirements</h2></summary>
-
-- **Node.js**: [Download](https://nodejs.org/en/download/) (v18 or newer recommended)
-- **Discord Bot Token**: [Guide](https://discordjs.guide/preparations/setting-up-a-bot-application)
-- **LavaLink**: [Guide](https://github.com/lavalink-devs/Lavalink) (v4 required)
-
-</details>
-
-## 📚 Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/kenewjr/Kizoxy.git
-   cd Kizoxy
-   ```
-
-2. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-3. **Start the bot:**
-
-   ```bash
-   node .
-   # OR
-   npm start
-   ```
-
----
-
-<details>
-<summary><h2>📄 Configuration</h2></summary>
-
-Copy `.env.example` to `.env` and fill in your details:
-
-```env
-# Bot Configuration
-TOKEN=YOUR_BOT_TOKEN_HERE
-EMBED_COLOR=#000001
-SEARCH_ENGINE=youtube
-LEAVE_EMPTY=120000
-
-# Developer
-OWNER_ID=YOUR_DISCORD_ID
-
-# LavaLink Nodes
-NODE_NAME=NanoSpace
-NODE_URL=localhost:5555
-NODE_AUTH=nanospace
-```
-
-**Deploy Slash Commands:**
+## 🚀 Quick Start
 
 ```bash
+# 1. Clone
+git clone https://github.com/kenewjr/Kizoxy.git
+cd Kizoxy
+
+# 2. Install
+npm install
+
+# 3. Configure
+cp ".env example" .env
+# edit .env with your token, owner ID, and Lavalink node
+
+# 4. Deploy slash commands (one-time)
 node deploySlash.js global --clear-all
+
+# 5. Run
+npm start              # foreground
+npm run start:pm2      # production with PM2
+```
+
+> [!TIP]
+> Use `npm run start:pm2` in production. PM2 handles auto-restart, log rotation, and process monitoring out of the box.
+
+---
+
+## 📋 Requirements
+
+| Tool | Version | Purpose |
+| :--- | :------ | :------ |
+| **Node.js** | `≥ 18.0.0` | Runtime |
+| **Lavalink** | `v4` | Audio streaming backend |
+| **Discord Bot** | — | [Setup guide](https://discordjs.guide/preparations/setting-up-a-bot-application) |
+| **PM2** *(optional)* | `latest` | Production process manager |
+
+---
+
+## ⚙️ Configuration
+
+<details>
+<summary><b>Click to expand environment variables</b></summary>
+
+<br />
+
+```env
+# ── Bot ─────────────────────────────────────────
+TOKEN=YOUR_BOT_TOKEN_HERE
+OWNER_ID=YOUR_DISCORD_ID
+PREFIX=!
+EMBED_COLOR=#6366f1
+
+# ── Music ───────────────────────────────────────
+SEARCH_ENGINE=youtube      # youtube | soundcloud | youtube_music
+LEAVE_EMPTY=120000         # ms before leaving empty channel
+
+# ── Lavalink ────────────────────────────────────
+NODE_NAME=kenewjr
+NODE_URL=localhost:2333
+NODE_AUTH=youshallnotpass
+LAVALINK_URL=http://localhost:2333
+LAVALINK_PASSWORD=youshallnotpass
+
+# ── Spotify (optional) ──────────────────────────
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
 ```
 
 </details>
 
 ---
 
+## 📚 Commands
+
+> Default prefix is `/`. Replace it with your configured `PREFIX` for legacy commands.
+
+<details open>
+<summary><b>🎶 Music</b></summary>
+
+| Command | Description |
+| :------ | :---------- |
+| `/play <song\|url>` | Play from YouTube, SoundCloud, Spotify, or Deezer |
+| `/search <query>` | Interactive search with selection |
+| `/nowplaying` | Show the currently playing track |
+| `/queue [page]` | Display the queue with pagination |
+| `/skip` · `/pause` · `/resume` | Playback controls |
+| `/loop` · `/shuffle` · `/clear` | Queue controls |
+| `/volume <1-100>` | Adjust playback volume |
+| `/forward <seconds>` | Seek forward in the current track |
+| `/remove <position>` | Remove a specific track from queue |
+| `/247` | Toggle 24/7 stay-in-voice mode |
+| `/lofi` | Stream Lofi radio non-stop |
+| `/lyrics` | Fetch synced lyrics with romaji support |
+| `/leave` | Disconnect from voice |
+
+</details>
+
 <details>
-<summary><h2>🔩 Features & Commands</h2></summary>
+<summary><b>🎛️ Filters</b></summary>
 
-> **Note:** The default prefix is `/`
+| Command | Description |
+| :------ | :---------- |
+| `/filter <type>` | Apply an audio filter |
 
-### 🎶 Music Commands
+Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · `nightcore` · `slowmotion` · `vibrato`
 
-| Command              | Description                                 |
-| :------------------- | :------------------------------------------ |
-| `/play [song/url]`   | Play a song from YouTube, SoundCloud, etc.  |
-| `/nowplaying`        | Show the current playing song.              |
-| `/queue [page]`      | Show the queue.                             |
-| `/loop`              | Toggle loop mode.                           |
-| `/shuffle`           | Shuffle the queue.                          |
-| `/volume [1-100]`    | Adjust the volume.                          |
-| `/pause`             | Pause playback.                             |
-| `/resume`            | Resume playback.                            |
-| `/skip`              | Skip the current song.                      |
-| `/clear`             | Clear the queue.                            |
-| `/leave`             | Disconnect the bot.                         |
-| `/forward [seconds]` | Forward the song.                           |
-| `/search [song]`     | Search for a song.                          |
-| `/247`               | Toggle 24/7 mode.                           |
-| `/remove [song]`     | Remove a song from the queue.               |
-| `/lofi`              | Toggle Lofi mode.                           |
-| `/lyrics`            | Display static lyrics for the playing song. |
+</details>
 
-### ⏺ Filter Commands
+<details>
+<summary><b>🏆 Leveling</b></summary>
 
-| Command          | Description                              |
-| :--------------- | :--------------------------------------- |
-| `/filter [type]` | Apply an audio filter (e.g., bassboost). |
+| Command | Description |
+| :------ | :---------- |
+| `/rank [user]` | View level, XP, and progress card |
+| `/leaderboard` | Top members in the server |
+| `/addxp <user> <xp>` | *(Admin)* Award XP to a member |
 
-_(Available filters: `reset`, `3d`, `bassboost`, `doubletime`, `karaoke`, `nightcore`, `slowmotion`, `vibrato`)_
+</details>
 
-### 🏆 Level System
+<details>
+<summary><b>⏰ Alarms</b></summary>
 
-| Command              | Description                     |
-| :------------------- | :------------------------------ |
-| `/rank [user]`       | View your current level and XP. |
-| `/leaderboard`       | View the server leaderboard.    |
-| `/addxp [user] [xp]` | Add XP to a user (Admin).       |
+| Command | Description |
+| :------ | :---------- |
+| `/alarm set` | Schedule a new alarm |
+| `/alarm list` | List your active alarms |
+| `/alarm edit` | Edit an existing alarm |
+| `/alarm cancel` | Cancel an alarm |
+| `/alarm adminlist` | *(Admin)* View all server alarms |
 
-### ⚙️ Settings Commands
+</details>
 
-| Command             | Description                             |
-| :------------------ | :-------------------------------------- |
-| `/fixembed`         | Configure the social media embed fixer. |
-| `/setlog [channel]` | Sets the server log channel for events. |
+<details>
+<summary><b>⚙️ Settings & Misc</b></summary>
 
-### 📑 Misc Commands
-
-| Command        | Description                 |
-| :------------- | :-------------------------- |
-| `/help`        | Show help menu.             |
-| `/alarm [sub]` | Manage your alarms.         |
-| `/anime`       | Anime schedule and options. |
+| Command | Description |
+| :------ | :---------- |
+| `/fixembed` | Configure social-media embed fixing |
+| `/setlog <channel>` | Set the server log channel |
+| `/anime` | Anime schedule and info (Jikan) |
+| `/help` | Open the help menu |
 
 </details>
 
 ---
 
-## 🌟 Made With
+## 🎵 Supported Sources
 
-- [Discord.js](https://discord.js.org/)
-- [LavaLink](https://github.com/lavalink-devs/Lavalink)
-- [Kazagumo](https://github.com/Takiyo0/Kazagumo)
-- [Shoukaku](https://github.com/Deivu/Shoukaku)
-- [Prettier](https://prettier.io/)
+<p>
+  <img src="https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white" />
+  <img src="https://img.shields.io/badge/SoundCloud-FF5500?style=flat-square&logo=soundcloud&logoColor=white" />
+  <img src="https://img.shields.io/badge/Spotify-1DB954?style=flat-square&logo=spotify&logoColor=white" />
+  <img src="https://img.shields.io/badge/Deezer-FEAA2D?style=flat-square&logo=deezer&logoColor=black" />
+  <img src="https://img.shields.io/badge/Apple%20Music-FA243C?style=flat-square&logo=applemusic&logoColor=white" />
+</p>
+
+> [!NOTE]
+> Spotify and Deezer require their respective Lavalink plugins to be enabled on your node.
+
+---
+
+## 🧱 Tech Stack
+
+<p>
+  <a href="https://discord.js.org/"><img src="https://img.shields.io/badge/Discord.js-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
+  <a href="https://github.com/lavalink-devs/Lavalink"><img src="https://img.shields.io/badge/Lavalink-v4-1DB954?style=flat-square" /></a>
+  <a href="https://github.com/Takiyo0/Kazagumo"><img src="https://img.shields.io/badge/Kazagumo-3.x-8b5cf6?style=flat-square" /></a>
+  <a href="https://github.com/Deivu/Shoukaku"><img src="https://img.shields.io/badge/Shoukaku-4.x-ec4899?style=flat-square" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-43853d?style=flat-square&logo=node.js&logoColor=white" /></a>
+  <a href="https://prettier.io/"><img src="https://img.shields.io/badge/Prettier-F7B93E?style=flat-square&logo=prettier&logoColor=black" /></a>
+</p>
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you'd like to change.
+
+```bash
+npm run lint        # check code style
+npm run lint:fix    # auto-fix issues
+npm run format      # format with prettier
+npm test            # run jest test suite
+```
+
+---
+
+## 📜 License
+
+Distributed under the **Apache 2.0** License. See [LICENSE](./LICENSE) for details.
+
+<div align="center">
+
+<br />
+
+<sub>Built with ❤️ by <a href="https://github.com/kenewjr">@kenewjr</a> · <a href="https://discord.gg/qeemvqq">Join the Discord</a></sub>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&height=80&section=footer&color=0:ec4899,50:8b5cf6,100:6366f1" />
+
+</div>
