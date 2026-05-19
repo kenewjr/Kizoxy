@@ -1,10 +1,10 @@
 // shared/music/playLogic.js
-const { 
-  isSpotifyUrl, 
-  isSpotifyPlaylist, 
-  isSpotifyAlbum, 
+const {
+  isSpotifyUrl,
+  isSpotifyPlaylist,
+  isSpotifyAlbum,
   isSpotifyTrack,
-  spotifyToYouTubeSearch 
+  spotifyToYouTubeSearch,
 } = require("../../../utils/spotify/spotifyHelper");
 
 module.exports = async function playLogic(client, ctx, args) {
@@ -14,11 +14,14 @@ module.exports = async function playLogic(client, ctx, args) {
   const reply = async (msg, edit = false) => {
     try {
       if (isSlash) {
-        if (edit || ctx.deferred || ctx.replied) return ctx.editReply({ content: msg });
+        if (edit || ctx.deferred || ctx.replied)
+          return ctx.editReply({ content: msg });
         return ctx.reply({ content: msg, ephemeral: false });
       }
       return ctx.channel.send(msg);
-    } catch (_) { /* ignore double-reply error */ }
+    } catch (_) {
+      /* ignore double-reply error */
+    }
   };
 
   try {
@@ -34,16 +37,16 @@ module.exports = async function playLogic(client, ctx, args) {
       if (isSpotifyPlaylist(query)) {
         return reply(
           "❌ | Spotify playlist tidak support tanpa Premium subscription.\n" +
-          "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
-          true
+            "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
+          true,
         );
       }
-      
+
       if (isSpotifyAlbum(query)) {
         return reply(
           "❌ | Spotify album tidak support tanpa Premium subscription.\n" +
-          "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
-          true
+            "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
+          true,
         );
       }
 
@@ -62,12 +65,16 @@ module.exports = async function playLogic(client, ctx, args) {
     // ── Cek voice channel ────────────────────────────────────
     const member = ctx.member;
     const userVoice = member?.voice?.channel;
-    if (!userVoice) return reply("❌ | Kamu harus berada di voice channel.", true);
+    if (!userVoice)
+      return reply("❌ | Kamu harus berada di voice channel.", true);
 
     // ── Cek bot sudah di channel lain ────────────────────────
     const botVoiceId = ctx.guild.members.me?.voice?.channelId;
     if (botVoiceId && botVoiceId !== userVoice.id)
-      return reply("❌ | Kamu harus di voice channel yang sama dengan bot.", true);
+      return reply(
+        "❌ | Kamu harus di voice channel yang sama dengan bot.",
+        true,
+      );
 
     // ── Buat / ambil player ──────────────────────────────────
     let player = client.manager.players.get(ctx.guild.id);
@@ -105,15 +112,26 @@ module.exports = async function playLogic(client, ctx, args) {
         added++;
       }
       if (!player.playing && !player.paused) {
-        try { player.play(); } catch (_) { /* ignore */ }
+        try {
+          player.play();
+        } catch (_) {
+          /* ignore */
+        }
       }
       const name = result.playlistName || result.playlist?.name || "Playlist";
-      return reply(`📃 Menambahkan playlist **${name}** dengan **${added}** lagu ke queue.`, true);
+      return reply(
+        `📃 Menambahkan playlist **${name}** dengan **${added}** lagu ke queue.`,
+        true,
+      );
     } else {
       const track = result.tracks[0];
       player.queue.add(track);
       if (!player.playing && !player.paused) {
-        try { player.play(); } catch (_) { /* ignore */ }
+        try {
+          player.play();
+        } catch (_) {
+          /* ignore */
+        }
       }
       return reply(`🎵 Menambahkan **${track.title}** ke queue.`, true);
     }

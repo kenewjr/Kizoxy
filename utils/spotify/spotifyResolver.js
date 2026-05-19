@@ -27,12 +27,12 @@ const RATE_LIMIT = {
 async function rateLimitedDelay() {
   const now = Date.now();
   const timeSinceLastRequest = now - RATE_LIMIT.lastRequestTime;
-  
+
   if (timeSinceLastRequest < RATE_LIMIT.minDelayMs) {
     const waitTime = RATE_LIMIT.minDelayMs - timeSinceLastRequest;
-    await new Promise(r => setTimeout(r, waitTime));
+    await new Promise((r) => setTimeout(r, waitTime));
   }
-  
+
   RATE_LIMIT.lastRequestTime = Date.now();
 }
 
@@ -45,18 +45,18 @@ const CACHE_TTL = 3600000; // 1 jam
 function getCached(key) {
   const cached = cache.get(key);
   if (!cached) return null;
-  
+
   if (Date.now() - cached.timestamp > CACHE_TTL) {
     cache.delete(key);
     return null;
   }
-  
+
   return cached.data;
 }
 
 function setCache(key, data) {
   cache.set(key, { data, timestamp: Date.now() });
-  
+
   // Auto cleanup: hapus cache lama jika terlalu banyak
   if (cache.size > 100) {
     const oldestKey = cache.keys().next().value;
@@ -83,12 +83,12 @@ async function getClientCredentialsToken() {
   const clientSecret = process.env.spotifySecret?.trim();
 
   if (!clientId || !clientSecret) {
-    throw new Error(
-      "spotifyClientID atau spotifySecret tidak ada di .env"
-    );
+    throw new Error("spotifyClientID atau spotifySecret tidak ada di .env");
   }
 
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64",
+  );
 
   await rateLimitedDelay(); // Rate limit bahkan untuk token request
 
@@ -135,12 +135,12 @@ async function spotifyFetch(url, retries = 5) {
       // Exponential backoff: 5s, 10s, 20s, 40s, 80s
       const backoffMultiplier = Math.pow(2, attempt);
       const waitSec = Math.min(retryAfter * backoffMultiplier, 120); // Max 2 menit
-      
+
       console.warn(
-        `[SPOTIFY] Rate limited (429). Waiting ${waitSec}s (attempt ${attempt + 1}/${retries})...`
+        `[SPOTIFY] Rate limited (429). Waiting ${waitSec}s (attempt ${attempt + 1}/${retries})...`,
       );
-      
-      await new Promise(r => setTimeout(r, waitSec * 1000));
+
+      await new Promise((r) => setTimeout(r, waitSec * 1000));
       continue;
     }
 
@@ -157,8 +157,10 @@ async function spotifyFetch(url, retries = 5) {
     // ── TOO MANY REQUESTS (503) ───────────────────────────
     if (res.status === 503) {
       const waitSec = Math.min(5 * Math.pow(2, attempt), 60);
-      console.warn(`[SPOTIFY] Service unavailable (503). Waiting ${waitSec}s...`);
-      await new Promise(r => setTimeout(r, waitSec * 1000));
+      console.warn(
+        `[SPOTIFY] Service unavailable (503). Waiting ${waitSec}s...`,
+      );
+      await new Promise((r) => setTimeout(r, waitSec * 1000));
       continue;
     }
 
@@ -178,33 +180,39 @@ async function spotifyFetch(url, retries = 5) {
 
 function extractPlaylistId(url) {
   const match = url.match(
-    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/,
   );
   return match ? match[1] : null;
 }
 
 function isSpotifyPlaylist(query) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(query);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(
+    query,
+  );
 }
 
 function extractAlbumId(url) {
   const match = url.match(
-    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/,
   );
   return match ? match[1] : null;
 }
 
 function isSpotifyAlbum(query) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/.test(query);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/.test(
+    query,
+  );
 }
 
 function isSpotifyTrack(query) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(query);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(
+    query,
+  );
 }
 
 function extractTrackId(url) {
   const match = url.match(
-    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/
+    /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/,
   );
   return match ? match[1] : null;
 }
@@ -222,19 +230,21 @@ async function getPlaylistTracks(playlistId) {
   const cacheKey = `playlist:${playlistId}`;
   const cached = getCached(cacheKey);
   if (cached) {
-    console.warn(`[SPOTIFY] Using cached playlist "${cached.name}" (${cached.tracks.length} tracks)`);
+    console.warn(
+      `[SPOTIFY] Using cached playlist "${cached.name}" (${cached.tracks.length} tracks)`,
+    );
     return cached;
   }
 
   // Ambil metadata playlist
   const playlist = await spotifyFetch(
-    `${SPOTIFY_API}/playlists/${playlistId}?fields=name,tracks.total`
+    `${SPOTIFY_API}/playlists/${playlistId}?fields=name,tracks.total`,
   );
   const playlistName = playlist.name;
   const totalTracks = playlist.tracks.total;
 
   console.warn(
-    `[SPOTIFY] Loading playlist "${playlistName}" (${totalTracks} tracks)`
+    `[SPOTIFY] Loading playlist "${playlistName}" (${totalTracks} tracks)`,
   );
 
   const tracks = [];
@@ -248,14 +258,17 @@ async function getPlaylistTracks(playlistId) {
 
     for (const item of page.items || []) {
       const track = item?.track;
-      if (!track || !track.name || track.type === "episode" || track.is_local) continue;
+      if (!track || !track.name || track.type === "episode" || track.is_local)
+        continue;
 
       tracks.push({
         title: track.name,
         author: track.artists?.[0]?.name || "Unknown",
         duration: track.duration_ms || 0,
         identifier: track.id,
-        uri: track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
+        uri:
+          track.external_urls?.spotify ||
+          `https://open.spotify.com/track/${track.id}`,
         artworkUrl: track.album?.images?.[0]?.url || null,
         isrc: track.external_ids?.isrc || null,
       });
@@ -265,12 +278,12 @@ async function getPlaylistTracks(playlistId) {
     pages++;
 
     console.warn(
-      `[SPOTIFY] Page ${pages}: ${tracks.length}/${totalTracks} tracks loaded`
+      `[SPOTIFY] Page ${pages}: ${tracks.length}/${totalTracks} tracks loaded`,
     );
   }
 
   console.warn(
-    `[SPOTIFY] Done loading "${playlistName}": ${tracks.length} tracks total`
+    `[SPOTIFY] Done loading "${playlistName}": ${tracks.length} tracks total`,
   );
 
   const result = { name: playlistName, tracks };
@@ -286,7 +299,9 @@ async function getAlbumTracks(albumId) {
   const cacheKey = `album:${albumId}`;
   const cached = getCached(cacheKey);
   if (cached) {
-    console.warn(`[SPOTIFY] Using cached album "${cached.name}" (${cached.tracks.length} tracks)`);
+    console.warn(
+      `[SPOTIFY] Using cached album "${cached.name}" (${cached.tracks.length} tracks)`,
+    );
     return cached;
   }
 
@@ -296,7 +311,7 @@ async function getAlbumTracks(albumId) {
   const totalTracks = album.tracks?.total || 0;
 
   console.warn(
-    `[SPOTIFY] Loading album "${albumName}" (${totalTracks} tracks)`
+    `[SPOTIFY] Loading album "${albumName}" (${totalTracks} tracks)`,
   );
 
   const tracks = [];
@@ -314,7 +329,9 @@ async function getAlbumTracks(albumId) {
         author: track.artists?.[0]?.name || "Unknown",
         duration: track.duration_ms || 0,
         identifier: track.id,
-        uri: track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
+        uri:
+          track.external_urls?.spotify ||
+          `https://open.spotify.com/track/${track.id}`,
         artworkUrl,
         isrc: null,
       });
@@ -325,7 +342,7 @@ async function getAlbumTracks(albumId) {
   }
 
   console.warn(
-    `[SPOTIFY] Done loading album "${albumName}": ${tracks.length} tracks total`
+    `[SPOTIFY] Done loading album "${albumName}": ${tracks.length} tracks total`,
   );
 
   const result = { name: albumName, tracks };

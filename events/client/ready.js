@@ -1,4 +1,4 @@
-const { Client, ActivityType } = require("discord.js");
+const { ActivityType } = require("discord.js");
 
 module.exports = async (client) => {
   console.warn(

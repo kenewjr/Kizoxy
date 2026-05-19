@@ -9,7 +9,7 @@
 
 module.exports = {
   customId: "fixembed_delete",
-  execute: async (interaction, client) => {
+  execute: async (interaction, _client) => {
     const originalAuthorId = interaction.customId.split(":")[1];
 
     // Non-OP: show a silent ephemeral error — original message is untouched
@@ -24,7 +24,7 @@ module.exports = {
       await interaction.message.delete();
       // Delete the ephemeral "thinking" reply so nothing lingers
       await interaction.deleteReply().catch(() => {});
-    } catch (err) {
+    } catch (_err) {
       return interaction.editReply({
         content:
           "❌ Failed to delete — I may be missing `Manage Messages` permission.",

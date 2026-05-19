@@ -5,21 +5,27 @@
  * Check if URL is Spotify playlist
  */
 function isSpotifyPlaylist(url) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(url);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(
+    url,
+  );
 }
 
 /**
  * Check if URL is Spotify album
  */
 function isSpotifyAlbum(url) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/.test(url);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/.test(
+    url,
+  );
 }
 
 /**
  * Check if URL is Spotify track
  */
 function isSpotifyTrack(url) {
-  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(url);
+  return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(
+    url,
+  );
 }
 
 /**
@@ -37,7 +43,7 @@ async function getSpotifyTrackInfo(spotifyUrl) {
   try {
     const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;
     const res = await fetch(oembedUrl);
-    
+
     if (!res.ok) return null;
 
     const data = await res.json();
@@ -46,7 +52,7 @@ async function getSpotifyTrackInfo(spotifyUrl) {
     // Extract artist and track name from description
     // Format: "Artist · Track Name" or just "Track Name"
     let searchQuery = data.title;
-    
+
     if (data.description) {
       const parts = data.description.split(" · ");
       if (parts.length >= 2) {
@@ -70,7 +76,7 @@ async function spotifyToYouTubeSearch(spotifyUrl) {
   try {
     const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;
     const res = await fetch(oembedUrl);
-    
+
     if (!res.ok) return null;
 
     const data = await res.json();

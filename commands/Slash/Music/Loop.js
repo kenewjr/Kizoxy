@@ -37,7 +37,7 @@ module.exports = {
       return interaction.reply(`I'm not in the same voice channel as you!`);
 
     const choice = interaction.options.getString("mode");
-    let loopType, currentLoop, message;
+    let loopType, message;
 
     // Determine loop type and message based on choice
     if (choice === "current") {

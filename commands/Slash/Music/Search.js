@@ -6,7 +6,6 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ApplicationCommandOptionType,
-  ComponentType,
 } = require("discord.js");
 
 module.exports = {

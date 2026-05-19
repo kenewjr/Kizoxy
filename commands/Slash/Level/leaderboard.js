@@ -3,7 +3,6 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ApplicationCommandOptionType,
 } = require("discord.js");
 const LevelStorage = require("../../../utils/storage/levelStorage");
 
@@ -62,7 +61,7 @@ module.exports = {
         try {
           const user = await client.users.fetch(item.userId);
           userTag = user.tag;
-        } catch (e) {
+        } catch (_e) {
           userTag = `User (${item.userId})`;
         }
 

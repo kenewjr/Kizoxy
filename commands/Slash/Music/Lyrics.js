@@ -19,7 +19,7 @@ module.exports = {
       }
 
       const player = validation.player;
-      
+
       // Toggle lyrics state
       player.lyricsEnabled = !player.lyricsEnabled;
 
@@ -27,17 +27,21 @@ module.exports = {
         // Show lyrics - fetch and update now playing message
         await interaction.editReply({ content: "🔍 Mencari lyrics..." });
 
-        const result = await searchLyrics(player, validation.track, client.color);
-        
+        const result = await searchLyrics(
+          player,
+          validation.track,
+          client.color,
+        );
+
         if (result.error) {
           player.lyricsEnabled = false;
           await interaction.editReply({ content: result.error });
-          
+
           // Delete ephemeral reply after 5 seconds
           setTimeout(async () => {
             try {
               await interaction.deleteReply();
-            } catch (err) {
+            } catch (_err) {
               // Ignore error if already deleted
             }
           }, 5000);
@@ -48,12 +52,14 @@ module.exports = {
         try {
           const channel = client.channels.cache.get(player.textId);
           if (channel && player.nowPlayingMessageId) {
-            const message = await channel.messages.fetch(player.nowPlayingMessageId).catch(() => null);
+            const message = await channel.messages
+              .fetch(player.nowPlayingMessageId)
+              .catch(() => null);
             if (message) {
               const currentEmbeds = message.embeds;
-              await message.edit({ 
+              await message.edit({
                 embeds: [...currentEmbeds, result.embed],
-                components: message.components 
+                components: message.components,
               });
             }
           }
@@ -67,13 +73,15 @@ module.exports = {
         try {
           const channel = client.channels.cache.get(player.textId);
           if (channel && player.nowPlayingMessageId) {
-            const message = await channel.messages.fetch(player.nowPlayingMessageId).catch(() => null);
+            const message = await channel.messages
+              .fetch(player.nowPlayingMessageId)
+              .catch(() => null);
             if (message) {
               // Keep only the first embed (now playing), remove lyrics
               const nowPlayingEmbed = message.embeds[0];
-              await message.edit({ 
+              await message.edit({
                 embeds: nowPlayingEmbed ? [nowPlayingEmbed] : [],
-                components: message.components 
+                components: message.components,
               });
             }
           }
@@ -88,7 +96,7 @@ module.exports = {
       setTimeout(async () => {
         try {
           await interaction.deleteReply();
-        } catch (err) {
+        } catch (_err) {
           // Ignore error if already deleted
         }
       }, 5000);
@@ -100,15 +108,15 @@ module.exports = {
           : error.response
             ? "❌ Failed to fetch lyrics. Please try again later."
             : "❌ An error occurred while fetching lyrics.";
-      
+
       try {
         await interaction.editReply({ content: msg });
-        
+
         // Delete ephemeral reply after 5 seconds
         setTimeout(async () => {
           try {
             await interaction.deleteReply();
-          } catch (err) {
+          } catch (_err) {
             // Ignore error if already deleted
           }
         }, 5000);

@@ -51,7 +51,7 @@ module.exports = {
               }
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // Directory might not exist, skip it
           continue;
         }

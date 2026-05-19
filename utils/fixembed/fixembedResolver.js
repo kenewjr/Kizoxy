@@ -49,7 +49,7 @@ function isSpoiler(content, url) {
 }
 
 // ─── Author extractor helpers ────────────────────────────────────────────────
-function usernameFromPath(url, afterDomain) {
+function _usernameFromPath(url, afterDomain) {
   // e.g. /username/... → extract first segment
   const m = url.match(new RegExp(`${afterDomain}\\/([^/?#\\s]+)`, "i"));
   return m ? m[1] : null;

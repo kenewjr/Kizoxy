@@ -36,7 +36,7 @@ module.exports = {
       setTimeout(async () => {
         try {
           await interaction.deleteReply();
-        } catch (err) {
+        } catch (_err) {
           // Ignore error if already deleted
         }
       }, 5000);

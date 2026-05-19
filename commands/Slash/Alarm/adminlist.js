@@ -79,7 +79,7 @@ module.exports = {
             value: alarmList,
             inline: false,
           });
-        } catch (error) {
+        } catch (_error) {
           logger.warning(`User ${userId} not found, but alarms exist`);
           embed.addFields({
             name: `👤 User Tidak Ditemukan (${userId}) - ${userAlarms.length} alarm`,
@@ -180,7 +180,7 @@ module.exports = {
                 value: alarmList,
                 inline: false,
               });
-            } catch (error) {
+            } catch (_error) {
               newEmbed.addFields({
                 name: `👤 User Tidak Ditemukan (${userId}) - ${userAlarms.length} alarm`,
                 value: "⚠️ User mungkin sudah meninggalkan server",

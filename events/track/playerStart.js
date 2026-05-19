@@ -90,7 +90,7 @@ module.exports = async (client, player, track) => {
         .catch(() => null);
       if (oldMsg) {
         await oldMsg.edit({ embeds: [embed], components: [buttons] });
-        
+
         // Auto-fetch lyrics jika toggle aktif
         if (player.lyricsEnabled) {
           await autoFetchLyrics(client, player, track, oldMsg);
@@ -105,7 +105,7 @@ module.exports = async (client, player, track) => {
       components: [buttons],
     });
     player.nowPlayingMessageId = sentMsg.id;
-    
+
     // Auto-fetch lyrics jika toggle aktif
     if (player.lyricsEnabled) {
       await autoFetchLyrics(client, player, track, sentMsg);
@@ -129,29 +129,29 @@ async function autoFetchLyrics(client, player, track, message) {
     const loadingEmbed = new EmbedBuilder()
       .setDescription("🔍 Mencari lyrics...")
       .setColor(client.color);
-    
-    await message.edit({ 
+
+    await message.edit({
       embeds: [...currentEmbeds, loadingEmbed],
-      components: message.components 
+      components: message.components,
     });
 
     // Fetch lyrics
     const result = await searchLyrics(player, track, client.color);
-    
+
     if (result.error) {
       // Remove loading notification if not found
-      await message.edit({ 
+      await message.edit({
         embeds: currentEmbeds,
-        components: message.components 
+        components: message.components,
       });
       console.warn("[playerStart] Lyrics not found:", result.error);
       return;
     }
 
     // Replace loading notification with actual lyrics
-    await message.edit({ 
+    await message.edit({
       embeds: [...currentEmbeds, result.embed],
-      components: message.components 
+      components: message.components,
     });
   } catch (err) {
     console.error("[playerStart] Auto-fetch lyrics failed:", err.message);
@@ -159,12 +159,12 @@ async function autoFetchLyrics(client, player, track, message) {
     try {
       const currentEmbeds = message.embeds;
       if (currentEmbeds.length > 1) {
-        await message.edit({ 
+        await message.edit({
           embeds: currentEmbeds.slice(0, -1), // Remove last embed (loading)
-          components: message.components 
+          components: message.components,
         });
       }
-    } catch (e) {
+    } catch (_e) {
       // Ignore
     }
   }

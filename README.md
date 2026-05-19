@@ -126,7 +126,7 @@ node deploySlash.js global --clear-all
 | `/247`               | Toggle 24/7 mode.                          |
 | `/remove [song]`     | Remove a song from the queue.              |
 | `/lofi`              | Toggle Lofi mode.                          |
-| `/lyrics`            | Fetch lyrics for the playing song.         |
+| `/lyrics`            | Display static lyrics for the playing song. |
 
 ### ⏺ Filter Commands
 

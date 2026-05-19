@@ -18,8 +18,8 @@ async function disableButtonsAfterDelay(message) {
       if (!row) return;
 
       // Disable all buttons (grayed out, not removed)
-      const disabledButtons = row.components.map(button => 
-        ButtonBuilder.from(button).setDisabled(true)
+      const disabledButtons = row.components.map((button) =>
+        ButtonBuilder.from(button).setDisabled(true),
       );
 
       const disabledRow = new ActionRowBuilder().addComponents(disabledButtons);

@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { Collection, EmbedBuilder } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const JSONStorage = require("../utils/storage/storage");
 const AlarmScheduler = require("../utils/alarm/alarmScheduler");
 const Logger = require("../utils/logger");
@@ -136,7 +136,7 @@ module.exports = (client) => {
                 const localNextAlarmTime = new Date(
                   nextAlarmTime.getTime() + timezoneOffset,
                 );
-                const localNowDate = new Date(
+                const _localNowDate = new Date(
                   nowDate.getTime() + timezoneOffset,
                 );
 

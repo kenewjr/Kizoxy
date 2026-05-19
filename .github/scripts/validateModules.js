@@ -32,7 +32,7 @@ function checkDir(dirPath, checkFn) {
   }
 }
 
-console.log("Validating Slash Commands...");
+console.warn("Validating Slash Commands...");
 checkDir(path.join(__dirname, "../../commands/Slash"), (cmd, file) => {
   const cmds = Array.isArray(cmd) ? cmd : [cmd];
   for (const c of cmds) {
@@ -43,7 +43,7 @@ checkDir(path.join(__dirname, "../../commands/Slash"), (cmd, file) => {
   }
 });
 
-console.log("Validating Prefix Commands...");
+console.warn("Validating Prefix Commands...");
 checkDir(path.join(__dirname, "../../commands/Prefix"), (cmd, file) => {
   const cmds = Array.isArray(cmd) ? cmd : [cmd];
   for (const c of cmds) {
@@ -54,7 +54,7 @@ checkDir(path.join(__dirname, "../../commands/Prefix"), (cmd, file) => {
   }
 });
 
-console.log("Validating Events...");
+console.warn("Validating Events...");
 checkDir(path.join(__dirname, "../../events"), (event, file) => {
   // Events export a single function, not an object with name and run
   if (typeof event !== "function") {
@@ -69,6 +69,6 @@ if (errors > 0) {
   console.error(`\n🔥 Module validation failed with ${errors} errors.`);
   process.exit(1);
 } else {
-  console.log("✅ All command modules are structurally valid!");
+  console.warn("✅ All command modules are structurally valid!");
   process.exit(0);
 }

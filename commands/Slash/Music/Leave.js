@@ -7,7 +7,10 @@ module.exports = {
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);
     if (!player) {
-      await interaction.reply({ content: "No playing in this guild!", ephemeral: true });
+      await interaction.reply({
+        content: "No playing in this guild!",
+        ephemeral: true,
+      });
       return;
     }
 
@@ -17,7 +20,10 @@ module.exports = {
       interaction.member.voice.channel !==
         interaction.guild.members.me.voice.channel
     ) {
-      await interaction.reply({ content: "I'm not in the same voice channel as you!", ephemeral: true });
+      await interaction.reply({
+        content: "I'm not in the same voice channel as you!",
+        ephemeral: true,
+      });
       return;
     }
 
@@ -33,7 +39,7 @@ module.exports = {
     setTimeout(async () => {
       try {
         await interaction.deleteReply();
-      } catch (err) {
+      } catch (_err) {
         // Ignore error if already deleted
       }
     }, 5000);

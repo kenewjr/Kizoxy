@@ -65,15 +65,9 @@ module.exports = async (client, interaction) => {
     if (interaction.commandName === "play") {
       try {
         const raw = interaction.options.getString("search") || Random;
-        let choice = await playSearchAutocompleteChoices(
-          client.manager,
-          raw,
-        );
+        let choice = await playSearchAutocompleteChoices(client.manager, raw);
         if (!choice.length) {
-          choice = await playSearchAutocompleteChoices(
-            client.manager,
-            Random,
-          );
+          choice = await playSearchAutocompleteChoices(client.manager, Random);
         }
         await interaction.respond(choice.length ? choice : []);
         logger.debug(`Autocomplete results sent for play command`);
@@ -83,7 +77,7 @@ module.exports = async (client, interaction) => {
         );
         try {
           await interaction.respond([]);
-        } catch (_) {
+        } catch (__) {
           /* ignore */
         }
       }
@@ -112,13 +106,13 @@ module.exports = async (client, interaction) => {
             );
             try {
               await interaction.respond([]);
-            } catch (_) {
+            } catch (__) {
               /* ignore */
             }
           }
           return;
         }
-      } catch (e) {
+      } catch (_e) {
         // No subcommand
       }
     }

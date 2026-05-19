@@ -1,5 +1,4 @@
 const {
-  EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   ComponentType,

@@ -19,9 +19,14 @@ const LRCLIB_HEADERS = {
  * @param {number} duration - Track duration in seconds (optional)
  * @returns {Promise<object|null>} Lyrics data or null
  */
-async function searchLRCLIB(trackName, artistName, albumName = null, duration = null) {
+async function searchLRCLIB(
+  trackName,
+  artistName,
+  albumName = null,
+  duration = null,
+) {
   try {
-    console.log(`[LRCLIB Direct] Searching: "${trackName}" by "${artistName}"`);
+    console.warn(`[LRCLIB Direct] Searching: "${trackName}" by "${artistName}"`);
 
     // Build search params
     const params = {
@@ -42,12 +47,12 @@ async function searchLRCLIB(trackName, artistName, albumName = null, duration = 
     });
 
     if (getResponse.status === 200 && getResponse.data) {
-      console.log(`[LRCLIB Direct] ✅ Found via GET (exact match)`);
+      console.warn(`[LRCLIB Direct] ✅ Found via GET (exact match)`);
       return formatLRCLIBResponse(getResponse.data);
     }
 
     // If GET fails, try SEARCH method (fuzzy match)
-    console.log(`[LRCLIB Direct] GET failed, trying SEARCH...`);
+    console.warn(`[LRCLIB Direct] GET failed, trying SEARCH...`);
     const searchUrl = `${LRCLIB_API}/search`;
     const searchResponse = await axios.get(searchUrl, {
       params: {
@@ -60,22 +65,22 @@ async function searchLRCLIB(trackName, artistName, albumName = null, duration = 
 
     if (searchResponse.status === 200 && Array.isArray(searchResponse.data)) {
       const results = searchResponse.data;
-      
+
       if (results.length === 0) {
-        console.log(`[LRCLIB Direct] ❌ No results found`);
+        console.warn(`[LRCLIB Direct] ❌ No results found`);
         return null;
       }
 
       // Find best match
       const bestMatch = findBestMatch(results, trackName, artistName);
-      
+
       if (bestMatch) {
-        console.log(`[LRCLIB Direct] ✅ Found via SEARCH (fuzzy match)`);
+        console.warn(`[LRCLIB Direct] ✅ Found via SEARCH (fuzzy match)`);
         return formatLRCLIBResponse(bestMatch);
       }
     }
 
-    console.log(`[LRCLIB Direct] ❌ No lyrics found`);
+    console.warn(`[LRCLIB Direct] ❌ No lyrics found`);
     return null;
   } catch (error) {
     console.error(`[LRCLIB Direct] Error:`, error.message);
@@ -113,7 +118,7 @@ function findBestMatch(results, trackName, artistName) {
 
   // Sort by score and return best
   scored.sort((a, b) => b.score - a.score);
-  
+
   // Only return if score is reasonable (at least 50)
   if (scored[0].score >= 50) {
     return scored[0].result;
@@ -168,11 +173,15 @@ function parseSyncedLyrics(lrcText) {
 
       if (text) {
         // Skip metadata lines
-        if (text.startsWith("[") || text.toLowerCase().includes("instrumental")) {
+        if (
+          text.startsWith("[") ||
+          text.toLowerCase().includes("instrumental")
+        ) {
           continue;
         }
 
-        const timestamp = minutes * 60 * 1000 + seconds * 1000 + centiseconds * 10;
+        const timestamp =
+          minutes * 60 * 1000 + seconds * 1000 + centiseconds * 10;
         lines.push({
           line: text,
           timestamp: timestamp,

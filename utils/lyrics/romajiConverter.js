@@ -5,7 +5,9 @@
  */
 
 const Kuroshiro = require("kuroshiro").default || require("kuroshiro");
-const KuromojiAnalyzer = require("kuroshiro-analyzer-kuromoji").default || require("kuroshiro-analyzer-kuromoji");
+const KuromojiAnalyzer =
+  require("kuroshiro-analyzer-kuromoji").default ||
+  require("kuroshiro-analyzer-kuromoji");
 
 // Singleton instance
 let kuroshiroInstance = null;
@@ -27,11 +29,11 @@ async function initializeKuroshiro() {
 
   initializationPromise = (async () => {
     try {
-      console.log("[RomajiConverter] Initializing Kuroshiro...");
+      console.warn("[RomajiConverter] Initializing Kuroshiro...");
       kuroshiroInstance = new Kuroshiro();
       await kuroshiroInstance.init(new KuromojiAnalyzer());
       isInitialized = true;
-      console.log("[RomajiConverter] ✅ Kuroshiro initialized successfully");
+      console.warn("[RomajiConverter] ✅ Kuroshiro initialized successfully");
       return kuroshiroInstance;
     } catch (error) {
       console.error("[RomajiConverter] ❌ Failed to initialize:", error);
@@ -174,9 +176,12 @@ function isJapaneseTrack(title, author) {
 async function preInitialize() {
   try {
     await initializeKuroshiro();
-    console.log("[RomajiConverter] Pre-initialization complete");
+    console.warn("[RomajiConverter] Pre-initialization complete");
   } catch (error) {
-    console.error("[RomajiConverter] Pre-initialization failed:", error.message);
+    console.error(
+      "[RomajiConverter] Pre-initialization failed:",
+      error.message,
+    );
   }
 }
 

@@ -23,14 +23,14 @@ module.exports = {
       }
 
       const channelName = voiceChannel.name;
-      
+
       // Remove buttons dari now playing message (stop = end session)
       try {
         await interaction.message.edit({ components: [] });
       } catch (error) {
         console.error("Failed to remove buttons:", error);
       }
-      
+
       await player.destroy();
 
       const embed = new EmbedBuilder()
@@ -43,7 +43,7 @@ module.exports = {
       setTimeout(async () => {
         try {
           await interaction.deleteReply();
-        } catch (err) {
+        } catch (_err) {
           // Ignore error if already deleted
         }
       }, 5000);

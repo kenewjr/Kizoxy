@@ -5,13 +5,12 @@ const logger = new Logger("EVENT");
 
 module.exports = async (client) => {
   let totalLoaded = 0;
-  let failedLoads = [];
   const loadFromDir = (dir) => {
     const folder = path.join(__dirname, "..", "events", dir);
     let events = [];
     try {
       events = readdirSync(folder).filter((f) => f.endsWith(".js"));
-    } catch (err) {
+    } catch (_err) {
       logger.warning(`[LOAD EVENT] folder not found: ${folder}`);
       return;
     }

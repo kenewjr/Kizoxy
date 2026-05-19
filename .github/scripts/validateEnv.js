@@ -3,7 +3,7 @@ const path = require("path");
 
 const envExamplePath = path.join(__dirname, "../../.env example");
 if (!fs.existsSync(envExamplePath)) {
-  console.log('No ".env example" found, skipping validation.');
+  console.warn('No ".env example" found, skipping validation.');
   process.exit(0);
 }
 
@@ -35,9 +35,9 @@ if (hasEnv) {
     console.error(`❌ Missing keys in .env: ${missingKeys.join(", ")}`);
     process.exit(1);
   } else {
-    console.log("✅ .env file is fully synced with .env example!");
+    console.warn("✅ .env file is fully synced with .env example!");
   }
 } else {
-  console.log("✅ .env example format is valid.");
-  console.log("Expected Keys:", expectedKeys.join(", "));
+  console.warn("✅ .env example format is valid.");
+  console.warn("Expected Keys:", expectedKeys.join(", "));
 }
