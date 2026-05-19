@@ -56,7 +56,6 @@ async function sendErrorWebhook(title, error, extra = {}) {
   processQueue();
 }
 
-
 async function processQueue() {
   if (processing || queue.length === 0) return;
   processing = true;

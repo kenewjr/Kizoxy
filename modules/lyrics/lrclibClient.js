@@ -76,7 +76,6 @@ async function searchLRCLIB(
   }
 }
 
-
 function findBestMatch(results, trackName, artistName) {
   const trackLower = trackName.toLowerCase();
   const artistLower = artistName.toLowerCase();

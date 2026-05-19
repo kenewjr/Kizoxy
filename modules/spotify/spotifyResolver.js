@@ -5,7 +5,6 @@ const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const PAGE_SIZE = 50; // Turunkan dari 100 ke 50 untuk lebih aman
 const MAX_PAGES = 100;
 
-
 const RATE_LIMIT = {
   maxRequestsPerSecond: 5, // Max 5 request per detik
   minDelayMs: 200, // Min 200ms delay antar request

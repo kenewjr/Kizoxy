@@ -8,10 +8,6 @@ let kuroshiroInstance = null;
 let isInitialized = false;
 let initializationPromise = null;
 
-/**
- * Initialize Kuroshiro (lazy initialization)
- * @returns {Promise<Kuroshiro>}
- */
 async function initializeKuroshiro() {
   if (isInitialized && kuroshiroInstance) {
     return kuroshiroInstance;
