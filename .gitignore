@@ -1,12 +1,6 @@
 node_modules
 .env
-
-# Runtime data files (DO NOT COMMIT)
 utils/data/*.json
 api/jikan-api/data/*.json
-
-# PM2 logs
 logs/
-
-# ESLint cache
 .eslintcache
