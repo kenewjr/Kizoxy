@@ -5,6 +5,7 @@ const {
   ButtonStyle,
 } = require("discord.js");
 const formatduration = require("../../structures/FormatDuration.js");
+const { searchLyrics } = require("../../services/lyrics/lyricsService");
 
 module.exports = async (client, player, track) => {
   const source = player.queue.current.sourceName || "unknow";
@@ -89,6 +90,11 @@ module.exports = async (client, player, track) => {
         .catch(() => null);
       if (oldMsg) {
         await oldMsg.edit({ embeds: [embed], components: [buttons] });
+        
+        // Auto-fetch lyrics jika toggle aktif
+        if (player.lyricsEnabled) {
+          await autoFetchLyrics(client, player, track, oldMsg);
+        }
         return;
       }
     }
@@ -99,6 +105,11 @@ module.exports = async (client, player, track) => {
       components: [buttons],
     });
     player.nowPlayingMessageId = sentMsg.id;
+    
+    // Auto-fetch lyrics jika toggle aktif
+    if (player.lyricsEnabled) {
+      await autoFetchLyrics(client, player, track, sentMsg);
+    }
   } catch (err) {
     console.error("Error sending/updating Now Playing embed:", err);
   }
@@ -106,4 +117,55 @@ module.exports = async (client, player, track) => {
 
 function UpCase(char) {
   return char.charAt(0).toUpperCase() + char.slice(1);
+}
+
+/**
+ * Auto-fetch lyrics dan update now playing message
+ */
+async function autoFetchLyrics(client, player, track, message) {
+  try {
+    // Add loading notification
+    const currentEmbeds = message.embeds;
+    const loadingEmbed = new EmbedBuilder()
+      .setDescription("🔍 Mencari lyrics...")
+      .setColor(client.color);
+    
+    await message.edit({ 
+      embeds: [...currentEmbeds, loadingEmbed],
+      components: message.components 
+    });
+
+    // Fetch lyrics
+    const result = await searchLyrics(player, track, client.color);
+    
+    if (result.error) {
+      // Remove loading notification if not found
+      await message.edit({ 
+        embeds: currentEmbeds,
+        components: message.components 
+      });
+      console.warn("[playerStart] Lyrics not found:", result.error);
+      return;
+    }
+
+    // Replace loading notification with actual lyrics
+    await message.edit({ 
+      embeds: [...currentEmbeds, result.embed],
+      components: message.components 
+    });
+  } catch (err) {
+    console.error("[playerStart] Auto-fetch lyrics failed:", err.message);
+    // Remove loading notification on error
+    try {
+      const currentEmbeds = message.embeds;
+      if (currentEmbeds.length > 1) {
+        await message.edit({ 
+          embeds: currentEmbeds.slice(0, -1), // Remove last embed (loading)
+          components: message.components 
+        });
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
 }

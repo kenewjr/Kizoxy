@@ -25,7 +25,7 @@ client.buttons = new Collection();
 client.aliases = new Collection();
 client.prefixCommands = new Map();
 
-const LogStorage = require("./utils/logStorage.js");
+const LogStorage = require("./utils/storage/logStorage.js");
 client.logStorage = new LogStorage();
 
 // Initialize Shoukaku

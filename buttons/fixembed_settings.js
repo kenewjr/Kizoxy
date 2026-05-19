@@ -20,7 +20,7 @@ const {
   RoleSelectMenuBuilder,
   ChannelType,
 } = require("discord.js");
-const fixembedStorage = require("../utils/fixembedStorage");
+const fixembedStorage = require("../utils/storage/fixembedStorage");
 
 // ─── Page embeds ─────────────────────────────────────────────────────────────
 

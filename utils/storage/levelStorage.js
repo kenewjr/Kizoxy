@@ -1,6 +1,6 @@
 const fs = require("fs").promises;
 const path = require("path");
-const Logger = require("../utils/logger");
+const Logger = require("../logger");
 const logger = new Logger("LEVEL_STORAGE");
 const JSONStorage = require("./storage");
 

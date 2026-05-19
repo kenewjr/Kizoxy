@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const { Collection, EmbedBuilder } = require("discord.js");
-const JSONStorage = require("../utils/storage");
-const AlarmScheduler = require("../utils/alarmScheduler");
+const JSONStorage = require("../utils/storage/storage");
+const AlarmScheduler = require("../utils/alarm/alarmScheduler");
 const Logger = require("../utils/logger");
 const logger = new Logger("ALARM");
 

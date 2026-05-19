@@ -2,7 +2,6 @@ module.exports = {
   customId: "music-shuffle",
   execute: async (interaction, client) => {
     try {
-      // Defer reply kalau belum di-acknowledge
       if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ ephemeral: true });
       }
@@ -21,19 +20,26 @@ module.exports = {
         });
       }
 
-      // Kalau queue kosong atau cuma 1 lagu, tidak bisa shuffle
       if (!player.queue || player.queue.length <= 1) {
         return interaction.editReply({
           content: "⚠️ Not enough tracks in the queue to shuffle.",
         });
       }
 
-      // Jalankan shuffle
       player.queue.shuffle();
 
       await interaction.editReply({
         content: "🔀 Queue shuffled successfully.",
       });
+
+      // Delete ephemeral reply after 5 seconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
     } catch (error) {
       console.error("Shuffle Button Error:", error);
       try {

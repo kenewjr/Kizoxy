@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 module.exports = {
-  PREFIX: "k",
+  PREFIX: process.env.PREFIX || "k",
   TOKEN: process.env.TOKEN || "YOUR_TOKEN_BOT",
   OWNER_ID: process.env.OWNER_ID || "YOUR_DISCORD_OWNER_ID",
   EMBED_COLOR: process.env.EMBED_COLOR || "#000001",

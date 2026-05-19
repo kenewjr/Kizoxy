@@ -12,7 +12,7 @@ const {
   ChannelType,
   PermissionsBitField,
 } = require("discord.js");
-const fixembedStorage = require("../../../utils/fixembedStorage");
+const fixembedStorage = require("../../../utils/storage/fixembedStorage");
 
 // ─── Shared builders (mirrors buttons/fixembed_settings.js) ──────────────────
 

@@ -1,16 +1,11 @@
 // shared/music/playLogic.js
-const {
-  isSpotifyPlaylist,
-  isSpotifyAlbum,
+const { 
+  isSpotifyUrl, 
+  isSpotifyPlaylist, 
+  isSpotifyAlbum, 
   isSpotifyTrack,
-  extractPlaylistId,
-  extractAlbumId,
-  getPlaylistTracks,
-  getAlbumTracks,
-  getTrackInfo,
-  getTrackInfoFromOEmbed,
-} = require("../../../utils/spotifyResolver");
-const { KazagumoTrack } = require("kazagumo");
+  spotifyToYouTubeSearch 
+} = require("../../../utils/spotify/spotifyHelper");
 
 module.exports = async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();
@@ -30,8 +25,39 @@ module.exports = async function playLogic(client, ctx, args) {
     if (isSlash) await ctx.deferReply();
 
     // ── Ambil query ──────────────────────────────────────────
-    const query = isSlash ? ctx.options.getString("search") : args.join(" ");
+    let query = isSlash ? ctx.options.getString("search") : args.join(" ");
     if (!query) return reply("❌ | Masukkan nama lagu atau URL.", true);
+
+    // ── Convert Spotify URLs ke YouTube search ───────────────
+    if (isSpotifyUrl(query)) {
+      // Playlist dan Album tidak support tanpa Spotify Premium
+      if (isSpotifyPlaylist(query)) {
+        return reply(
+          "❌ | Spotify playlist tidak support tanpa Premium subscription.\n" +
+          "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
+          true
+        );
+      }
+      
+      if (isSpotifyAlbum(query)) {
+        return reply(
+          "❌ | Spotify album tidak support tanpa Premium subscription.\n" +
+          "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
+          true
+        );
+      }
+
+      // Single track: convert ke YouTube search
+      if (isSpotifyTrack(query)) {
+        await reply("🎵 | Memuat dari Spotify...", true);
+        const ytSearch = await spotifyToYouTubeSearch(query);
+        if (ytSearch) {
+          query = ytSearch; // Let Kazagumo handle search prefix
+        } else {
+          return reply("❌ | Gagal memuat dari Spotify. Coba lagi.", true);
+        }
+      }
+    }
 
     // ── Cek voice channel ────────────────────────────────────
     const member = ctx.member;
@@ -58,107 +84,6 @@ module.exports = async function playLogic(client, ctx, args) {
     }
 
     const requester = isSlash ? ctx.user : ctx.author;
-
-    // Helper: tambah banyak track ke queue lalu play jika belum jalan
-    const bulkAdd = (tracks) => {
-      for (const t of tracks) player.queue.add(t);
-      if (!player.playing && !player.paused) {
-        try { player.play(); } catch (_) { /* ignore */ }
-      }
-    };
-
-    // Helper: bangun KazagumoTrack dari data mentah Spotify
-    const buildSpotifyTrack = (t) =>
-      new KazagumoTrack(
-        {
-          encoded: "",
-          pluginInfo: {},
-          info: {
-            sourceName: "spotify",
-            identifier: t.identifier,
-            isSeekable: true,
-            author: t.author,
-            length: t.duration,
-            isStream: false,
-            position: 0,
-            title: t.title,
-            uri: t.uri,
-            artworkUrl: t.artworkUrl,
-            isrc: t.isrc,
-          },
-        },
-        requester,
-        client.manager,
-      );
-
-    // ═══════════════════════════════════════════════════════════
-    // SPOTIFY PLAYLIST
-    // ═══════════════════════════════════════════════════════════
-    if (isSpotifyPlaylist(query)) {
-      const playlistId = extractPlaylistId(query);
-      if (!playlistId) return reply("❌ | URL Spotify playlist tidak valid.", true);
-
-      await reply("⏳ | Memuat Spotify playlist...", true);
-
-      const playlist = await getPlaylistTracks(playlistId);
-      if (!playlist.tracks.length)
-        return reply("❌ | Playlist kosong atau gagal dimuat.", true);
-
-      const kazTracks = playlist.tracks.map(buildSpotifyTrack);
-      bulkAdd(kazTracks);
-
-      return reply(
-        `📃 Menambahkan playlist Spotify **${playlist.name}** dengan **${kazTracks.length}** lagu ke queue.`,
-        true,
-      );
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // SPOTIFY ALBUM
-    // ═══════════════════════════════════════════════════════════
-    if (isSpotifyAlbum(query)) {
-      const albumId = extractAlbumId(query);
-      if (!albumId) return reply("❌ | URL Spotify album tidak valid.", true);
-
-      await reply("⏳ | Memuat Spotify album...", true);
-
-      const album = await getAlbumTracks(albumId);
-      if (!album.tracks.length)
-        return reply("❌ | Album kosong atau gagal dimuat.", true);
-
-      const kazTracks = album.tracks.map(buildSpotifyTrack);
-      bulkAdd(kazTracks);
-
-      return reply(
-        `💿 Menambahkan album Spotify **${album.name}** dengan **${kazTracks.length}** lagu ke queue.`,
-        true,
-      );
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // SPOTIFY SINGLE TRACK
-    // ═══════════════════════════════════════════════════════════
-    if (isSpotifyTrack(query)) {
-      // Coba lewat official API dulu, fallback ke oEmbed
-      let searchQuery = await getTrackInfo(query);
-      if (!searchQuery) searchQuery = await getTrackInfoFromOEmbed(query);
-
-      if (searchQuery) {
-        const result = await client.manager.search(searchQuery, { requester });
-        if (result?.tracks?.length) {
-          const track = result.tracks[0];
-          player.queue.add(track);
-          if (!player.playing && !player.paused) {
-            try { player.play(); } catch (_) { /* ignore */ }
-          }
-          return reply(
-            `🎵 Menambahkan **${track.title}** ke queue. (Spotify → YouTube)`,
-            true,
-          );
-        }
-      }
-      // Jika semua gagal, fall-through ke default search
-    }
 
     // ═══════════════════════════════════════════════════════════
     // DEFAULT: search via Kazagumo / Lavalink

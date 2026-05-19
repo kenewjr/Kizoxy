@@ -1,5 +1,5 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
-const LevelStorage = require("../../../utils/levelStorage");
+const LevelStorage = require("../../../utils/storage/levelStorage");
 
 module.exports = {
   name: ["level"],

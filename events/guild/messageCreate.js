@@ -5,9 +5,9 @@ const {
   ButtonBuilder,
   ButtonStyle,
 } = require("discord.js");
-const LevelStorage = require("../../utils/levelStorage");
-const fixembedStorage = require("../../utils/fixembedStorage");
-const { extractFixedLinks } = require("../../utils/fixembedResolver");
+const LevelStorage = require("../../utils/storage/levelStorage");
+const fixembedStorage = require("../../utils/storage/fixembedStorage");
+const { extractFixedLinks } = require("../../utils/fixembed/fixembedResolver");
 
 // Map to store cooldowns: userId -> timestamp
 const cooldowns = new Map();

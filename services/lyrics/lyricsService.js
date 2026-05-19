@@ -4,16 +4,59 @@
  *                buttons/lyrics.js
  *
  * Eliminates ~350 lines of duplicated code.
+ * 
+ * NEW: Uses Lavalink LRCLIB directly with romaji conversion
  */
 
 const { EmbedBuilder } = require("discord.js");
 const axios = require("axios");
+const NodeCache = require("node-cache");
+const http = require("http");
+const https = require("https");
+const {
+  convertLyricsToRomaji,
+  isJapanese,
+  isJapaneseTrack,
+} = require("../../utils/lyrics/romajiConverter");
 
 // ══════════════════════════════════════════════════════════════════════════
 // Config
 // ══════════════════════════════════════════════════════════════════════════
-const UNIFIED_API = "http://localhost:8000/lyrics";
+const LAVALINK_URL = process.env.LAVALINK_URL || "http://localhost:2333";
+const LAVALINK_PASSWORD = process.env.LAVALINK_PASSWORD || "youshallnotpass";
 const TIMEOUT_MS = 15_000;
+
+// ══════════════════════════════════════════════════════════════════════════
+// Cache & Connection Pooling (Phase 1 Optimization)
+// ══════════════════════════════════════════════════════════════════════════
+const lyricsCache = new NodeCache({
+  stdTTL: 1800,      // 30 minutes TTL
+  checkperiod: 120,  // cleanup every 2 minutes
+  maxKeys: 200,      // max 200 songs in cache
+  useClones: false,  // performance: don't clone objects
+});
+
+// HTTP connection pooling with keep-alive
+const httpAgent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 10,
+  maxFreeSockets: 5,
+  timeout: TIMEOUT_MS,
+});
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 10,
+  maxFreeSockets: 5,
+  timeout: TIMEOUT_MS,
+});
+
+// Axios instance with connection pooling
+const axiosInstance = axios.create({
+  httpAgent,
+  httpsAgent,
+  timeout: TIMEOUT_MS,
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // Helpers — cleaning & strategy building
@@ -121,14 +164,12 @@ function resolveArtist(lyricsArtist, trackAuthor) {
 function buildFullLyrics(data) {
   if (!data?.lyrics?.length) return "";
   if (data.is_japanese) {
-    for (const field of ["romaji", "english", "japanese"]) {
-      const merged = data.lyrics
-        .map((p) => p[field]?.trim() ?? "")
-        .filter(Boolean)
-        .join("\n\n");
-      if (merged) return merged;
-    }
-    return "";
+    // ONLY romaji for Japanese songs - no fallback to english/japanese
+    const merged = data.lyrics
+      .map((p) => p.romaji?.trim() ?? "")
+      .filter(Boolean)
+      .join("\n\n");
+    return merged; // Return romaji only, or empty if not available
   }
   return data.lyrics
     .map((p) => p.english?.trim() ?? "")
@@ -199,12 +240,85 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// API calls
+// Lavalink Lyrics API
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fetch lyrics from Lavalink's built-in LRCLIB
+ * @param {object} player - Kazagumo player instance
+ * @returns {Promise<object|null>} Lyrics data or null
+ */
+async function fetchLavalinkLyrics(player) {
+  if (!player?.node?.sessionId || !player?.guildId) {
+    console.warn("[Lavalink Lyrics] Invalid player or missing session/guild ID");
+    return null;
+  }
+
+  try {
+    const sessionId = player.node.sessionId;
+    const guildId = player.guildId;
+    const url = `${LAVALINK_URL}/v4/sessions/${sessionId}/players/${guildId}/track/lyrics`;
+
+    console.log(`[Lavalink Lyrics] Fetching from: ${url}`);
+
+    const response = await axiosInstance.get(url, {
+      headers: {
+        Authorization: LAVALINK_PASSWORD,
+      },
+      timeout: TIMEOUT_MS,
+      validateStatus: (s) => s < 500,
+    });
+
+    if (response.status !== 200) {
+      console.warn(
+        `[Lavalink Lyrics] Non-200 status: ${response.status}`,
+      );
+      return null;
+    }
+
+    if (!response.data?.text) {
+      console.warn("[Lavalink Lyrics] No lyrics text in response");
+      return null;
+    }
+
+    console.log(
+      `[Lavalink Lyrics] ✅ Success | source: ${response.data.source} | length: ${response.data.text.length}`,
+    );
+
+    return {
+      source: response.data.source || "lrclib",
+      text: response.data.text,
+      lines: response.data.lines || [],
+      hasSyncedLyrics: Array.isArray(response.data.lines) && response.data.lines.length > 0,
+    };
+  } catch (error) {
+    if (error.response?.status === 404) {
+      console.warn("[Lavalink Lyrics] 404 - No lyrics found");
+    } else {
+      console.error("[Lavalink Lyrics] Error:", error.message);
+    }
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// API calls (DEPRECATED - kept for reference)
 // ══════════════════════════════════════════════════════════════════════════
 async function fetchLyrics(query, rawAuthor, trackTitle, trackAuthor) {
+  // Cache key includes all relevant parameters
+  const cacheKey = `${query}|${trackTitle}|${trackAuthor}|${rawAuthor}`;
+
+  // Check cache first
+  const cached = lyricsCache.get(cacheKey);
+  if (cached) {
+    console.warn(`[lyrics] ✅ Cache HIT: "${query}"`);
+    return cached;
+  }
+
+  // Cache miss - fetch from API
   let res;
   try {
-    res = await axios.get(UNIFIED_API, {
+    res = await axiosInstance.get(UNIFIED_API, {
       params: {
         q: query,
         lang: "all",
@@ -213,7 +327,6 @@ async function fetchLyrics(query, rawAuthor, trackTitle, trackAuthor) {
         track_title: trackTitle || "",
         track_author: trackAuthor || "",
       },
-      timeout: TIMEOUT_MS,
       validateStatus: (s) => s < 500,
     });
   } catch (err) {
@@ -222,45 +335,18 @@ async function fetchLyrics(query, rawAuthor, trackTitle, trackAuthor) {
   }
   if (res.status !== 200) return null;
   if (!res.data?.lyrics?.length) return null;
+
+  // Cache successful response
+  lyricsCache.set(cacheKey, res.data);
+  console.warn(`[lyrics] 💾 Cached: "${query}"`);
+
   return res.data;
 }
 
-async function fetchAllPages(
-  query,
-  _rawAuthor,
-  firstData,
-  trackTitle,
-  trackAuthor,
-) {
-  const MAX_PAGES = 8;
-  const totalPages = Math.min(firstData.pages ?? 1, MAX_PAGES);
-  const allLyricPages = [...firstData.lyrics];
-
-  if (totalPages > 1) {
-    const extras = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) =>
-        axios
-          .get(UNIFIED_API, {
-            params: {
-              q: query,
-              lang: "all",
-              page: i + 2,
-              track_title: trackTitle || "",
-              track_author: trackAuthor || "",
-            },
-            timeout: TIMEOUT_MS,
-            validateStatus: (s) => s < 500,
-          })
-          .catch(() => null),
-      ),
-    );
-    for (const res of extras) {
-      if (res?.data?.lyrics?.length) allLyricPages.push(...res.data.lyrics);
-    }
-  }
-
-  return allLyricPages;
-}
+// ══════════════════════════════════════════════════════════════════════════
+// REMOVED: fetchAllPages function
+// Optimization: API now returns only the requested page, no need to fetch all
+// ══════════════════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════════════════════
 // PUBLIC API — called by both command and button
@@ -272,7 +358,7 @@ async function fetchAllPages(
  * @param {string} color  - Embed color (hex)
  * @returns {{ embed: EmbedBuilder } | { error: string }}
  */
-async function searchLyrics(track, color) {
+async function searchLyrics(player, track, color) {
   const rawTitle = track.title ?? "";
   const rawAuthor = track.author ?? "";
 
@@ -306,67 +392,63 @@ async function searchLyrics(track, color) {
     console.warn(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`),
   );
 
-  // Strategy loop
-  let firstData = null;
-  let usedQuery = null;
-  let strategyUsed = 0;
 
-  for (let i = 0; i < queries.length; i++) {
-    console.warn(
-      `[lyrics] Trying [${i + 1}/${queries.length}] (${labels[i]}): "${queries[i]}"`,
+  // Fetch lyrics from Lavalink LRCLIB
+  console.warn(`[lyrics] Fetching from Lavalink LRCLIB...`);
+  let lavalinkData = await fetchLavalinkLyrics(player);
+
+  if (!lavalinkData || !lavalinkData.text) {
+    console.warn(`[lyrics] No lyrics found from Lavalink, trying direct LRCLIB...`);
+    
+    // Fallback: Try direct LRCLIB API with cleaned query
+    const { searchLRCLIB } = require("../../utils/lyrics/lrclibClient");
+    const directLRCLIB = await searchLRCLIB(
+      cleanedTitle,
+      trackAuthor || cleanAuthor(rawAuthor),
+      null, // album
+      track.length ? Math.floor(track.length / 1000) : null // duration in seconds
     );
-
-    const candidate = await fetchLyrics(
-      queries[i],
-      rawAuthor,
-      trackTitle,
-      trackAuthor,
-    );
-
-    if (candidate) {
-      const preview = buildFullLyrics(candidate);
-      if (preview?.trim()) {
-        firstData = candidate;
-        usedQuery = queries[i];
-        strategyUsed = i + 1;
-        console.warn(
-          `[lyrics] ✅ Hit on strategy ${strategyUsed} (${labels[i]}) | len=${preview.length}`,
-        );
-        break;
-      }
-      console.warn(
-        `[lyrics] ⚠️  Data found but lyrics empty on strategy ${i + 1} (${labels[i]}) — continuing...`,
-      );
+    
+    if (directLRCLIB && directLRCLIB.text) {
+      console.warn(`[lyrics] ✅ Found via direct LRCLIB API`);
+      // Use direct LRCLIB data
+      lavalinkData = directLRCLIB;
     } else {
-      console.warn(`[lyrics] ❌ Miss on strategy ${i + 1} (${labels[i]})`);
+      console.warn(`[lyrics] ❌ No lyrics found from both Lavalink and direct LRCLIB`);
+      return { error: "🔹 No lyrics found for this track." };
     }
   }
 
-  if (!firstData) {
-    console.warn(
-      `[lyrics] All ${queries.length} strategies exhausted — no lyrics found.`,
-    );
-    return { error: "🔹 No lyrics found for this track." };
+  // Detect if lyrics are Japanese
+  const isJp = isJapanese(lavalinkData.text);
+  console.warn(`[lyrics] Japanese detected: ${isJp}`);
+
+  // Convert to romaji if Japanese
+  let displayLyrics = lavalinkData.text;
+  if (isJp) {
+    console.warn(`[lyrics] Converting to romaji...`);
+    displayLyrics = await convertLyricsToRomaji(lavalinkData.text);
+    console.warn(`[lyrics] ✅ Romaji conversion complete`);
   }
 
-  const allLyricPages = await fetchAllPages(
-    usedQuery,
-    rawAuthor,
-    firstData,
-    trackTitle,
-    trackAuthor,
-  );
-
-  const lyricsData = {
-    ...firstData,
-    lyrics: allLyricPages,
-    artist: resolveArtist(firstData.artist, rawAuthor),
+  // Build lyrics data object
+  const firstData = {
+    title: track.title,
+    artist: cleanAuthor(rawAuthor) || "Unknown Artist",
+    album: null,
+    source: lavalinkData.source,
+    is_japanese: isJp,
+    url: null,
+    lyrics: displayLyrics,
   };
 
-  const fullLyrics = buildFullLyrics(lyricsData);
+
+  // Lyrics data is ready (already processed above)
+  const fullLyrics = displayLyrics;
+  
   console.warn(
-    `[lyrics] source=${lyricsData.source} | is_jp=${lyricsData.is_japanese}` +
-      ` | artist="${lyricsData.artist}" | len=${fullLyrics.length} | strategy=${strategyUsed}`,
+    `[lyrics] source=${firstData.source} | is_jp=${firstData.is_japanese}` +
+      ` | artist="${firstData.artist}" | len=${fullLyrics.length}`,
   );
 
   if (!fullLyrics?.trim()) {
@@ -374,32 +456,34 @@ async function searchLyrics(track, color) {
   }
 
   // Build embed
-  const flag = lyricsData.is_japanese ? "🇯🇵 " : "";
-  const src = sourceLabel(lyricsData.source ?? "");
+  const flag = firstData.is_japanese ? "🇯🇵 " : "";
+  const src = sourceLabel(firstData.source ?? "");
 
   const footerParts = [
-    `${flag}${lyricsData.artist}`,
-    lyricsData.album ? `📀 ${lyricsData.album}` : null,
+    `${flag}${firstData.artist}`,
+    firstData.album ? `📀 ${firstData.album}` : null,
     `Powered by ${src}`,
   ].filter(Boolean);
 
   let displayText = fullLyrics;
   if (displayText.length > 4096) {
-    const suffix = lyricsData.url
-      ? `...\n[Read more](${lyricsData.url})`
+    const suffix = firstData.url
+      ? `...\n[Read more](${firstData.url})`
       : "...\n[Lyrics truncated]";
     displayText = displayText.slice(0, 4096 - suffix.length) + suffix;
   }
 
   const embed = new EmbedBuilder()
     .setColor(color ?? 0x9b59b6)
-    .setTitle(`🎵 ${lyricsData.title || rawTitle || "Unknown"}`)
+    .setTitle(`🎵 ${firstData.title || rawTitle || "Unknown"}`)
     .setDescription(displayText)
     .setFooter({ text: footerParts.join("  ·  ") });
 
-  if (lyricsData.url) embed.setURL(lyricsData.url);
+  if (firstData.url) embed.setURL(firstData.url);
 
-  return { embed };
+  return { 
+    embed
+  };
 }
 
 /**
@@ -427,4 +511,6 @@ module.exports = {
   cleanTitle,
   cleanAuthor,
   buildQueryStrategies,
+  // Cache management
+  lyricsCache,
 };

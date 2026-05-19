@@ -5,7 +5,7 @@ const {
   ButtonStyle,
   ApplicationCommandOptionType,
 } = require("discord.js");
-const LevelStorage = require("../../../utils/levelStorage");
+const LevelStorage = require("../../../utils/storage/levelStorage");
 
 module.exports = {
   name: ["leaderboard"],

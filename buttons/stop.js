@@ -23,6 +23,14 @@ module.exports = {
       }
 
       const channelName = voiceChannel.name;
+      
+      // Remove buttons dari now playing message (stop = end session)
+      try {
+        await interaction.message.edit({ components: [] });
+      } catch (error) {
+        console.error("Failed to remove buttons:", error);
+      }
+      
       await player.destroy();
 
       const embed = new EmbedBuilder()
@@ -31,12 +39,14 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
 
-      // Remove buttons from now playing
-      try {
-        await interaction.message.edit({ components: [] });
-      } catch (error) {
-        console.error("Failed to remove buttons:", error);
-      }
+      // Delete ephemeral reply after 5 seconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
     } catch (error) {
       console.error("Stop Button Error:", error);
       await interaction.editReply({ content: "❌ Failed to stop the music." });

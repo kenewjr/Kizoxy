@@ -4,6 +4,6 @@ title Kizoxy
 
 :StartBot
 
-npm run start:pm2
+npm run start
 
 goto StartBot

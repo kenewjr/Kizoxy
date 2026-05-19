@@ -17,7 +17,10 @@ module.exports = {
   run: async (client, interaction) => {
     // Check if player exists
     const player = client.manager.players.get(interaction.guild.id);
-    if (!player) return interaction.reply(`No playing in this guild!`);
+    if (!player) {
+      await interaction.reply({ content: "No playing in this guild!", ephemeral: true });
+      return;
+    }
 
     // Check if user is in same voice channel
     const { channel } = interaction.member.voice;
@@ -25,8 +28,10 @@ module.exports = {
       !channel ||
       interaction.member.voice.channel !==
         interaction.guild.members.me.voice.channel
-    )
-      return interaction.reply(`I'm not in the same voice channel as you!`);
+    ) {
+      await interaction.reply({ content: "I'm not in the same voice channel as you!", ephemeral: true });
+      return;
+    }
 
     const position = interaction.options.getInteger("position");
 
@@ -38,7 +43,17 @@ module.exports = {
         .setDescription(`\`⏭\` | *Song has been:* \`Skipped\``)
         .setColor(client.color);
 
-      return interaction.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+
+      // Delete ephemeral reply after 5 seconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
+      return;
     }
 
     // If position provided, skip to that position
@@ -46,9 +61,20 @@ module.exports = {
       position > player.queue.size ||
       (position && !player.queue[position - 1])
     ) {
-      return interaction.reply(
-        `You can't skip to a song that doesn't exist! The queue only has ${player.queue.size} song(s).`,
-      );
+      await interaction.reply({
+        content: `You can't skip to a song that doesn't exist! The queue only has ${player.queue.size} song(s).`,
+        ephemeral: true,
+      });
+
+      // Delete ephemeral reply after 5 seconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
+      return;
     }
 
     // If position is 1, just skip current song
@@ -64,6 +90,15 @@ module.exports = {
       .setDescription(`\`⏭\` | *Skipped to position:* \`${position}\``)
       .setColor(client.color);
 
-    return interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+
+    // Delete ephemeral reply after 5 seconds
+    setTimeout(async () => {
+      try {
+        await interaction.deleteReply();
+      } catch (err) {
+        // Ignore error if already deleted
+      }
+    }, 5000);
   },
 };

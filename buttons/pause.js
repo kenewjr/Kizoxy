@@ -32,6 +32,15 @@ module.exports = {
       if (nowPlayingCmd) {
         await nowPlayingCmd.run(client, interaction);
       }
+
+      // Delete ephemeral reply after 5 seconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
     } catch (error) {
       console.error("Pause Button Error:", error);
       await interaction.editReply({ content: "❌ Failed to toggle pause." });

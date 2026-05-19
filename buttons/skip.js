@@ -4,11 +4,6 @@ module.exports = {
   customId: "music-skip",
   execute: async (interaction, client) => {
     try {
-      // Global handler already defers
-      // if (!interaction.deferred && !interaction.replied) {
-      //   await interaction.deferReply({ ephemeral: true });
-      // }
-
       const player = client.manager.players.get(interaction.guild.id);
       if (!player) {
         return interaction.editReply({
@@ -36,6 +31,15 @@ module.exports = {
       if (nowPlayingCmd) {
         await nowPlayingCmd.run(client, interaction);
       }
+
+      // Delete ephemeral reply after 5 seconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
     } catch (error) {
       console.error("Skip Button Error:", error);
       await interaction.editReply({ content: "❌ Failed to skip track." });
