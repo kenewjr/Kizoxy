@@ -4,8 +4,12 @@ const { Collection } = require("discord.js");
 const Logger = require("../utils/logger");
 const logger = new Logger("BUTTON");
 
+/**
+ * Load all button handlers from the buttons directory.
+ * @param {Client} client - Discord client instance
+ */
 module.exports = (client) => {
-  // Pastikan client.buttons ada
+  // Ensure client.buttons exists
   client.buttons = client.buttons || new Collection();
 
   const buttonsDir = path.join(__dirname, "..", "buttons");

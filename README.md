@@ -108,24 +108,24 @@ node deploySlash.js global --clear-all
 
 ### 🎶 Music Commands
 
-| Command              | Description                                |
-| :------------------- | :----------------------------------------- |
-| `/play [song/url]`   | Play a song from YouTube, SoundCloud, etc. |
-| `/nowplaying`        | Show the current playing song.             |
-| `/queue [page]`      | Show the queue.                            |
-| `/loop`              | Toggle loop mode.                          |
-| `/shuffle`           | Shuffle the queue.                         |
-| `/volume [1-100]`    | Adjust the volume.                         |
-| `/pause`             | Pause playback.                            |
-| `/resume`            | Resume playback.                           |
-| `/skip`              | Skip the current song.                     |
-| `/clear`             | Clear the queue.                           |
-| `/leave`             | Disconnect the bot.                        |
-| `/forward [seconds]` | Forward the song.                          |
-| `/search [song]`     | Search for a song.                         |
-| `/247`               | Toggle 24/7 mode.                          |
-| `/remove [song]`     | Remove a song from the queue.              |
-| `/lofi`              | Toggle Lofi mode.                          |
+| Command              | Description                                 |
+| :------------------- | :------------------------------------------ |
+| `/play [song/url]`   | Play a song from YouTube, SoundCloud, etc.  |
+| `/nowplaying`        | Show the current playing song.              |
+| `/queue [page]`      | Show the queue.                             |
+| `/loop`              | Toggle loop mode.                           |
+| `/shuffle`           | Shuffle the queue.                          |
+| `/volume [1-100]`    | Adjust the volume.                          |
+| `/pause`             | Pause playback.                             |
+| `/resume`            | Resume playback.                            |
+| `/skip`              | Skip the current song.                      |
+| `/clear`             | Clear the queue.                            |
+| `/leave`             | Disconnect the bot.                         |
+| `/forward [seconds]` | Forward the song.                           |
+| `/search [song]`     | Search for a song.                          |
+| `/247`               | Toggle 24/7 mode.                           |
+| `/remove [song]`     | Remove a song from the queue.               |
+| `/lofi`              | Toggle Lofi mode.                           |
 | `/lyrics`            | Display static lyrics for the playing song. |
 
 ### ⏺ Filter Commands

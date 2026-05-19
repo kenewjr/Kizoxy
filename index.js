@@ -54,8 +54,8 @@ client.manager = new Kazagumo(
   new Connectors.DiscordJS(client),
   Nodes,
   {
-    reconnectTries: Infinity, // terus mencoba selamanya
-    reconnectInterval: 15, // jeda 5 detik antar percobaan
+    reconnectTries: Infinity, // keep trying forever
+    reconnectInterval: 15, // 15 second interval between attempts
   },
 );
 

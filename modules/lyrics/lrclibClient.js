@@ -26,7 +26,9 @@ async function searchLRCLIB(
   duration = null,
 ) {
   try {
-    console.warn(`[LRCLIB Direct] Searching: "${trackName}" by "${artistName}"`);
+    console.warn(
+      `[LRCLIB Direct] Searching: "${trackName}" by "${artistName}"`,
+    );
 
     // Build search params
     const params = {

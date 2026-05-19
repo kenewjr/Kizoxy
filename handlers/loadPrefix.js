@@ -3,6 +3,10 @@ const path = require("path");
 const Logger = require("../utils/logger");
 const logger = new Logger("PREFIX");
 
+/**
+ * Load all prefix commands from the commands/Prefix directory.
+ * @param {Client} client - Discord client instance
+ */
 module.exports = (client) => {
   const basePath = path.join(__dirname, "../commands/Prefix");
   let totalLoaded = 0;

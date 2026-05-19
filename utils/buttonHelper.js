@@ -1,10 +1,10 @@
 // utils/buttonHelper.js
-// Helper untuk manage button behavior (disable after 5 seconds)
+// Helper to manage button behavior (disable after 5 seconds)
 
 const { ActionRowBuilder, ButtonBuilder } = require("discord.js");
 
 /**
- * Disable buttons di now playing message setelah 5 detik
+ * Disable buttons in now playing message after 5 seconds
  * @param {Message} message - Discord message object (interaction.message)
  */
 async function disableButtonsAfterDelay(message) {
@@ -24,7 +24,7 @@ async function disableButtonsAfterDelay(message) {
 
       const disabledRow = new ActionRowBuilder().addComponents(disabledButtons);
 
-      // Update message dengan buttons disabled
+      // Update message with buttons disabled
       await message.edit({ components: [disabledRow] });
     } catch (err) {
       console.error("[buttonHelper] Failed to disable buttons:", err.message);

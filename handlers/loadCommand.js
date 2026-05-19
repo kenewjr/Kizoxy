@@ -3,6 +3,10 @@ const path = require("path");
 const Logger = require("../utils/logger");
 const logger = new Logger("COMMAND");
 
+/**
+ * Load all slash commands from the commands/Slash directory.
+ * @param {Client} client - Discord client instance
+ */
 module.exports = (client) => {
   try {
     const commandsDir = path.join(__dirname, "..", "commands", "Slash");

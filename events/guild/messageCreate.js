@@ -6,7 +6,9 @@ const {
 } = require("discord.js");
 const LevelStorage = require("../../modules/storage/levelStorage");
 const fixembedStorage = require("../../modules/storage/fixembedStorage");
-const { extractFixedLinks } = require("../../modules/fixembed/fixembedResolver");
+const {
+  extractFixedLinks,
+} = require("../../modules/fixembed/fixembedResolver");
 
 // Map to store cooldowns: userId -> timestamp
 const cooldowns = new Map();

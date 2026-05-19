@@ -12,11 +12,23 @@ const colors = {
 
 const LOG_FORMAT = process.env.LOG_FORMAT || "pretty"; // "pretty" or "json"
 
+/**
+ * Logger utility for consistent logging across the application.
+ */
 class Logger {
+  /**
+   * Create a logger instance.
+   * @param {string} moduleName - Name of the module using this logger
+   */
   constructor(moduleName) {
     this.moduleName = moduleName;
   }
 
+  /**
+   * Log a message with specified level.
+   * @param {string} message - Message to log
+   * @param {string} level - Log level (info, success, error, warning, debug)
+   */
   log(message, level = "info") {
     const timestamp = new Date().toISOString();
 

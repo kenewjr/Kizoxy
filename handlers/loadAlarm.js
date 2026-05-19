@@ -6,20 +6,24 @@ const AlarmScheduler = require("../modules/alarm/alarmScheduler");
 const Logger = require("../utils/logger");
 const logger = new Logger("ALARM");
 
+/**
+ * Initialize and load the alarm system with scheduler and commands.
+ * @param {Client} client - Discord client instance
+ */
 module.exports = (client) => {
   try {
-    // Inisialisasi storage dan scheduler alarm
+    // Initialize storage and alarm scheduler
     const alarmStorage = new JSONStorage("alarms.json");
     const alarmScheduler = new AlarmScheduler(client);
 
-    // Set storage untuk scheduler
+    // Set storage for scheduler
     alarmScheduler.setStorage(alarmStorage);
 
-    // Simpan di client untuk akses global
+    // Store in client for global access
     client.alarmStorage = alarmStorage;
     client.alarmScheduler = alarmScheduler;
 
-    // Inisialisasi map untuk countdown aktif
+    // Initialize map for active countdowns
     client.activeCountdowns = new Map();
 
     // Load alarm commands
@@ -64,7 +68,7 @@ module.exports = (client) => {
       for (const file of files) {
         try {
           const filePath = path.join(commandsDir, file);
-          // Clear cache selama development
+          // Clear cache during development
           delete require.cache[require.resolve(filePath)];
           const cmd = require(filePath);
 
@@ -80,7 +84,7 @@ module.exports = (client) => {
             throw new Error("Missing 'run' function");
           }
 
-          // Simpan command dengan nama lengkap (alarm set, alarm list, dll)
+          // Store command with full name (alarm set, alarm list, etc.)
           const fullCommandName = cmd.name.join(" ");
           client.commands.set(fullCommandName, cmd);
           logger.success(`Command loaded: ${fullCommandName}`);
@@ -105,7 +109,7 @@ module.exports = (client) => {
       logger.error(`Failed to read folder ${commandsDir}: ${err.message}`);
     }
 
-    // Event handler untuk memuat alarm setelah bot ready
+    // Event handler to load alarms after bot is ready
     client.once("ready", async () => {
       try {
         logger.info("Loading saved alarms...");
@@ -113,7 +117,7 @@ module.exports = (client) => {
         await alarmScheduler.loadAlarms();
         logger.success("Alarm scheduler started with auto-delete feature");
 
-        // Set up interval untuk update countdown otomatis
+        // Set up interval for automatic countdown updates
         setInterval(async () => {
           try {
             const now = Date.now();
@@ -131,8 +135,8 @@ module.exports = (client) => {
                 let nextAlarmTime = new Date(alarm.time);
                 const nowDate = new Date();
 
-                // Perbaiki timezone untuk Indonesia (UTC+7)
-                const timezoneOffset = 7 * 60 * 60 * 1000; // UTC+7 dalam milidetik
+                // Fix timezone for Indonesia (UTC+7)
+                const timezoneOffset = 7 * 60 * 60 * 1000; // UTC+7 in milliseconds
                 const localNextAlarmTime = new Date(
                   nextAlarmTime.getTime() + timezoneOffset,
                 );
@@ -162,7 +166,7 @@ module.exports = (client) => {
                   });
                 }
 
-                // Format waktu untuk display dengan timezone Indonesia
+                // Format time for display with Indonesia timezone
                 const formattedTime = `${localNextAlarmTime.getDate().toString().padStart(2, "0")}/${(localNextAlarmTime.getMonth() + 1).toString().padStart(2, "0")}/${localNextAlarmTime.getFullYear()} ${localNextAlarmTime.getHours().toString().padStart(2, "0")}:${localNextAlarmTime.getMinutes().toString().padStart(2, "0")}`;
 
                 // Update the Discord timestamp
@@ -171,16 +175,16 @@ module.exports = (client) => {
                 );
                 const discordTimestamp = `<t:${unixTimestamp}:R>`;
 
-                // Update the embed dengan waktu yang baru
+                // Update the embed with new time
                 const updatedEmbed = new EmbedBuilder()
                   .setDescription(
-                    `✅ Alarm "${alarm.message}" berhasil disetel!\n` +
-                      `⏰ Waktu: ${formattedTime}\n` +
-                      `🔔 Akan berbunyi di: <#${alarm.channelId}>\n` +
-                      `👥 Role yang di-tag: <@&${alarm.roleId}>\n` +
-                      `🔄 Jenis: ${alarm.recurring === "daily" ? "Harian" : alarm.recurring === "weekly" ? "Mingguan" : alarm.recurring === "monthly" ? "Bulanan" : "Tidak Berulang"}\n` +
-                      `⏳ Countdown hingga bunyi berikutnya: ${discordTimestamp}\n` +
-                      `🗑️ Pesan alarm di channel akan otomatis terhapus setelah 2 jam`,
+                    `✅ Alarm "${alarm.message}" successfully set!\n` +
+                      `⏰ Time: ${formattedTime}\n` +
+                      `🔔 Will ring in: <#${alarm.channelId}>\n` +
+                      `👥 Tagged role: <@&${alarm.roleId}>\n` +
+                      `🔄 Type: ${alarm.recurring === "daily" ? "Daily" : alarm.recurring === "weekly" ? "Weekly" : alarm.recurring === "monthly" ? "Monthly" : "Non-recurring"}\n` +
+                      `⏳ Countdown to next ring: ${discordTimestamp}\n` +
+                      `🗑️ Alarm message in channel will be auto-deleted after 2 hours`,
                   )
                   .setColor(countdownData.originalEmbed.color);
 

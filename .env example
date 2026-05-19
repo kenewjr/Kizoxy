@@ -3,7 +3,7 @@ TOKEN=inseryourtokenhere
 EMBED_COLOR=#000001
 SEARCH_ENGINE=youtube
 LEAVE_EMPTY=120000
-
+PREFIX=
 # Dev
 OWNER_ID=
 

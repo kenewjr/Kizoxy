@@ -62,6 +62,9 @@ async function sendErrorWebhook(title, error, extra = {}) {
   processQueue();
 }
 
+/**
+ * Process queued webhook messages with rate limiting.
+ */
 async function processQueue() {
   if (processing || queue.length === 0) return;
   processing = true;
