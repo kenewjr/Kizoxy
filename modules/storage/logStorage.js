@@ -10,6 +10,10 @@ class LogStorage {
 
   init() {
     try {
+      const dir = path.dirname(this.dataPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       if (!fs.existsSync(this.dataPath)) {
         fs.writeFileSync(this.dataPath, JSON.stringify({}, null, 2), "utf8");
       }
