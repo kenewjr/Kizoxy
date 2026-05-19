@@ -4,7 +4,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
 } = require("discord.js");
-const LevelStorage = require("../../../utils/storage/levelStorage");
+const LevelStorage = require("../../../modules/storage/levelStorage");
 
 module.exports = {
   name: ["leaderboard"],

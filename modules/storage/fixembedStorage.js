@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const DATA_PATH = path.join(__dirname, "../data/fixembed.json");
+const DATA_PATH = path.join(__dirname, "../../utils/data/fixembed.json");
 
 const DEFAULT_SETTINGS = {
   enabled: false,

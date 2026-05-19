@@ -1,4 +1,4 @@
-const LevelStorage = require("../../utils/storage/levelStorage");
+const LevelStorage = require("../../modules/storage/levelStorage");
 
 // Constants
 const XP_PER_MINUTE = 10;

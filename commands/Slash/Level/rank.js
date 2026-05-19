@@ -3,7 +3,7 @@ const {
   AttachmentBuilder,
 } = require("discord.js");
 const { RankCardBuilder, Font } = require("canvacord");
-const LevelStorage = require("../../../utils/storage/levelStorage");
+const LevelStorage = require("../../../modules/storage/levelStorage");
 
 if (Font?.loadDefault) Font.loadDefault();
 

@@ -5,7 +5,7 @@ const {
   isSpotifyAlbum,
   isSpotifyTrack,
   spotifyToYouTubeSearch,
-} = require("../../../utils/spotify/spotifyHelper");
+} = require("../../../modules/spotify/spotifyHelper");
 
 module.exports = async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();

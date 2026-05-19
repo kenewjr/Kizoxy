@@ -6,7 +6,7 @@ const {
   ButtonStyle,
   PermissionsBitField,
 } = require("discord.js");
-const fixembedStorage = require("../../../utils/storage/fixembedStorage");
+const fixembedStorage = require("../../../modules/storage/fixembedStorage");
 
 // ─── Shared builders (mirrors buttons/fixembed_settings.js) ──────────────────
 

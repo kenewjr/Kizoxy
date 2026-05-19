@@ -16,7 +16,7 @@ const https = require("https");
 const {
   convertLyricsToRomaji,
   isJapanese,
-} = require("../../utils/lyrics/romajiConverter");
+} = require("../../modules/lyrics/romajiConverter");
 
 // ══════════════════════════════════════════════════════════════════════════
 // Config
@@ -339,7 +339,7 @@ async function searchLyrics(player, track, color) {
     );
 
     // Fallback: Try direct LRCLIB API with cleaned query
-    const { searchLRCLIB } = require("../../utils/lyrics/lrclibClient");
+    const { searchLRCLIB } = require("../../modules/lyrics/lrclibClient");
     const directLRCLIB = await searchLRCLIB(
       cleanedTitle,
       trackAuthor || cleanAuthor(rawAuthor),

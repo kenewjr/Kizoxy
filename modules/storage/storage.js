@@ -1,11 +1,11 @@
 const fs = require("fs").promises;
 const path = require("path");
-const Logger = require("../logger");
+const Logger = require("../../utils/logger");
 const logger = new Logger("STORAGE");
 
 class JSONStorage {
   constructor(filename) {
-    this.filepath = path.join(__dirname, "../data", filename);
+    this.filepath = path.join(__dirname, "../../utils/data", filename);
     this.data = {}; // Initialize as object
     logger.info(`Initialized storage for: ${filename}`);
   }

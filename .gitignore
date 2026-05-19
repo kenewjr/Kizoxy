@@ -1,10 +1,9 @@
 node_modules
 .env
-data/alarms.json
-data/levels.json
-data/logs.json
-data/fixembed.json
-api/jikan-api/data/jikan-schedule.json
+
+# Runtime data files (DO NOT COMMIT)
+utils/data/*.json
+api/jikan-api/data/*.json
 
 # PM2 logs
 logs/
