@@ -1,6 +1,3 @@
-// buttons/lyrics.js
-// Toggle lyrics button - show/hide lyrics in now playing message
-
 const {
   searchLyrics,
   validatePlayerForLyrics,

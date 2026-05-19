@@ -1,6 +1,3 @@
-// ESLint Flat Config (v9+)
-// Migration from .eslintrc.js to eslint.config.js
-
 module.exports = [
   {
     languageOptions: {

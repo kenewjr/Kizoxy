@@ -1,12 +1,3 @@
-/**
- * fixembed_delete.js
- * Allows only the original message author (OP) to delete the bot's fixed-link reply.
- * customId format: fixembed_delete:<originalAuthorId>
- *
- * Uses deferReply(ephemeral) so any response is ONLY visible to the clicker —
- * the original bot message is never touched unless the OP explicitly deletes it.
- */
-
 module.exports = {
   customId: "fixembed_delete",
   execute: async (interaction, _client) => {

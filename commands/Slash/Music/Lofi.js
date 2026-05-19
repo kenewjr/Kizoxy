@@ -66,10 +66,10 @@ module.exports = {
 
     // Set 24/7 AND Lofi mode
     player.data.set("stay", true);
-    player.data.set("lofi", true); // Special flag for auto-restart
+    player.data.set("lofi", true); // Flag for auto-restart on stream end
+    player.data.set("lofiUrl", query); // Store URL for reliable re-fetch
 
-    if (!player.playing && !player.paused && !player.queue.size) player.play();
-    else player.play(); // Force play if needed or skip to it
+    if (!player.playing && !player.paused) await player.play();
 
     const embed = new EmbedBuilder()
       .setColor(client.color)

@@ -11,10 +11,6 @@ function truncateChoice(str, max = CHOICE_LEN) {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
-/**
- * Autocomplete via Lavalink (same path as playback). Avoids @distube/ytsr
- * breaking when YouTube changes search HTML.
- */
 async function playSearchAutocompleteChoices(manager, query) {
   const q = (query || "").trim();
   if (!q) return [];

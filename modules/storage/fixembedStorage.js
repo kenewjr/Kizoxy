@@ -52,10 +52,6 @@ class FixEmbedStorage {
     return this.cache[guildId];
   }
 
-  /**
-   * Check whether the bot should process a message in this context.
-   * Returns false if the feature is disabled or the context is ignored.
-   */
   isEnabled(guildId, channelId, member) {
     const s = this.getSettings(guildId);
     if (!s.enabled) return false;
@@ -68,9 +64,6 @@ class FixEmbedStorage {
     return true;
   }
 
-  /**
-   * Returns true if any ignored keyword is present in the message content.
-   */
   hasIgnoredKeyword(guildId, content) {
     const s = this.getSettings(guildId);
     const lower = content.toLowerCase();

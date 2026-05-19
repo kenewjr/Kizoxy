@@ -2,10 +2,6 @@ const { readdirSync } = require("fs");
 const Logger = require("../utils/logger");
 const logger = new Logger("PLAYER");
 
-/**
- * Load all player events from the events/player directory.
- * @param {Client} client - Discord client instance
- */
 module.exports = async (client) => {
   let totalLoaded = 0;
   let failedLoads = [];

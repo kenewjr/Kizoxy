@@ -1,7 +1,3 @@
--- Kizoxy Bot — PostgreSQL Schema
--- Run this script to initialize the database tables.
-
--- Guild settings (log channel, prefix overrides, etc.)
 CREATE TABLE IF NOT EXISTS guild_settings (
   guild_id   VARCHAR(20) PRIMARY KEY,
   log_channel_id VARCHAR(20),

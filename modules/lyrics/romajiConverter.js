@@ -1,9 +1,3 @@
-/**
- * Romaji Converter Utility
- * Converts Japanese text (Kanji/Hiragana/Katakana) to Romaji
- * Uses Kuroshiro library for accurate conversion
- */
-
 const Kuroshiro = require("kuroshiro").default || require("kuroshiro");
 const KuromojiAnalyzer =
   require("kuroshiro-analyzer-kuromoji").default ||
@@ -47,27 +41,13 @@ async function initializeKuroshiro() {
   return initializationPromise;
 }
 
-/**
- * Check if text contains Japanese characters
- * @param {string} text - Text to check
- * @returns {boolean}
- */
 function isJapanese(text) {
   if (!text || typeof text !== "string") return false;
 
-  // Japanese character ranges:
-  // Hiragana: \u3040-\u309F
-  // Katakana: \u30A0-\u30FF
-  // Kanji: \u4E00-\u9FAF
   const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
   return japaneseRegex.test(text);
 }
 
-/**
- * Convert Japanese text to Romaji
- * @param {string} text - Japanese text to convert
- * @returns {Promise<string>} Romaji text
- */
 async function convertToRomaji(text) {
   if (!text || typeof text !== "string") {
     return "";
@@ -96,11 +76,6 @@ async function convertToRomaji(text) {
   }
 }
 
-/**
- * Convert lyrics paragraphs to romaji
- * @param {string} lyricsText - Full lyrics text with line breaks
- * @returns {Promise<string>} Romaji lyrics
- */
 async function convertLyricsToRomaji(lyricsText) {
   if (!lyricsText || !isJapanese(lyricsText)) {
     return lyricsText;
@@ -141,12 +116,6 @@ async function convertLyricsToRomaji(lyricsText) {
   }
 }
 
-/**
- * Detect if track is Japanese based on title and author
- * @param {string} title - Track title
- * @param {string} author - Track author
- * @returns {boolean}
- */
 function isJapaneseTrack(title, author) {
   // Check for Japanese characters
   if (isJapanese(title) || isJapanese(author)) {
@@ -169,10 +138,6 @@ function isJapaneseTrack(title, author) {
   return japaneseKeywords.some((kw) => combined.includes(kw.toLowerCase()));
 }
 
-/**
- * Pre-initialize Kuroshiro on bot startup (optional)
- * Call this during bot initialization to avoid first-use delay
- */
 async function preInitialize() {
   try {
     await initializeKuroshiro();

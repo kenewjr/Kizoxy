@@ -72,9 +72,6 @@ class JSONStorage {
 
   async getAll() {
     if (this.data === null) await this.load();
-    // Return all items as a flat array to maintain compatibility with some consumers if needed,
-    // BUT internally we work with object.
-    // Wait, if other code expects getAll() to return array, this keeps compat.
     return Object.values(this.data).flat();
   }
 

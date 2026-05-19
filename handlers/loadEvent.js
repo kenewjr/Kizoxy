@@ -3,10 +3,6 @@ const path = require("path");
 const Logger = require("../utils/logger");
 const logger = new Logger("EVENT");
 
-/**
- * Load all event handlers from the events directory.
- * @param {Client} client - Discord client instance
- */
 module.exports = async (client) => {
   let totalLoaded = 0;
   const loadFromDir = (dir) => {

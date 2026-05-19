@@ -1,10 +1,3 @@
-/**
- * fixembedResolver.js
- * Detects social media URLs, resolves author info, and returns fixed URLs.
- * Supports view modes: normal | direct | gallery | text
- * Domains sourced from the FixTweetBot project.
- */
-
 const axios = require("axios");
 
 const URL_REGEX = /https?:\/\/[^\s<>"\])\\']+/gi;
@@ -55,15 +48,6 @@ function _usernameFromPath(url, afterDomain) {
   return m ? m[1] : null;
 }
 
-// ─── Resolvers ────────────────────────────────────────────────────────────────
-/**
- * Each resolver:
- *   name          – platform display name
- *   originalLabel – label for the content type (Tweet, Reel, etc.)
- *   fixerName     – name of the fix service
- *   match(url)    – bool
- *   resolve(url, viewMode) → { fixed, authorUrl, authorName } | null
- */
 const RESOLVERS = [
   // ── Twitter / X / Nitter ──────────────────────────────────────────────────
   {

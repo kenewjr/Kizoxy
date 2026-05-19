@@ -1,12 +1,5 @@
-// utils/buttonHelper.js
-// Helper to manage button behavior (disable after 5 seconds)
-
 const { ActionRowBuilder, ButtonBuilder } = require("discord.js");
 
-/**
- * Disable buttons in now playing message after 5 seconds
- * @param {Message} message - Discord message object (interaction.message)
- */
 async function disableButtonsAfterDelay(message) {
   if (!message) return;
 

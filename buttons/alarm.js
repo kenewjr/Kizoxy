@@ -1,8 +1,3 @@
-/**
- * Alarm Button Handler — pure routing logic only.
- * All UI and CRUD logic lives in services/alarm/.
- */
-
 const {
   buildAlarmListEmbed,
   buildAlarmDetailEmbed,

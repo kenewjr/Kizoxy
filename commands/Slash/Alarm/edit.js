@@ -164,8 +164,6 @@ module.exports = {
         return;
       }
 
-      // Jika ID alarm diberikan, lanjutkan dengan proses edit
-      // Dapatkan alarm dari storage
       const alarm = await alarmScheduler.storage.get(alarmId);
 
       if (!alarm) {

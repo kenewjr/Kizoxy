@@ -16,23 +16,12 @@ const LOG_FORMAT = process.env.LOG_FORMAT || "pretty"; // "pretty" or "json"
  * Logger utility for consistent logging across the application.
  */
 class Logger {
-  /**
-   * Create a logger instance.
-   * @param {string} moduleName - Name of the module using this logger
-   */
   constructor(moduleName) {
     this.moduleName = moduleName;
   }
 
-  /**
-   * Log a message with specified level.
-   * @param {string} message - Message to log
-   * @param {string} level - Log level (info, success, error, warning, debug)
-   */
   log(message, level = "info") {
     const timestamp = new Date().toISOString();
-
-    // JSON structured output for log aggregation (Logstash, PM2, etc.)
     if (LOG_FORMAT === "json") {
       const entry = {
         timestamp,
@@ -40,8 +29,6 @@ class Logger {
         module: this.moduleName,
         message,
       };
-      // Use console.warn for all levels (PM2 compatibility)
-      // Use console.error only for actual errors
       if (level === "error") {
         console.error(JSON.stringify(entry));
       } else {

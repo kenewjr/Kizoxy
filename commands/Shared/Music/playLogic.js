@@ -1,4 +1,3 @@
-// shared/music/playLogic.js
 const {
   isSpotifyUrl,
   isSpotifyPlaylist,
@@ -10,7 +9,6 @@ const {
 module.exports = async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();
 
-  // Helper: kirim pesan (slash atau prefix)
   const reply = async (msg, edit = false) => {
     try {
       if (isSlash) {
@@ -27,13 +25,10 @@ module.exports = async function playLogic(client, ctx, args) {
   try {
     if (isSlash) await ctx.deferReply();
 
-    // ── Ambil query ──────────────────────────────────────────
     let query = isSlash ? ctx.options.getString("search") : args.join(" ");
     if (!query) return reply("❌ | Masukkan nama lagu atau URL.", true);
 
-    // ── Convert Spotify URLs ke YouTube search ───────────────
     if (isSpotifyUrl(query)) {
-      // Playlist dan Album tidak support tanpa Spotify Premium
       if (isSpotifyPlaylist(query)) {
         return reply(
           "❌ | Spotify playlist tidak support tanpa Premium subscription.\n" +
@@ -50,7 +45,6 @@ module.exports = async function playLogic(client, ctx, args) {
         );
       }
 
-      // Single track: convert ke YouTube search
       if (isSpotifyTrack(query)) {
         await reply("🎵 | Memuat dari Spotify...", true);
         const ytSearch = await spotifyToYouTubeSearch(query);
@@ -62,13 +56,11 @@ module.exports = async function playLogic(client, ctx, args) {
       }
     }
 
-    // ── Cek voice channel ────────────────────────────────────
     const member = ctx.member;
     const userVoice = member?.voice?.channel;
     if (!userVoice)
       return reply("❌ | Kamu harus berada di voice channel.", true);
 
-    // ── Cek bot sudah di channel lain ────────────────────────
     const botVoiceId = ctx.guild.members.me?.voice?.channelId;
     if (botVoiceId && botVoiceId !== userVoice.id)
       return reply(
@@ -76,7 +68,6 @@ module.exports = async function playLogic(client, ctx, args) {
         true,
       );
 
-    // ── Buat / ambil player ──────────────────────────────────
     let player = client.manager.players.get(ctx.guild.id);
     if (!player) {
       player = await client.manager.createPlayer({
@@ -92,9 +83,6 @@ module.exports = async function playLogic(client, ctx, args) {
 
     const requester = isSlash ? ctx.user : ctx.author;
 
-    // ═══════════════════════════════════════════════════════════
-    // DEFAULT: search via Kazagumo / Lavalink
-    // ═══════════════════════════════════════════════════════════
     const result = await client.manager.search(query, { requester });
 
     if (!result?.tracks?.length)

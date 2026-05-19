@@ -1,10 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
 
-/**
- * Format a single anime into a Discord Embed.
- * @param {Object} anime - The anime object from Jikan API.
- * @returns {EmbedBuilder}
- */
 function formatAnimeEmbed(anime) {
   const embed = new EmbedBuilder()
     .setTitle(anime.title)
@@ -60,12 +55,6 @@ function formatAnimeEmbed(anime) {
   return embed;
 }
 
-/**
- * Chunk an array into smaller arrays of a specific size.
- * @param {Array} array
- * @param {number} size
- * @returns {Array<Array>}
- */
 function chunkArray(array, size) {
   const chunked = [];
   for (let i = 0; i < array.length; i += size) {

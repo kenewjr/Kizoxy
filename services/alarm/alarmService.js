@@ -1,8 +1,3 @@
-/**
- * Alarm Service — shared CRUD + validation logic for alarms.
- * Used by:  commands/Slash/Alarm/* , buttons/alarm.js
- */
-
 const { PermissionsBitField } = require("discord.js");
 const { v4: uuidv4 } = require("uuid");
 
@@ -11,10 +6,6 @@ const { v4: uuidv4 } = require("uuid");
 const WAKTU_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const TANGGAL_REGEX = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/;
 
-/**
- * Validate time string format (HH:mm).
- * @returns {string|null} Error message, or null if valid
- */
 function validateTime(waktu) {
   if (!WAKTU_REGEX.test(waktu)) {
     return "❌ Format waktu tidak valid! Gunakan format HH:mm (contoh: 14:30)";
@@ -22,10 +13,6 @@ function validateTime(waktu) {
   return null;
 }
 
-/**
- * Validate date string format (DD/MM/YYYY or DD/MM).
- * @returns {{ day, month, year }|{ error: string }}
- */
 function parseDate(tanggal) {
   const match = tanggal.match(TANGGAL_REGEX);
   if (!match) {
@@ -50,10 +37,6 @@ function parseDate(tanggal) {
   return { day, month, year };
 }
 
-/**
- * Build a Date object from alarm params and validate it.
- * @returns {{ alarmDate: Date }|{ error: string }}
- */
 function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
   const [hours, minutes] = waktu.split(":").map(Number);
   const now = new Date();
@@ -109,10 +92,6 @@ function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
   return { alarmDate };
 }
 
-/**
- * Check bot permissions in a channel.
- * @returns {string|null} Error message, or null if permissions are OK
- */
 function checkChannelPermissions(channel, guild) {
   if (channel.type !== 0) {
     return "❌ Channel harus berupa text channel!";
@@ -131,10 +110,6 @@ function checkChannelPermissions(channel, guild) {
 
 // ── CRUD Operations ─────────────────────────────────────
 
-/**
- * Create a new alarm.
- * @returns {{ alarm, alarmDate }|{ error: string }}
- */
 async function createAlarm(
   scheduler,
   {
@@ -178,10 +153,6 @@ async function cancelAlarm(scheduler, alarmId) {
   await scheduler.storage.delete(alarmId);
 }
 
-/**
- * Toggle an alarm on/off.
- * @returns {{ alarm, enabled: boolean }}
- */
 async function toggleAlarm(scheduler, alarmId) {
   const alarm = await scheduler.storage.get(alarmId);
   if (!alarm) return { error: "❌ Alarm tidak ditemukan." };

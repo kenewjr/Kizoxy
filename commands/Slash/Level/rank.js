@@ -59,13 +59,9 @@ module.exports = {
         interaction.guild.members.cache.get(targetUser.id)?.presence?.status ||
           "offline",
       )
-      //.setProgressBar("#FFFFFF", "COLOR") // Check if method exists in v6, usually it does or similar
       .setUsername(targetUser.username)
-      .setDisplayName(targetUser.displayName) // v6 often supports display name
+      .setDisplayName(targetUser.displayName)
       .setRank(typeof rank === "number" ? rank : 0);
-
-    // Customize visual elements if desired
-    //.setBackground("IMAGE", "https://i.imgur.com/8Qe7n5T.png");
 
     const data = await rankCard.build();
     const attachment = new AttachmentBuilder(data, { name: "rank.png" });

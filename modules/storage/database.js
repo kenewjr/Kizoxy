@@ -4,10 +4,6 @@ const logger = new Logger("DATABASE");
 
 let pool = null;
 
-/**
- * Initialize PostgreSQL connection pool.
- * Only connects if POSTGRES_HOST is set in env — otherwise remains disabled (fallback to JSON storage).
- */
 function initDatabase() {
   const host = process.env.POSTGRES_HOST;
   if (!host) {
@@ -42,16 +38,10 @@ function initDatabase() {
   return pool;
 }
 
-/**
- * Get the active database pool. Returns null if DB is disabled.
- */
 function getPool() {
   return pool;
 }
 
-/**
- * Check if PostgreSQL is available and healthy.
- */
 async function healthCheck() {
   if (!pool)
     return { status: "disabled", message: "PostgreSQL not configured" };
@@ -66,12 +56,6 @@ async function healthCheck() {
   }
 }
 
-/**
- * Execute a query with parameters.
- * @param {string} text - SQL query
- * @param {Array} params - Query parameters
- * @returns {object|null} Query result, or null if DB is disabled
- */
 async function query(text, params = []) {
   if (!pool) return null;
 
@@ -84,9 +68,6 @@ async function query(text, params = []) {
   }
 }
 
-/**
- * Gracefully close all database connections.
- */
 async function closeDatabase() {
   if (pool) {
     await pool.end();

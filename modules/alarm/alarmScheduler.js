@@ -32,7 +32,6 @@ class AlarmScheduler {
     const notifyTime = new Date(alarmDate.getTime() - 10 * 60 * 1000);
     const now = new Date();
 
-    // Jadwalkan notifikasi 10 menit sebelumnya
     if (notifyTime > now) {
       const notifyDelay = notifyTime.getTime() - now.getTime();
       const notifyTimeout = setTimeout(async () => {
@@ -53,7 +52,6 @@ class AlarmScheduler {
               content: `🔔 **Pengingat Alarm: ${alarmMessage}**\n⏰ Akan berbunyi dalam 10 menit!\n👥 ${role}`,
             });
 
-            // Jadwalkan penghapusan pesan pengingat setelah 2 jam
             this.scheduleMessageDelete(reminderMsg, 2 * 60 * 60 * 1000);
             logger.info(
               `Notification sent for alarm: ${alarmMessage} (ID: ${id})`,
@@ -72,7 +70,6 @@ class AlarmScheduler {
       this.jobs.set(`${id}-notify`, notifyTimeout);
     }
 
-    // Jadwalkan alarm utama
     if (alarmDate > now) {
       const alarmDelay = alarmDate.getTime() - now.getTime();
       const alarmTimeout = setTimeout(async () => {
@@ -91,13 +88,10 @@ class AlarmScheduler {
               content: `⏰ **ALARM: ${alarmMessage}**\n🔔 Waktu yang ditentukan telah tiba!\n👥 ${role}`,
             });
 
-            // Jadwalkan penghapusan pesan alarm setelah 2 jam
             this.scheduleMessageDelete(alarmMsg, 2 * 60 * 60 * 1000);
             logger.info(`Alarm triggered: ${alarmMessage} (ID: ${id})`);
 
-            // Untuk alarm recurring, jadwalkan ulang untuk waktu berikutnya
             if (recurring !== "none") {
-              // Hitung waktu berikutnya berdasarkan jenis recurring
               const nextAlarmDate = new Date(alarmDate);
 
               if (recurring === "daily") {
@@ -108,7 +102,6 @@ class AlarmScheduler {
                 nextAlarmDate.setMonth(nextAlarmDate.getMonth() + 1);
               }
 
-              // Update alarm dengan waktu berikutnya
               const updatedAlarm = {
                 ...alarm,
                 time: nextAlarmDate.toISOString(),
@@ -116,10 +109,8 @@ class AlarmScheduler {
 
               await this.storage.update(id, updatedAlarm);
 
-              // Jadwalkan alarm berikutnya
               this.scheduleAlarm(updatedAlarm);
 
-              // Update embed message jika ada
               if (messageId && embedChannelId) {
                 this.scheduleEmbedUpdate(updatedAlarm);
               }
@@ -128,7 +119,6 @@ class AlarmScheduler {
                 `Recurring alarm rescheduled: ${alarmMessage} for ${nextAlarmDate.toLocaleString("id-ID")}`,
               );
             } else {
-              // Hapus alarm one-time setelah dijalankan
               await this.storage.delete(id);
               this.cancelAlarm(id);
               logger.info(`One-time alarm deleted: ${id}`);
@@ -145,16 +135,13 @@ class AlarmScheduler {
       this.jobs.set(id, alarmTimeout);
       logger.debug(`Alarm scheduled: ${alarmMessage} (ID: ${id})`);
 
-      // Jadwalkan update embed jika alarm memiliki messageId
       if (messageId && embedChannelId) {
         this.scheduleEmbedUpdate(alarm);
       }
     } else {
       logger.warning(`Alarm time is in the past: ${alarmMessage} (ID: ${id})`);
 
-      // Untuk alarm recurring yang waktunya sudah lewat, jadwalkan ulang
       if (recurring !== "none") {
-        // Hitung waktu berikutnya berdasarkan jenis recurring
         const nextAlarmDate = new Date();
 
         if (recurring === "daily") {
@@ -183,7 +170,6 @@ class AlarmScheduler {
           );
         }
 
-        // Update alarm dengan waktu berikutnya
         const updatedAlarm = {
           ...alarm,
           time: nextAlarmDate.toISOString(),
@@ -191,10 +177,8 @@ class AlarmScheduler {
 
         await this.storage.update(id, updatedAlarm);
 
-        // Jadwalkan alarm berikutnya
         this.scheduleAlarm(updatedAlarm);
 
-        // Update embed message jika ada
         if (messageId && embedChannelId) {
           this.scheduleEmbedUpdate(updatedAlarm);
         }
@@ -206,7 +190,6 @@ class AlarmScheduler {
     }
   }
 
-  // Method untuk update embed message
   async scheduleEmbedUpdate(alarm) {
     const {
       id,
@@ -227,7 +210,6 @@ class AlarmScheduler {
       return;
     }
 
-    // Hitung delay sampai update berikutnya (update setiap menit)
     const updateDelay = 60000 - (now.getTime() % 60000);
 
     const updateTimeout = setTimeout(async () => {
@@ -244,14 +226,11 @@ class AlarmScheduler {
           return;
         }
 
-        // Format waktu untuk display
         const formattedTime = `${alarmDate.getDate().toString().padStart(2, "0")}/${(alarmDate.getMonth() + 1).toString().padStart(2, "0")}/${alarmDate.getFullYear()} ${alarmDate.getHours().toString().padStart(2, "0")}:${alarmDate.getMinutes().toString().padStart(2, "0")}`;
 
-        // Gunakan Discord timestamp untuk countdown otomatis
         const unixTimestamp = Math.floor(alarmDate.getTime() / 1000);
         const discordTimestamp = `<t:${unixTimestamp}:R>`;
 
-        // Tentukan teks berdasarkan jenis pengulangan
         let recurringText = "Tidak Berulang";
         let countdownText = `⏳ Countdown: ${discordTimestamp}`;
 
@@ -266,7 +245,6 @@ class AlarmScheduler {
           countdownText = `⏳ Countdown hingga bunyi berikutnya: ${discordTimestamp}`;
         }
 
-        // Buat embed baru
         const updatedEmbed = new EmbedBuilder()
           .setDescription(
             `✅ Alarm "${alarmMessage}" berhasil disetel!\n` +
@@ -279,16 +257,13 @@ class AlarmScheduler {
           )
           .setColor(0x00ff00);
 
-        // Edit pesan
         await message.edit({ embeds: [updatedEmbed] });
         logger.debug(`Embed updated for alarm: ${id}`);
 
-        // Jadwalkan update berikutnya
         this.scheduleEmbedUpdate(alarm);
       } catch (error) {
         logger.error(`Error updating embed for alarm ${id}: ${error.message}`);
 
-        // Jika pesan tidak ditemukan, hapus dari storage
         if (error.code === 10008) {
           logger.info(
             `Embed message not found, removing reference from alarm: ${id}`,
@@ -303,15 +278,12 @@ class AlarmScheduler {
       }
     }, updateDelay);
 
-    // Simpan timeout di queue
     this.embedUpdateQueue.set(id, updateTimeout);
   }
 
-  // Method untuk menjadwalkan penghapusan pesan
   async scheduleMessageDelete(message, delay) {
     const deleteTimeout = setTimeout(async () => {
       try {
-        // Pastikan pesan masih ada sebelum menghapus
         const channel = this.client.channels.cache.get(message.channelId);
         if (channel) {
           try {
@@ -322,7 +294,6 @@ class AlarmScheduler {
             }
           } catch (fetchError) {
             if (fetchError.code === 10008) {
-              // Unknown Message
               logger.debug(`Message already deleted: ${message.id}`);
             } else {
               logger.error(`Failed to fetch message: ${fetchError.message}`);
@@ -334,11 +305,9 @@ class AlarmScheduler {
       }
     }, delay);
 
-    // Simpan timeout di queue
     this.messageDeleteQueue.set(message.id, deleteTimeout);
   }
 
-  // Method untuk membatalkan penghapusan pesan
   cancelScheduledDelete(messageId) {
     const timeout = this.messageDeleteQueue.get(messageId);
     if (timeout) {
@@ -348,7 +317,6 @@ class AlarmScheduler {
     }
   }
 
-  // Method untuk membatalkan update embed
   cancelScheduledEmbedUpdate(alarmId) {
     const timeout = this.embedUpdateQueue.get(alarmId);
     if (timeout) {
@@ -379,24 +347,20 @@ class AlarmScheduler {
   }
 
   cancelAlarm(alarmId) {
-    // Batalkan notifikasi
     const notifyJob = this.jobs.get(`${alarmId}-notify`);
     if (notifyJob) {
       clearTimeout(notifyJob);
       this.jobs.delete(`${alarmId}-notify`);
     }
 
-    // Batalkan alarm utama
     const alarmJob = this.jobs.get(alarmId);
     if (alarmJob) {
       clearTimeout(alarmJob);
       this.jobs.delete(alarmId);
     }
 
-    // Batalkan penghapusan pesan terkait
     this.cancelScheduledDelete(alarmId);
 
-    // Batalkan update embed
     this.cancelScheduledEmbedUpdate(alarmId);
 
     logger.info(`Alarm cancelled: ${alarmId}`);

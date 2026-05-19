@@ -6,10 +6,6 @@ const { formatAnimeEmbed, chunkArray } = require("./formatter");
 
 const DATA_PATH = path.join(__dirname, "./data/jikan-schedule.json");
 
-/**
- * Validates and ensures the Jikan schedule data file exists.
- * @returns {Object} The schedule data.
- */
 function getScheduleData() {
   if (!fs.existsSync(DATA_PATH)) return {};
   try {
@@ -20,10 +16,6 @@ function getScheduleData() {
   }
 }
 
-/**
- * Initializes the Jikan Daily Scheduler.
- * @param {Object} client - The Discord Client instance.
- */
 function initScheduler(client) {
   // Schedule the job to run every day at 08:00 AM
   schedule.scheduleJob("0 8 * * *", async () => {

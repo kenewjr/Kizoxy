@@ -6,27 +6,14 @@ const AlarmScheduler = require("../modules/alarm/alarmScheduler");
 const Logger = require("../utils/logger");
 const logger = new Logger("ALARM");
 
-/**
- * Initialize and load the alarm system with scheduler and commands.
- * @param {Client} client - Discord client instance
- */
 module.exports = (client) => {
   try {
-    // Initialize storage and alarm scheduler
     const alarmStorage = new JSONStorage("alarms.json");
     const alarmScheduler = new AlarmScheduler(client);
-
-    // Set storage for scheduler
     alarmScheduler.setStorage(alarmStorage);
-
-    // Store in client for global access
     client.alarmStorage = alarmStorage;
     client.alarmScheduler = alarmScheduler;
-
-    // Initialize map for active countdowns
     client.activeCountdowns = new Map();
-
-    // Load alarm commands
     const commandsDir = path.join(
       __dirname,
       "..",

@@ -1,7 +1,3 @@
-// utils/spotifyResolver.js
-// Spotify resolver dengan RATE LIMITING, CACHING, dan EXPONENTIAL BACKOFF
-// Mencegah rate limit ban 24 jam dari Spotify
-
 require("dotenv").config();
 
 const SPOTIFY_API = "https://api.spotify.com/v1";
@@ -9,9 +5,7 @@ const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const PAGE_SIZE = 50; // Turunkan dari 100 ke 50 untuk lebih aman
 const MAX_PAGES = 100;
 
-// ═══════════════════════════════════════════════════════════
-// RATE LIMITER - Mencegah terlalu banyak request sekaligus
-// ═══════════════════════════════════════════════════════════
+
 const RATE_LIMIT = {
   maxRequestsPerSecond: 5, // Max 5 request per detik
   minDelayMs: 200, // Min 200ms delay antar request
@@ -20,10 +14,6 @@ const RATE_LIMIT = {
   isProcessing: false,
 };
 
-/**
- * Rate-limited request wrapper.
- * Memastikan tidak ada burst request yang bisa trigger ban.
- */
 async function rateLimitedDelay() {
   const now = Date.now();
   const timeSinceLastRequest = now - RATE_LIMIT.lastRequestTime;
@@ -36,9 +26,6 @@ async function rateLimitedDelay() {
   RATE_LIMIT.lastRequestTime = Date.now();
 }
 
-// ═══════════════════════════════════════════════════════════
-// CACHE - Mengurangi jumlah request ke Spotify
-// ═══════════════════════════════════════════════════════════
 const cache = new Map();
 const CACHE_TTL = 3600000; // 1 jam
 
@@ -64,16 +51,9 @@ function setCache(key, data) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// TOKEN MANAGEMENT
-// ═══════════════════════════════════════════════════════════
 let cachedToken = null;
 let tokenExpiry = 0;
 
-/**
- * Ambil access token menggunakan Client Credentials Flow.
- * Token berlaku 1 jam, di-cache dan auto-refresh.
- */
 async function getClientCredentialsToken() {
   if (cachedToken && Date.now() < tokenExpiry) {
     return cachedToken;
@@ -114,10 +94,6 @@ async function getClientCredentialsToken() {
   return cachedToken;
 }
 
-/**
- * Fetch Spotify API dengan EXPONENTIAL BACKOFF dan RATE LIMITING.
- * Retry otomatis pada 429 dengan backoff yang lebih agresif.
- */
 async function spotifyFetch(url, retries = 5) {
   const token = await getClientCredentialsToken();
   if (!token) throw new Error("Gagal mendapatkan Spotify access token");
@@ -174,10 +150,6 @@ async function spotifyFetch(url, retries = 5) {
   throw new Error("Spotify API gagal setelah semua retry");
 }
 
-// ═══════════════════════════════════════════════════════════
-// URL VALIDATORS & EXTRACTORS
-// ═══════════════════════════════════════════════════════════
-
 function extractPlaylistId(url) {
   const match = url.match(
     /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/,
@@ -217,14 +189,6 @@ function extractTrackId(url) {
   return match ? match[1] : null;
 }
 
-// ═══════════════════════════════════════════════════════════
-// PLAYLIST LOADER dengan RATE LIMITING & CACHING
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Ambil semua track dari Spotify playlist dengan full pagination.
- * DENGAN rate limiting dan caching untuk mencegah ban.
- */
 async function getPlaylistTracks(playlistId) {
   // Cek cache dulu
   const cacheKey = `playlist:${playlistId}`;
@@ -291,9 +255,6 @@ async function getPlaylistTracks(playlistId) {
   return result;
 }
 
-/**
- * Ambil semua track dari Spotify album dengan rate limiting & caching.
- */
 async function getAlbumTracks(albumId) {
   // Cek cache dulu
   const cacheKey = `album:${albumId}`;
@@ -350,9 +311,6 @@ async function getAlbumTracks(albumId) {
   return result;
 }
 
-/**
- * Ambil info single track dari Spotify API dengan caching.
- */
 async function getTrackInfo(spotifyUrl) {
   try {
     const trackId = extractTrackId(spotifyUrl);
@@ -378,9 +336,6 @@ async function getTrackInfo(spotifyUrl) {
   }
 }
 
-/**
- * Fallback: ambil info track dari Spotify oEmbed (tidak butuh token).
- */
 async function getTrackInfoFromOEmbed(spotifyUrl) {
   try {
     const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;

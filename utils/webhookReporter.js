@@ -9,12 +9,6 @@ const RATE_LIMIT_MS = 10000;
 const queue = [];
 let processing = false;
 
-/**
- * Send an error report to Discord via webhook.
- * @param {string} title - Short error title
- * @param {Error|string} error - Error object or message
- * @param {object} [extra] - Additional context fields
- */
 async function sendErrorWebhook(title, error, extra = {}) {
   if (!WEBHOOK_URL) return; // Webhook not configured — silently skip
 
@@ -62,9 +56,7 @@ async function sendErrorWebhook(title, error, extra = {}) {
   processQueue();
 }
 
-/**
- * Process queued webhook messages with rate limiting.
- */
+
 async function processQueue() {
   if (processing || queue.length === 0) return;
   processing = true;

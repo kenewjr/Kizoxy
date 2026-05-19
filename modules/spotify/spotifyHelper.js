@@ -1,44 +1,25 @@
-// utils/spotifyHelper.js
-// Simple Spotify URL handler using oEmbed API (no auth required)
-
-/**
- * Check if URL is Spotify playlist
- */
 function isSpotifyPlaylist(url) {
   return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?playlist[/:]([A-Za-z0-9]+)/.test(
     url,
   );
 }
 
-/**
- * Check if URL is Spotify album
- */
 function isSpotifyAlbum(url) {
   return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?album[/:]([A-Za-z0-9]+)/.test(
     url,
   );
 }
 
-/**
- * Check if URL is Spotify track
- */
 function isSpotifyTrack(url) {
   return /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?track[/:]([A-Za-z0-9]+)/.test(
     url,
   );
 }
 
-/**
- * Check if URL is any Spotify URL
- */
 function isSpotifyUrl(url) {
   return isSpotifyPlaylist(url) || isSpotifyAlbum(url) || isSpotifyTrack(url);
 }
 
-/**
- * Get track info from Spotify oEmbed API (no authentication required)
- * Returns search query string for YouTube
- */
 async function getSpotifyTrackInfo(spotifyUrl) {
   try {
     const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;
@@ -68,10 +49,6 @@ async function getSpotifyTrackInfo(spotifyUrl) {
   }
 }
 
-/**
- * Convert Spotify URL to YouTube search query
- * Works for tracks, albums, and playlists
- */
 async function spotifyToYouTubeSearch(spotifyUrl) {
   try {
     const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;

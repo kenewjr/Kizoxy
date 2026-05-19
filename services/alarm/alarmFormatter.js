@@ -1,10 +1,3 @@
-/**
- * Alarm Formatter — shared embed + UI component builders for alarm system.
- * Used by:  commands/Slash/Alarm/* , buttons/alarm.js , alarmScheduler.js
- *
- * Centralizes ALL visual output: embeds, buttons, select menus.
- */
-
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -170,8 +163,6 @@ function buildAlarmDetailEmbed(alarm) {
 // ══════════════════════════════════════════════════════════
 // UI Component builders (buttons, select menus)
 // ══════════════════════════════════════════════════════════
-
-/** Main alarm panel buttons: Refresh, Batalkan, Edit, On/Off, Tutup */
 function buildAlarmButtons(hasAlarms) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -265,17 +256,14 @@ function buildDetailButtons() {
 }
 
 module.exports = {
-  // Helpers
   formatAlarmDate,
   recurringLabel,
   alarmStatus,
-  // Embeds
   buildAlarmField,
   buildAlarmListEmbed,
   buildAlarmSetEmbed,
   buildAlarmEditEmbed,
   buildAlarmDetailEmbed,
-  // UI Components
   buildAlarmButtons,
   buildAlarmSelect,
   buildAlarmToggleSelect,

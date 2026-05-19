@@ -8,8 +8,6 @@ const {
 } = require("discord.js");
 const fixembedStorage = require("../../../modules/storage/fixembedStorage");
 
-// ─── Shared builders (mirrors buttons/fixembed_settings.js) ──────────────────
-
 function buildMainPage(s, guild, color) {
   const fmt = (arr, mentionFn) =>
     arr.length ? arr.map(mentionFn).join(", ") : "*None*";

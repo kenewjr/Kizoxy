@@ -1,13 +1,3 @@
-/**
- * fixembed_settings.js
- * Handles ALL button/select interactions for the paginated /fixembed settings UI.
- *
- * customId format:  fxs:<action>:<guildId>:<invokerUserId>
- *
- * Rule: every action ends with a SINGLE interaction.editReply() — no followUp().
- * The embed itself updates to reflect the change (status line / field update).
- */
-
 const {
   EmbedBuilder,
   ActionRowBuilder,

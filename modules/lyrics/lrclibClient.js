@@ -1,9 +1,3 @@
-/**
- * Direct LRCLIB API Client
- * Fallback when Lavalink LRCLIB returns no results
- * https://lrclib.net/docs
- */
-
 const axios = require("axios");
 
 const LRCLIB_API = "https://lrclib.net/api";
@@ -11,14 +5,6 @@ const LRCLIB_HEADERS = {
   "User-Agent": "Kizoxy Discord Bot (https://github.com/kenewjr/Kizoxy)",
 };
 
-/**
- * Search LRCLIB for lyrics
- * @param {string} trackName - Track title
- * @param {string} artistName - Artist name
- * @param {string} albumName - Album name (optional)
- * @param {number} duration - Track duration in seconds (optional)
- * @returns {Promise<object|null>} Lyrics data or null
- */
 async function searchLRCLIB(
   trackName,
   artistName,
@@ -90,9 +76,7 @@ async function searchLRCLIB(
   }
 }
 
-/**
- * Find best match from search results
- */
+
 function findBestMatch(results, trackName, artistName) {
   const trackLower = trackName.toLowerCase();
   const artistLower = artistName.toLowerCase();
@@ -129,9 +113,6 @@ function findBestMatch(results, trackName, artistName) {
   return null;
 }
 
-/**
- * Format LRCLIB response to our standard format
- */
 function formatLRCLIBResponse(data) {
   const formatted = {
     source: "lrclib",
@@ -154,10 +135,6 @@ function formatLRCLIBResponse(data) {
   return formatted;
 }
 
-/**
- * Parse LRC format to lines array
- * Format: [mm:ss.xx]lyrics text
- */
 function parseSyncedLyrics(lrcText) {
   if (!lrcText) return [];
 

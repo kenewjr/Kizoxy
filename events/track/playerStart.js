@@ -119,9 +119,6 @@ function UpCase(char) {
   return char.charAt(0).toUpperCase() + char.slice(1);
 }
 
-/**
- * Auto-fetch lyrics dan update now playing message
- */
 async function autoFetchLyrics(client, player, track, message) {
   try {
     // Add loading notification

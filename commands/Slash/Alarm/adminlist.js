@@ -17,7 +17,6 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      // Cek permission admin :cite[2]
       if (
         !interaction.member.permissions.has(
           PermissionsBitField.Flags.Administrator,
@@ -30,7 +29,6 @@ module.exports = {
 
       const alarmScheduler = client.alarmScheduler;
 
-      // Dapatkan semua alarm di server
       const alarms = await alarmScheduler.storage.findByGuild(
         interaction.guildId,
       );
@@ -39,7 +37,6 @@ module.exports = {
         return interaction.editReply("❌ Tidak ada alarm aktif di server ini.");
       }
 
-      // Kelompokkan alarm oleh user
       const alarmsByUser = {};
       alarms.forEach((alarm) => {
         if (!alarmsByUser[alarm.userId]) {
@@ -48,7 +45,6 @@ module.exports = {
         alarmsByUser[alarm.userId].push(alarm);
       });
 
-      // Buat embed
       const embed = new EmbedBuilder()
         .setTitle(`🔔 Semua Alarm di ${interaction.guild.name}`)
         .setColor(0x0099ff)
@@ -58,7 +54,6 @@ module.exports = {
         })
         .setTimestamp();
 
-      // Tambahkan field untuk setiap user
       for (const [userId, userAlarms] of Object.entries(alarmsByUser)) {
         try {
           const user = await client.users.fetch(userId);
@@ -89,7 +84,6 @@ module.exports = {
         }
       }
 
-      // Buat button untuk manajemen
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("refresh_admin_alarms")
@@ -106,7 +100,6 @@ module.exports = {
         components: [row],
       });
 
-      // Buat collector untuk button
       const collector = message.createMessageComponentCollector({
         componentType: ComponentType.Button,
         time: 300000, // 5 menit
@@ -123,7 +116,6 @@ module.exports = {
         if (i.customId === "refresh_admin_alarms") {
           await i.deferUpdate();
 
-          // Refresh data
           const refreshedAlarms = await alarmScheduler.storage.findByGuild(
             interaction.guildId,
           );
@@ -136,7 +128,6 @@ module.exports = {
             return;
           }
 
-          // Buat embed baru dengan data yang diperbarui
           const newEmbed = new EmbedBuilder()
             .setTitle(
               `🔔 Semua Alarm di ${interaction.guild.name} (Diperbarui)`,
@@ -148,7 +139,6 @@ module.exports = {
             })
             .setTimestamp();
 
-          // Kelompokkan alarm oleh user
           const refreshedAlarmsByUser = {};
           refreshedAlarms.forEach((alarm) => {
             if (!refreshedAlarmsByUser[alarm.userId]) {
@@ -157,7 +147,6 @@ module.exports = {
             refreshedAlarmsByUser[alarm.userId].push(alarm);
           });
 
-          // Tambahkan field untuk setiap user
           for (const [userId, userAlarms] of Object.entries(
             refreshedAlarmsByUser,
           )) {
@@ -204,7 +193,6 @@ module.exports = {
       });
 
       collector.on("end", () => {
-        // Hapus button ketika collector berakhir
         message.edit({ components: [] }).catch(() => {});
       });
     } catch (error) {

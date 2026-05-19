@@ -1,13 +1,3 @@
-/**
- * Lyrics Service — shared business logic for lyrics fetching.
- * Used by both:  commands/Slash/Music/Lyrics.js
- *                buttons/lyrics.js
- *
- * Eliminates ~350 lines of duplicated code.
- *
- * NEW: Uses Lavalink LRCLIB directly with romaji conversion
- */
-
 const { EmbedBuilder } = require("discord.js");
 const axios = require("axios");
 const NodeCache = require("node-cache");
@@ -221,11 +211,6 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
 // Lavalink Lyrics API
 // ══════════════════════════════════════════════════════════════════════════
 
-/**
- * Fetch lyrics from Lavalink's built-in LRCLIB
- * @param {object} player - Kazagumo player instance
- * @returns {Promise<object|null>} Lyrics data or null
- */
 async function fetchLavalinkLyrics(player) {
   if (!player?.node?.sessionId || !player?.guildId) {
     console.warn(
@@ -280,21 +265,6 @@ async function fetchLavalinkLyrics(player) {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// REMOVED: fetchAllPages function
-// Optimization: API now returns only the requested page, no need to fetch all
-// ══════════════════════════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════════════════════════
-// PUBLIC API — called by both command and button
-// ══════════════════════════════════════════════════════════════════════════
-
-/**
- * Search lyrics for the given track and return a Discord embed.
- * @param {object} track  - Kazagumo track object { title, author, ... }
- * @param {string} color  - Embed color (hex)
- * @returns {{ embed: EmbedBuilder } | { error: string }}
- */
 async function searchLyrics(player, track, color) {
   const rawTitle = track.title ?? "";
   const rawAuthor = track.author ?? "";
@@ -425,10 +395,6 @@ async function searchLyrics(player, track, color) {
   };
 }
 
-/**
- * Validate that a player exists and user is in the correct voice channel.
- * @returns {{ player, track } | { error: string }}
- */
 function validatePlayerForLyrics(client, interaction) {
   const player = client.manager?.players?.get(interaction.guild.id);
   if (!player) return { error: "❌ No music is currently playing." };
@@ -446,10 +412,8 @@ function validatePlayerForLyrics(client, interaction) {
 module.exports = {
   searchLyrics,
   validatePlayerForLyrics,
-  // Exported for testing/extension
   cleanTitle,
   cleanAuthor,
   buildQueryStrategies,
-  // Cache management
   lyricsCache,
 };
