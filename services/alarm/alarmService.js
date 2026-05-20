@@ -5,20 +5,22 @@ const { v4: uuidv4 } = require("uuid");
 
 const WAKTU_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const TANGGAL_REGEX = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/;
+const TIME_REGEX = WAKTU_REGEX;
+const DATE_REGEX = TANGGAL_REGEX;
 
-function validateTime(waktu) {
-  if (!WAKTU_REGEX.test(waktu)) {
-    return "❌ Format waktu tidak valid! Gunakan format HH:mm (contoh: 14:30)";
+function validateTime(time) {
+  if (!TIME_REGEX.test(time)) {
+    return "❌ Invalid time format! Use HH:mm (e.g. 14:30)";
   }
   return null;
 }
 
-function parseDate(tanggal) {
-  const match = tanggal.match(TANGGAL_REGEX);
+function parseDate(date) {
+  const match = date.match(DATE_REGEX);
   if (!match) {
     return {
       error:
-        "❌ Format tanggal tidak valid! Gunakan format DD/MM/YYYY atau DD/MM",
+        "❌ Invalid date format! Use DD/MM/YYYY or DD/MM",
     };
   }
 
@@ -31,19 +33,19 @@ function parseDate(tanggal) {
   }
 
   if (day < 1 || day > 31 || month < 1 || month > 12) {
-    return { error: "❌ Tanggal atau bulan tidak valid!" };
+    return { error: "❌ Invalid day or month!" };
   }
 
   return { day, month, year };
 }
 
-function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
-  const [hours, minutes] = waktu.split(":").map(Number);
+function buildAlarmDate({ time, date, recurring = "none" }) {
+  const [hours, minutes] = time.split(":").map(Number);
   const now = new Date();
 
   let alarmDate;
-  if (tanggal) {
-    const parsed = parseDate(tanggal);
+  if (date) {
+    const parsed = parseDate(date);
     if (parsed.error) return parsed;
     alarmDate = new Date(
       parsed.year,
@@ -60,7 +62,7 @@ function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
     ) {
       return {
         error:
-          "❌ Tanggal tidak valid! Pastikan tanggal sesuai dengan kalender.",
+          "❌ Invalid date! Make sure the date matches the calendar.",
       };
     }
   } else {
@@ -85,7 +87,7 @@ function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
   if (alarmDate <= now && recurring === "none") {
     return {
       error:
-        "❌ Waktu alarm tidak boleh di masa lalu untuk alarm tidak berulang!",
+        "❌ Alarm time cannot be in the past for non-recurring alarms!",
     };
   }
 
@@ -94,15 +96,15 @@ function buildAlarmDate({ waktu, tanggal, recurring = "none" }) {
 
 function checkChannelPermissions(channel, guild) {
   if (channel.type !== 0) {
-    return "❌ Channel harus berupa text channel!";
+    return "❌ Channel must be a text channel!";
   }
 
   const perms = channel.permissionsFor(guild.members.me);
   if (!perms.has(PermissionsBitField.Flags.SendMessages)) {
-    return "❌ Saya tidak memiliki izin untuk mengirim pesan di channel tersebut!";
+    return "❌ I don't have permission to send messages in that channel!";
   }
   if (!perms.has(PermissionsBitField.Flags.MentionEveryone)) {
-    return "❌ Saya tidak memiliki izin untuk mention role di channel tersebut!";
+    return "❌ I don't have permission to mention roles in that channel!";
   }
 
   return null;
@@ -118,12 +120,12 @@ async function createAlarm(
     roleId,
     userId,
     message,
-    waktu,
-    tanggal,
+    time,
+    date,
     recurring = "none",
   },
 ) {
-  const dateResult = buildAlarmDate({ waktu, tanggal, recurring });
+  const dateResult = buildAlarmDate({ time, date, recurring });
   if (dateResult.error) return dateResult;
 
   const alarmId = uuidv4();
@@ -155,7 +157,7 @@ async function cancelAlarm(scheduler, alarmId) {
 
 async function toggleAlarm(scheduler, alarmId) {
   const alarm = await scheduler.storage.get(alarmId);
-  if (!alarm) return { error: "❌ Alarm tidak ditemukan." };
+  if (!alarm) return { error: "❌ Alarm not found." };
 
   const wasEnabled = alarm.enabled !== false;
   const newEnabled = !wasEnabled;

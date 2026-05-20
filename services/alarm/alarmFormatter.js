@@ -7,6 +7,33 @@ const {
 } = require("discord.js");
 
 // ══════════════════════════════════════════════════════════
+// Pagination Constants
+// ══════════════════════════════════════════════════════════
+
+/** Items per page for embed list views (Discord field limits + readability) */
+const LIST_PAGE_SIZE = 5;
+/** Items per page for select menus (Discord max options = 25) */
+const SELECT_PAGE_SIZE = 25;
+
+/** Compute total pages for a given dataset and page size */
+function totalPages(items, pageSize) {
+  return Math.max(1, Math.ceil(items.length / pageSize));
+}
+
+/** Clamp page within [0, totalPages-1] */
+function clampPage(page, total) {
+  if (Number.isNaN(page) || page < 0) return 0;
+  if (page >= total) return total - 1;
+  return page;
+}
+
+/** Get the slice of items for a given page */
+function sliceForPage(items, page, pageSize) {
+  const start = page * pageSize;
+  return items.slice(start, start + pageSize);
+}
+
+// ══════════════════════════════════════════════════════════
 // Date / Label helpers
 // ══════════════════════════════════════════════════════════
 
@@ -21,18 +48,18 @@ function formatAlarmDate(dateStr) {
 }
 
 function recurringLabel(recurring) {
-  if (recurring === "daily") return "Harian";
-  if (recurring === "weekly") return "Mingguan";
-  if (recurring === "monthly") return "Bulanan";
-  return "Tidak Berulang";
+  if (recurring === "daily") return "Daily";
+  if (recurring === "weekly") return "Weekly";
+  if (recurring === "monthly") return "Monthly";
+  return "Non-recurring";
 }
 
 function alarmStatus(alarm) {
   const timeLeft = new Date(alarm.time).getTime() - Date.now();
-  if (alarm.enabled === false) return "⏸️ Non-aktif";
-  if (timeLeft < 0) return "🔔 Terlewat";
-  if (timeLeft < 60000) return "🔔 Segera";
-  return "⏳ Menunggu";
+  if (alarm.enabled === false) return "⏸️ Disabled";
+  if (timeLeft < 0) return "🔔 Missed";
+  if (timeLeft < 60000) return "🔔 Soon";
+  return "⏳ Waiting";
 }
 
 // ══════════════════════════════════════════════════════════
@@ -46,28 +73,35 @@ function buildAlarmField(alarm, index) {
   return {
     name: `${status} ${index + 1}. ${alarm.message}`,
     value:
-      `⏰ **Waktu**: ${formatAlarmDate(alarm.time)}\n` +
+      `⏰ **Time**: ${formatAlarmDate(alarm.time)}\n` +
       `🔔 **Channel**: <#${alarm.channelId}>\n` +
       `👥 **Role**: <@&${alarm.roleId}>\n` +
-      `🔄 **Jenis**: ${recurringLabel(alarm.recurring)}\n` +
+      `🔄 **Type**: ${recurringLabel(alarm.recurring)}\n` +
       `⏳ **Countdown**: <t:${unix}:R>\n` +
       `📋 **ID**: ||${alarm.id}||`,
     inline: false,
   };
 }
 
-function buildAlarmListEmbed(alarms, color, footerIconURL) {
+function buildAlarmListEmbed(alarms, color, footerIconURL, page = 0) {
+  const total = totalPages(alarms, LIST_PAGE_SIZE);
+  const safePage = clampPage(page, total);
+  const pageItems = sliceForPage(alarms, safePage, LIST_PAGE_SIZE);
+  const startIdx = safePage * LIST_PAGE_SIZE;
+
   const embed = new EmbedBuilder()
-    .setTitle("🔔 Daftar Alarm Anda")
+    .setTitle("🔔 Your Alarms")
     .setColor(color)
     .setFooter({
-      text: `${alarms.length} alarm aktif • Gunakan tombol di bawah untuk mengelola`,
+      text:
+        `${alarms.length} active alarm(s) • Page ${safePage + 1}/${total}` +
+        ` • Use the buttons below to manage`,
       iconURL: footerIconURL,
     })
     .setTimestamp();
 
-  alarms.forEach((alarm, idx) => {
-    embed.addFields(buildAlarmField(alarm, idx));
+  pageItems.forEach((alarm, idx) => {
+    embed.addFields(buildAlarmField(alarm, startIdx + idx));
   });
 
   return embed;
@@ -79,18 +113,18 @@ function buildAlarmSetEmbed(alarm, color) {
 
   let countdownText = `⏳ Countdown: ${discordTimestamp}`;
   if (alarm.recurring !== "none") {
-    countdownText = `⏳ Countdown hingga bunyi berikutnya: ${discordTimestamp}`;
+    countdownText = `⏳ Countdown to next trigger: ${discordTimestamp}`;
   }
 
   return new EmbedBuilder()
     .setDescription(
-      `✅ Alarm "${alarm.message}" berhasil disetel!\n` +
-        `⏰ Waktu: ${formatAlarmDate(alarm.time)}\n` +
-        `🔔 Akan berbunyi di: <#${alarm.channelId}>\n` +
-        `👥 Role yang di-tag: <@&${alarm.roleId}>\n` +
-        `🔄 Jenis: ${recurringLabel(alarm.recurring)}\n` +
+      `✅ Alarm "${alarm.message}" has been set!\n` +
+        `⏰ Time: ${formatAlarmDate(alarm.time)}\n` +
+        `🔔 Will trigger in: <#${alarm.channelId}>\n` +
+        `👥 Role to mention: <@&${alarm.roleId}>\n` +
+        `🔄 Type: ${recurringLabel(alarm.recurring)}\n` +
         `${countdownText}\n` +
-        `🗑️ Pesan alarm di channel akan otomatis terhapus setelah 2 jam`,
+        `🗑️ The alarm message will be auto-deleted after 2 hours`,
     )
     .setColor(color);
 }
@@ -99,31 +133,35 @@ function buildAlarmEditEmbed(alarm, editedBy) {
   const d = new Date(alarm.time);
 
   return new EmbedBuilder()
-    .setTitle("✅ Alarm Berhasil Diupdate")
+    .setTitle("✅ Alarm Updated")
     .setColor(0x00ff00)
     .addFields(
-      { name: "Nama Alarm", value: alarm.name || alarm.message, inline: true },
       {
-        name: "Tanggal",
+        name: "Alarm Name",
+        value: alarm.name || alarm.message,
+        inline: true,
+      },
+      {
+        name: "Date",
         value: formatAlarmDate(alarm.time).split(" ")[0],
         inline: true,
       },
       {
-        name: "Waktu",
+        name: "Time",
         value: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
         inline: true,
       },
       { name: "Channel", value: `<#${alarm.channelId}>`, inline: true },
       {
         name: "Role",
-        value: alarm.roleId ? `<@&${alarm.roleId}>` : "Tidak ada",
+        value: alarm.roleId ? `<@&${alarm.roleId}>` : "None",
         inline: true,
       },
-      { name: "Jenis", value: recurringLabel(alarm.recurring), inline: true },
+      { name: "Type", value: recurringLabel(alarm.recurring), inline: true },
       { name: "ID", value: alarm.id, inline: true },
     )
     .setFooter({
-      text: `Diupdate oleh ${editedBy.tag}`,
+      text: `Updated by ${editedBy.tag}`,
       iconURL: editedBy.displayAvatarURL(),
     })
     .setTimestamp();
@@ -137,14 +175,14 @@ function buildAlarmDetailEmbed(alarm) {
     .setColor(0x5865f2)
     .addFields(
       { name: "ID", value: `\`${alarm.id}\``, inline: false },
-      { name: "Waktu", value: formatAlarmDate(alarm.time), inline: true },
+      { name: "Time", value: formatAlarmDate(alarm.time), inline: true },
       { name: "Channel", value: `<#${alarm.channelId}>`, inline: true },
       {
         name: "Role",
-        value: alarm.roleId ? `<@&${alarm.roleId}>` : "Tidak ada",
+        value: alarm.roleId ? `<@&${alarm.roleId}>` : "None",
         inline: true,
       },
-      { name: "Jenis", value: recurringLabel(alarm.recurring), inline: true },
+      { name: "Type", value: recurringLabel(alarm.recurring), inline: true },
       {
         name: "Countdown",
         value: `<t:${Math.floor(d.getTime() / 1000)}:R>`,
@@ -152,11 +190,11 @@ function buildAlarmDetailEmbed(alarm) {
       },
     )
     .setDescription(
-      "Gunakan command berikut untuk mengedit:\n" +
-        `\`/alarm edit id_alarm:${alarm.id}\` + parameter yang ingin diubah`,
+      "Use the following command to edit:\n" +
+        `\`/alarm edit id_alarm:${alarm.id}\` + the parameter you want to change`,
     )
     .setFooter({
-      text: "Parameter: waktu, nama_alarm, tanggal, role, channel, recurring",
+      text: "Parameters: time, alarm_name, date, role, channel, recurring",
     });
 }
 
@@ -166,13 +204,18 @@ function buildAlarmDetailEmbed(alarm) {
 function buildAlarmButtons(hasAlarms) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
+      .setCustomId("alarm_new")
+      .setLabel("New")
+      .setEmoji("➕")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
       .setCustomId("alarm_refresh")
       .setLabel("Refresh")
       .setEmoji("🔄")
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("alarm_cancel_select")
-      .setLabel("Batalkan")
+      .setLabel("Cancel")
       .setEmoji("🗑️")
       .setStyle(ButtonStyle.Danger)
       .setDisabled(!hasAlarms),
@@ -188,36 +231,45 @@ function buildAlarmButtons(hasAlarms) {
       .setEmoji("⏯️")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(!hasAlarms),
-    new ButtonBuilder()
-      .setCustomId("alarm_close")
-      .setLabel("Tutup")
-      .setEmoji("❌")
-      .setStyle(ButtonStyle.Secondary),
   );
 }
 
-/** Select menu for picking an alarm (cancel, edit, etc.) */
-function buildAlarmSelect(alarms, customId) {
-  const options = alarms.slice(0, 25).map((alarm, i) => ({
-    label: `${i + 1}. ${alarm.message}`.slice(0, 100),
-    description: `Waktu: ${formatAlarmDate(alarm.time)}`.slice(0, 100),
+/** Select menu for picking an alarm (cancel, edit, etc.) — paginated */
+function buildAlarmSelect(alarms, customId, page = 0) {
+  const total = totalPages(alarms, SELECT_PAGE_SIZE);
+  const safePage = clampPage(page, total);
+  const pageItems = sliceForPage(alarms, safePage, SELECT_PAGE_SIZE);
+  const startIdx = safePage * SELECT_PAGE_SIZE;
+
+  const options = pageItems.map((alarm, i) => ({
+    label: `${startIdx + i + 1}. ${alarm.message}`.slice(0, 100),
+    description: `Time: ${formatAlarmDate(alarm.time)}`.slice(0, 100),
     value: alarm.id,
   }));
   const select = new StringSelectMenuBuilder()
     .setCustomId(customId)
-    .setPlaceholder("Pilih alarm...")
+    .setPlaceholder(
+      total > 1
+        ? `Select an alarm... (Page ${safePage + 1}/${total})`
+        : "Select an alarm...",
+    )
     .addOptions(options);
   return new ActionRowBuilder().addComponents(select);
 }
 
-/** Select menu for toggle — shows on/off status per alarm */
-function buildAlarmToggleSelect(alarms) {
-  const options = alarms.slice(0, 25).map((alarm, i) => {
+/** Select menu for toggle — shows on/off status per alarm, paginated */
+function buildAlarmToggleSelect(alarms, page = 0) {
+  const total = totalPages(alarms, SELECT_PAGE_SIZE);
+  const safePage = clampPage(page, total);
+  const pageItems = sliceForPage(alarms, safePage, SELECT_PAGE_SIZE);
+  const startIdx = safePage * SELECT_PAGE_SIZE;
+
+  const options = pageItems.map((alarm, i) => {
     const isEnabled = alarm.enabled !== false;
     return {
-      label: `${i + 1}. ${alarm.message}`.slice(0, 100),
+      label: `${startIdx + i + 1}. ${alarm.message}`.slice(0, 100),
       description:
-        `${isEnabled ? "✅ Aktif" : "⏸️ Non-aktif"} • ${formatAlarmDate(alarm.time)}`.slice(
+        `${isEnabled ? "✅ Active" : "⏸️ Disabled"} • ${formatAlarmDate(alarm.time)}`.slice(
           0,
           100,
         ),
@@ -226,36 +278,102 @@ function buildAlarmToggleSelect(alarms) {
   });
   const select = new StringSelectMenuBuilder()
     .setCustomId("alarm_toggle_do")
-    .setPlaceholder("Pilih alarm untuk toggle on/off...")
+    .setPlaceholder(
+      total > 1
+        ? `Select an alarm to toggle... (Page ${safePage + 1}/${total})`
+        : "Select an alarm to toggle on/off...",
+    )
     .addOptions(options);
   return new ActionRowBuilder().addComponents(select);
 }
 
-/** Single "⬅️ Kembali" button row */
+/** Single "⬅️ Back" button row */
 function buildBackButton() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("alarm_refresh")
-      .setLabel("⬅️ Kembali")
+      .setLabel("⬅️ Back")
       .setStyle(ButtonStyle.Secondary),
   );
 }
 
-/** Detail view buttons: Kembali ke Daftar + Tutup */
+/** Detail view buttons: Back to List + Close */
 function buildDetailButtons() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("alarm_refresh")
-      .setLabel("⬅️ Kembali ke Daftar")
+      .setLabel("⬅️ Back to List")
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("alarm_close")
-      .setLabel("❌ Tutup")
+      .setLabel("❌ Close")
       .setStyle(ButtonStyle.Secondary),
   );
 }
 
+/**
+ * Build a pagination navigation row.
+ * Disables prev/next when at edges, and disables all when only one page.
+ *
+ * @param {string} prefix — customId prefix (e.g. "alarm_list_page", "alarm_cancel_page")
+ * @param {number} page — current page (0-based)
+ * @param {number} total — total number of pages
+ */
+function buildPaginationRow(prefix, page, total) {
+  const safePage = clampPage(page, total);
+  const onlyOne = total <= 1;
+
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${prefix}:first:${safePage}`)
+      .setEmoji("⏮️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(onlyOne || safePage === 0),
+    new ButtonBuilder()
+      .setCustomId(`${prefix}:prev:${safePage}`)
+      .setEmoji("⬅️")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(onlyOne || safePage === 0),
+    new ButtonBuilder()
+      .setCustomId(`${prefix}:indicator:${safePage}`)
+      .setLabel(`${safePage + 1} / ${total}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`${prefix}:next:${safePage}`)
+      .setEmoji("➡️")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(onlyOne || safePage >= total - 1),
+    new ButtonBuilder()
+      .setCustomId(`${prefix}:last:${safePage}`)
+      .setEmoji("⏭️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(onlyOne || safePage >= total - 1),
+  );
+}
+
+/**
+ * Build the full set of components for the alarm list view, including
+ * action buttons and a pagination navigation row when there's more than one page.
+ */
+function buildAlarmListComponents(alarms, page = 0) {
+  const total = totalPages(alarms, LIST_PAGE_SIZE);
+  const hasAlarms = alarms.length > 0;
+  const rows = [buildAlarmButtons(hasAlarms)];
+  if (total > 1) {
+    rows.push(buildPaginationRow("alarm_list_page", page, total));
+  }
+  return rows;
+}
+
 module.exports = {
+  // Pagination helpers
+  LIST_PAGE_SIZE,
+  SELECT_PAGE_SIZE,
+  totalPages,
+  clampPage,
+  sliceForPage,
+  // Formatters
   formatAlarmDate,
   recurringLabel,
   alarmStatus,
@@ -264,9 +382,12 @@ module.exports = {
   buildAlarmSetEmbed,
   buildAlarmEditEmbed,
   buildAlarmDetailEmbed,
+  // Components
   buildAlarmButtons,
   buildAlarmSelect,
   buildAlarmToggleSelect,
   buildBackButton,
   buildDetailButtons,
+  buildPaginationRow,
+  buildAlarmListComponents,
 };

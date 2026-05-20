@@ -1,11 +1,20 @@
+const Logger = require("../../../utils/logger");
 const {
   searchLyrics,
   validatePlayerForLyrics,
 } = require("../../../services/lyrics/lyricsService");
+const {
+  scheduleAutoDelete,
+  EPHEMERAL_ERROR_TTL_MS,
+  addLyricsToNowPlaying,
+  removeLyricsFromNowPlaying,
+} = require("../../../utils/musicHelpers");
+
+const logger = new Logger("MUSIC-LYRICS");
 
 module.exports = {
   name: ["music", "lyric"],
-  description: "Toggle lyrics display (show/hide) for current song.",
+  description: "Toggle lyrics display (show/hide) for the current song.",
   category: "Music",
 
   run: async (client, interaction) => {
@@ -15,93 +24,42 @@ module.exports = {
     try {
       const validation = validatePlayerForLyrics(client, interaction);
       if (validation.error) {
-        return interaction.editReply({ content: validation.error });
+        await interaction.editReply({ content: validation.error });
+        return scheduleAutoDelete(interaction);
       }
 
-      const player = validation.player;
-
-      // Toggle lyrics state
+      const { player, track } = validation;
       player.lyricsEnabled = !player.lyricsEnabled;
 
       if (player.lyricsEnabled) {
-        // Show lyrics - fetch and update now playing message
-        await interaction.editReply({ content: "🔍 Mencari lyrics..." });
+        // Toggle ON
+        await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
-        const result = await searchLyrics(
-          player,
-          validation.track,
-          client.color,
-        );
+        const result = await searchLyrics(player, track, client.color);
 
         if (result.error) {
           player.lyricsEnabled = false;
-          await interaction.editReply({ content: result.error });
-
-          // Delete ephemeral reply after 5 seconds
-          setTimeout(async () => {
-            try {
-              await interaction.deleteReply();
-            } catch (_err) {
-              // Ignore error if already deleted
-            }
-          }, 5000);
-          return;
+          await interaction.editReply({
+            content: `⚠️ Lyrics not found for **${track.title}**.\n${result.error}`,
+          });
+          return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        // Update now playing message with lyrics
-        try {
-          const channel = client.channels.cache.get(player.textId);
-          if (channel && player.nowPlayingMessageId) {
-            const message = await channel.messages
-              .fetch(player.nowPlayingMessageId)
-              .catch(() => null);
-            if (message) {
-              const currentEmbeds = message.embeds;
-              await message.edit({
-                embeds: [...currentEmbeds, result.embed],
-                components: message.components,
-              });
-            }
-          }
-        } catch (err) {
-          console.error("[lyrics] Failed to update now playing:", err.message);
+        const updated = await addLyricsToNowPlaying(client, player, result.embed);
+        if (!updated) {
+          logger.warning("addLyricsToNowPlaying returned false");
         }
 
-        await interaction.editReply({ content: "✅ Lyrics ditampilkan" });
-      } else {
-        // Hide lyrics - remove lyrics embed from now playing message
-        try {
-          const channel = client.channels.cache.get(player.textId);
-          if (channel && player.nowPlayingMessageId) {
-            const message = await channel.messages
-              .fetch(player.nowPlayingMessageId)
-              .catch(() => null);
-            if (message) {
-              // Keep only the first embed (now playing), remove lyrics
-              const nowPlayingEmbed = message.embeds[0];
-              await message.edit({
-                embeds: nowPlayingEmbed ? [nowPlayingEmbed] : [],
-                components: message.components,
-              });
-            }
-          }
-        } catch (err) {
-          console.error("[lyrics] Failed to hide lyrics:", err.message);
-        }
-
-        await interaction.editReply({ content: "✅ Lyrics disembunyikan" });
+        await interaction.editReply({ content: "✅ Lyrics shown." });
+        return scheduleAutoDelete(interaction);
       }
 
-      // Delete ephemeral reply after 5 seconds
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (_err) {
-          // Ignore error if already deleted
-        }
-      }, 5000);
+      // Toggle OFF
+      await removeLyricsFromNowPlaying(client, player);
+      await interaction.editReply({ content: "✅ Lyrics hidden." });
+      return scheduleAutoDelete(interaction);
     } catch (error) {
-      console.error("[lyrics] Unexpected error:", error);
+      logger.error(`Unexpected lyrics command error: ${error.message}`);
       const msg =
         error.type === "request" || error.request
           ? "❌ Could not connect to lyrics service."
@@ -111,18 +69,8 @@ module.exports = {
 
       try {
         await interaction.editReply({ content: msg });
-
-        // Delete ephemeral reply after 5 seconds
-        setTimeout(async () => {
-          try {
-            await interaction.deleteReply();
-          } catch (_err) {
-            // Ignore error if already deleted
-          }
-        }, 5000);
-      } catch (e) {
-        console.error("[lyrics] Failed to send error reply:", e.message);
-      }
+        return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
+      } catch (_) {}
     }
   },
 };

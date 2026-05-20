@@ -36,13 +36,15 @@
     <td width="50%" valign="top">
 
 #### 🎵 Music
+
 - High-quality Lavalink v4 playback
 - YouTube · SoundCloud · Spotify · Deezer
 - Custom audio filters (Nightcore, Bassboost, 3D, Vibrato)
 - Lofi 24/7 mode with auto-reconnect
-- Synced lyrics with romaji conversion
+- Static lyrics with romaji conversion (LRCLIB + Lavalink)
 
 #### 🏆 Engagement
+
 - Level & XP system with rank cards
 - Server leaderboards
 - Anime schedule via Jikan API
@@ -51,11 +53,13 @@
   <td width="50%" valign="top">
 
 #### ⏰ Utility
+
 - Alarm system with auto-update countdown
 - Social media embed fixer (Twitter, IG, TikTok)
 - Per-guild log channels
 
 #### 🛠️ Developer Experience
+
 - Slash & prefix command support
 - AutoComplete suggestions on `/play`
 - PM2-ready ecosystem config
@@ -97,12 +101,12 @@ npm run start:pm2      # production with PM2
 
 ## 📋 Requirements
 
-| Tool | Version | Purpose |
-| :--- | :------ | :------ |
-| **Node.js** | `≥ 18.0.0` | Runtime |
-| **Lavalink** | `v4` | Audio streaming backend |
-| **Discord Bot** | — | [Setup guide](https://discordjs.guide/preparations/setting-up-a-bot-application) |
-| **PM2** *(optional)* | `latest` | Production process manager |
+| Tool                 | Version    | Purpose                                                                          |
+| :------------------- | :--------- | :------------------------------------------------------------------------------- |
+| **Node.js**          | `≥ 18.0.0` | Runtime                                                                          |
+| **Lavalink**         | `v4`       | Audio streaming backend                                                          |
+| **Discord Bot**      | —          | [Setup guide](https://discordjs.guide/preparations/setting-up-a-bot-application) |
+| **PM2** _(optional)_ | `latest`   | Production process manager                                                       |
 
 ---
 
@@ -147,29 +151,29 @@ SPOTIFY_CLIENT_SECRET=
 <details open>
 <summary><b>🎶 Music</b></summary>
 
-| Command | Description |
-| :------ | :---------- |
-| `/play <song\|url>` | Play from YouTube, SoundCloud, Spotify, or Deezer |
-| `/search <query>` | Interactive search with selection |
-| `/nowplaying` | Show the currently playing track |
-| `/queue [page]` | Display the queue with pagination |
-| `/skip` · `/pause` · `/resume` | Playback controls |
-| `/loop` · `/shuffle` · `/clear` | Queue controls |
-| `/volume <1-100>` | Adjust playback volume |
-| `/forward <seconds>` | Seek forward in the current track |
-| `/remove <position>` | Remove a specific track from queue |
-| `/247` | Toggle 24/7 stay-in-voice mode |
-| `/lofi` | Stream Lofi radio non-stop |
-| `/lyrics` | Fetch synced lyrics with romaji support |
-| `/leave` | Disconnect from voice |
+| Command                         | Description                                       |
+| :------------------------------ | :------------------------------------------------ |
+| `/play <song\|url>`             | Play from YouTube, SoundCloud, Spotify, or Deezer |
+| `/search <query>`               | Interactive search with selection                 |
+| `/nowplaying`                   | Show the currently playing track                  |
+| `/queue [page]`                 | Display the queue with pagination                 |
+| `/skip` · `/pause` · `/resume`  | Playback controls                                 |
+| `/loop` · `/shuffle` · `/clear` | Queue controls                                    |
+| `/volume <1-100>`               | Adjust playback volume                            |
+| `/forward <seconds>`            | Seek forward in the current track                 |
+| `/remove <position>`            | Remove a specific track from queue                |
+| `/247`                          | Toggle 24/7 stay-in-voice mode                    |
+| `/lofi`                         | Stream Lofi radio non-stop                        |
+| `/lyrics`                       | Fetch synced lyrics with romaji support           |
+| `/leave`                        | Disconnect from voice                             |
 
 </details>
 
 <details>
 <summary><b>🎛️ Filters</b></summary>
 
-| Command | Description |
-| :------ | :---------- |
+| Command          | Description           |
+| :--------------- | :-------------------- |
 | `/filter <type>` | Apply an audio filter |
 
 Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · `nightcore` · `slowmotion` · `vibrato`
@@ -179,36 +183,35 @@ Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · 
 <details>
 <summary><b>🏆 Leveling</b></summary>
 
-| Command | Description |
-| :------ | :---------- |
-| `/rank [user]` | View level, XP, and progress card |
-| `/leaderboard` | Top members in the server |
-| `/addxp <user> <xp>` | *(Admin)* Award XP to a member |
+| Command              | Description                       |
+| :------------------- | :-------------------------------- |
+| `/rank [user]`       | View level, XP, and progress card |
+| `/leaderboard`       | Top members in the server         |
+| `/addxp <user> <xp>` | _(Admin)_ Award XP to a member    |
 
 </details>
 
 <details>
 <summary><b>⏰ Alarms</b></summary>
 
-| Command | Description |
-| :------ | :---------- |
-| `/alarm set` | Schedule a new alarm |
-| `/alarm list` | List your active alarms |
-| `/alarm edit` | Edit an existing alarm |
-| `/alarm cancel` | Cancel an alarm |
-| `/alarm adminlist` | *(Admin)* View all server alarms |
+| Command            | Description                                            |
+| :----------------- | :----------------------------------------------------- |
+| `/alarm set`       | Schedule a new alarm                                   |
+| `/alarm list`      | Open the alarm panel (view, cancel, toggle on/off)     |
+| `/alarm edit`      | Edit an existing alarm                                 |
+| `/alarm adminlist` | _(Admin)_ View all server alarms                       |
 
 </details>
 
 <details>
 <summary><b>⚙️ Settings & Misc</b></summary>
 
-| Command | Description |
-| :------ | :---------- |
-| `/fixembed` | Configure social-media embed fixing |
-| `/setlog <channel>` | Set the server log channel |
-| `/anime` | Anime schedule and info (Jikan) |
-| `/help` | Open the help menu |
+| Command             | Description                         |
+| :------------------ | :---------------------------------- |
+| `/fixembed`         | Configure social-media embed fixing |
+| `/setlog <channel>` | Set the server log channel          |
+| `/anime`            | Anime schedule and info (Jikan)     |
+| `/help`             | Open the help menu                  |
 
 </details>
 

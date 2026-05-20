@@ -2,6 +2,40 @@ const Logger = require("../../utils/logger");
 const logger = new Logger("ALARM");
 const { EmbedBuilder } = require("discord.js");
 
+// Node.js setTimeout caps at 2^31 - 1 ms (~24.8 days). Anything larger
+// silently overflows and fires immediately. safeSetTimeout chains shorter
+// timeouts until the real delay is reached.
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
+function safeSetTimeout(callback, delayMs) {
+  const handle = { _timer: null, _cleared: false };
+  const schedule = (remaining) => {
+    if (handle._cleared) return;
+    if (remaining <= MAX_TIMEOUT_MS) {
+      handle._timer = setTimeout(
+        () => {
+          if (!handle._cleared) callback();
+        },
+        Math.max(0, remaining),
+      );
+      return;
+    }
+    handle._timer = setTimeout(
+      () => schedule(remaining - MAX_TIMEOUT_MS),
+      MAX_TIMEOUT_MS,
+    );
+  };
+  schedule(delayMs);
+  handle.clear = () => {
+    handle._cleared = true;
+    if (handle._timer) {
+      clearTimeout(handle._timer);
+      handle._timer = null;
+    }
+  };
+  return handle;
+}
+
 class AlarmScheduler {
   constructor(client) {
     this.client = client;
@@ -34,7 +68,7 @@ class AlarmScheduler {
 
     if (notifyTime > now) {
       const notifyDelay = notifyTime.getTime() - now.getTime();
-      const notifyTimeout = setTimeout(async () => {
+      const notifyTimeout = safeSetTimeout(async () => {
         try {
           const guild = this.client.guilds.cache.get(guildId);
           if (!guild) {
@@ -49,7 +83,7 @@ class AlarmScheduler {
 
           if (channel && role) {
             const reminderMsg = await channel.send({
-              content: `🔔 **Pengingat Alarm: ${alarmMessage}**\n⏰ Akan berbunyi dalam 10 menit!\n👥 ${role}`,
+              content: `🔔 **Alarm Reminder: ${alarmMessage}**\n⏰ Will trigger in 10 minutes!\n👥 ${role}`,
             });
 
             this.scheduleMessageDelete(reminderMsg, 2 * 60 * 60 * 1000);
@@ -72,7 +106,7 @@ class AlarmScheduler {
 
     if (alarmDate > now) {
       const alarmDelay = alarmDate.getTime() - now.getTime();
-      const alarmTimeout = setTimeout(async () => {
+      const alarmTimeout = safeSetTimeout(async () => {
         try {
           const guild = this.client.guilds.cache.get(guildId);
           if (!guild) {
@@ -85,7 +119,7 @@ class AlarmScheduler {
 
           if (channel && role) {
             const alarmMsg = await channel.send({
-              content: `⏰ **ALARM: ${alarmMessage}**\n🔔 Waktu yang ditentukan telah tiba!\n👥 ${role}`,
+              content: `⏰ **ALARM: ${alarmMessage}**\n🔔 The scheduled time has arrived!\n👥 ${role}`,
             });
 
             this.scheduleMessageDelete(alarmMsg, 2 * 60 * 60 * 1000);
@@ -116,7 +150,7 @@ class AlarmScheduler {
               }
 
               logger.info(
-                `Recurring alarm rescheduled: ${alarmMessage} for ${nextAlarmDate.toLocaleString("id-ID")}`,
+                `Recurring alarm rescheduled: ${alarmMessage} for ${nextAlarmDate.toLocaleString("en-US")}`,
               );
             } else {
               await this.storage.delete(id);
@@ -184,7 +218,7 @@ class AlarmScheduler {
         }
 
         logger.info(
-          `Past-time recurring alarm rescheduled: ${alarmMessage} for ${nextAlarmDate.toLocaleString("id-ID")}`,
+          `Past-time recurring alarm rescheduled: ${alarmMessage} for ${nextAlarmDate.toLocaleString("en-US")}`,
         );
       }
     }
@@ -231,29 +265,29 @@ class AlarmScheduler {
         const unixTimestamp = Math.floor(alarmDate.getTime() / 1000);
         const discordTimestamp = `<t:${unixTimestamp}:R>`;
 
-        let recurringText = "Tidak Berulang";
+        let recurringText = "Non-recurring";
         let countdownText = `⏳ Countdown: ${discordTimestamp}`;
 
         if (recurring !== "none") {
           recurringText =
             recurring === "daily"
-              ? "Harian"
+              ? "Daily"
               : recurring === "weekly"
-                ? "Mingguan"
-                : "Bulanan";
+                ? "Weekly"
+                : "Monthly";
 
-          countdownText = `⏳ Countdown hingga bunyi berikutnya: ${discordTimestamp}`;
+          countdownText = `⏳ Countdown to next trigger: ${discordTimestamp}`;
         }
 
         const updatedEmbed = new EmbedBuilder()
           .setDescription(
-            `✅ Alarm "${alarmMessage}" berhasil disetel!\n` +
-              `⏰ Waktu: ${formattedTime}\n` +
-              `🔔 Akan berbunyi di: <#${channelId}>\n` +
-              `👥 Role yang di-tag: <@&${roleId}>\n` +
-              `🔄 Jenis: ${recurringText}\n` +
+            `✅ Alarm "${alarmMessage}" has been set!\n` +
+              `⏰ Time: ${formattedTime}\n` +
+              `🔔 Will trigger in: <#${channelId}>\n` +
+              `👥 Role to mention: <@&${roleId}>\n` +
+              `🔄 Type: ${recurringText}\n` +
               `${countdownText}\n` +
-              `🗑️ Pesan alarm di channel akan otomatis terhapus setelah 2 jam`,
+              `🗑️ The alarm message will be auto-deleted after 2 hours`,
           )
           .setColor(0x00ff00);
 
@@ -349,13 +383,15 @@ class AlarmScheduler {
   cancelAlarm(alarmId) {
     const notifyJob = this.jobs.get(`${alarmId}-notify`);
     if (notifyJob) {
-      clearTimeout(notifyJob);
+      if (typeof notifyJob.clear === "function") notifyJob.clear();
+      else clearTimeout(notifyJob);
       this.jobs.delete(`${alarmId}-notify`);
     }
 
     const alarmJob = this.jobs.get(alarmId);
     if (alarmJob) {
-      clearTimeout(alarmJob);
+      if (typeof alarmJob.clear === "function") alarmJob.clear();
+      else clearTimeout(alarmJob);
       this.jobs.delete(alarmId);
     }
 

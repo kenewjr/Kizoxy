@@ -114,19 +114,19 @@ module.exports = {
           const embedChunks = chunkArray(allEmbeds, 10);
 
           const days = [
-            "Minggu",
-            "Senin",
-            "Selasa",
-            "Rabu",
-            "Kamis",
-            "Jumat",
-            "Sabtu",
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
           ];
           const date = new Date();
           const dayName = days[date.getDay()];
           const dateNum = date.getDate();
           await interaction.editReply({
-            content: `📅 **Jadwal Update Anime Hari '${dayName}' Pada Tanggal '${dateNum}'**`,
+            content: `📅 **Anime Update Schedule for ${dayName} (Day ${dateNum})**`,
           });
 
           // Send chunks

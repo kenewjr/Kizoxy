@@ -1,6 +1,4 @@
-const fs = require("fs");
-const path = require("path");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, Events } = require("discord.js");
 const JSONStorage = require("../modules/storage/storage");
 const AlarmScheduler = require("../modules/alarm/alarmScheduler");
 const Logger = require("../utils/logger");
@@ -14,90 +12,11 @@ module.exports = (client) => {
     client.alarmStorage = alarmStorage;
     client.alarmScheduler = alarmScheduler;
     client.activeCountdowns = new Map();
-    const commandsDir = path.join(
-      __dirname,
-      "..",
-      "commands",
-      "Slash",
-      "Alarm",
-    );
-    const buttonsDir = path.join(__dirname, "..", "buttons");
-    let loadedCommands = 0;
-    let failedCommands = [];
-
-    try {
-      const buttonFiles = fs
-        .readdirSync(buttonsDir)
-        .filter((f) => f.endsWith(".js"));
-      for (const file of buttonFiles) {
-        try {
-          const filePath = path.join(buttonsDir, file);
-          delete require.cache[require.resolve(filePath)];
-          const btn = require(filePath);
-
-          if (btn && btn.customId) {
-            client.buttons.set(btn.customId, btn);
-            logger.success(`Button loaded: ${btn.customId}`);
-          }
-        } catch (error) {
-          logger.error(`Failed to load button ${file}: ${error.message}`);
-        }
-      }
-    } catch (err) {
-      logger.error(`Failed to read buttons folder: ${err.message}`);
-    }
-
-    try {
-      const files = fs
-        .readdirSync(commandsDir)
-        .filter((f) => f.endsWith(".js"));
-
-      for (const file of files) {
-        try {
-          const filePath = path.join(commandsDir, file);
-          // Clear cache during development
-          delete require.cache[require.resolve(filePath)];
-          const cmd = require(filePath);
-
-          if (!cmd) {
-            throw new Error("Module exports is empty");
-          }
-
-          if (!cmd.name || !Array.isArray(cmd.name)) {
-            throw new Error("Missing or invalid 'name' array");
-          }
-
-          if (typeof cmd.run !== "function") {
-            throw new Error("Missing 'run' function");
-          }
-
-          // Store command with full name (alarm set, alarm list, etc.)
-          const fullCommandName = cmd.name.join(" ");
-          client.commands.set(fullCommandName, cmd);
-          logger.success(`Command loaded: ${fullCommandName}`);
-          loadedCommands++;
-        } catch (error) {
-          logger.error(`Failed to load ${file}: ${error.message}`);
-          failedCommands.push({ file, error: error.message });
-        }
-      }
-
-      logger.info(`Total alarm commands loaded: ${loadedCommands}`);
-
-      if (failedCommands.length > 0) {
-        logger.warning(
-          `${failedCommands.length} alarm commands failed to load:`,
-        );
-        failedCommands.forEach(({ file, error }) => {
-          logger.warning(`- ${file}: ${error}`);
-        });
-      }
-    } catch (err) {
-      logger.error(`Failed to read folder ${commandsDir}: ${err.message}`);
-    }
+    // Note: alarm slash commands and buttons are discovered by loadCommand
+    // and loadButtons earlier in the pipeline. We do not re-load them here.
 
     // Event handler to load alarms after bot is ready
-    client.once("ready", async () => {
+    client.once(Events.ClientReady, async () => {
       try {
         logger.info("Loading saved alarms...");
         await alarmStorage.load();
@@ -122,15 +41,6 @@ module.exports = (client) => {
                 let nextAlarmTime = new Date(alarm.time);
                 const nowDate = new Date();
 
-                // Fix timezone for Indonesia (UTC+7)
-                const timezoneOffset = 7 * 60 * 60 * 1000; // UTC+7 in milliseconds
-                const localNextAlarmTime = new Date(
-                  nextAlarmTime.getTime() + timezoneOffset,
-                );
-                const _localNowDate = new Date(
-                  nowDate.getTime() + timezoneOffset,
-                );
-
                 if (nextAlarmTime <= nowDate && alarm.recurring !== "none") {
                   if (alarm.recurring === "daily") {
                     nextAlarmTime.setDate(nextAlarmTime.getDate() + 1);
@@ -153,8 +63,20 @@ module.exports = (client) => {
                   });
                 }
 
-                // Format time for display with Indonesia timezone
-                const formattedTime = `${localNextAlarmTime.getDate().toString().padStart(2, "0")}/${(localNextAlarmTime.getMonth() + 1).toString().padStart(2, "0")}/${localNextAlarmTime.getFullYear()} ${localNextAlarmTime.getHours().toString().padStart(2, "0")}:${localNextAlarmTime.getMinutes().toString().padStart(2, "0")}`;
+                // Format time for display in Asia/Jakarta regardless of host TZ
+                const jakartaParts = new Intl.DateTimeFormat("id-ID", {
+                  timeZone: "Asia/Jakarta",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }).formatToParts(nextAlarmTime);
+                const partMap = Object.fromEntries(
+                  jakartaParts.map((p) => [p.type, p.value]),
+                );
+                const formattedTime = `${partMap.day}/${partMap.month}/${partMap.year} ${partMap.hour}:${partMap.minute}`;
 
                 // Update the Discord timestamp
                 const unixTimestamp = Math.floor(

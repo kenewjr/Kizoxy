@@ -1,55 +1,29 @@
-const {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const formatduration = require("../../structures/FormatDuration.js");
 const { searchLyrics } = require("../../services/lyrics/lyricsService");
+const Logger = require("../../utils/logger");
+const { buildMusicControlRow } = require("../../utils/musicHelpers");
+
+const logger = new Logger("PLAYER-START");
+
+const SOURCE_ICONS = {
+  youtube:
+    "https://media.discordapp.net/attachments/1010784573061349496/1070282974848888863/youtube.png",
+  spotify:
+    "https://media.discordapp.net/attachments/1010784573061349496/1070282974404300902/spotify.png",
+  soundcloud:
+    "https://media.discordapp.net/attachments/1010784573061349496/1070282974190383124/soundcloud.png",
+  twitch:
+    "https://media.discordapp.net/attachments/1010784573061349496/1070282974634975292/twitch.png",
+  unknow:
+    "https://media.discordapp.net/attachments/1010784573061349496/1070283756100911184/question.png",
+};
 
 module.exports = async (client, player, track) => {
   const source = player.queue.current.sourceName || "unknow";
-  let src =
-    {
-      youtube:
-        "https://media.discordapp.net/attachments/1010784573061349496/1070282974848888863/youtube.png",
-      spotify:
-        "https://media.discordapp.net/attachments/1010784573061349496/1070282974404300902/spotify.png",
-      soundcloud:
-        "https://media.discordapp.net/attachments/1010784573061349496/1070282974190383124/soundcloud.png",
-      twitch:
-        "https://media.discordapp.net/attachments/1010784573061349496/1070282974634975292/twitch.png",
-      unknow:
-        "https://media.discordapp.net/attachments/1010784573061349496/1070283756100911184/question.png",
-    }[source] || src.unknow;
+  const src = SOURCE_ICONS[source] || SOURCE_ICONS.unknow;
 
-  const buttons = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("music-pause")
-      .setLabel(player.playing ? "Pause" : "Resume")
-      .setEmoji(player.playing ? "⏸️" : "▶️")
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId("music-skip")
-      .setLabel("Skip")
-      .setEmoji("⏭️")
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId("music-stop")
-      .setLabel("Stop")
-      .setEmoji("⏹️")
-      .setStyle(ButtonStyle.Danger),
-    new ButtonBuilder()
-      .setCustomId("music-lyrics")
-      .setLabel("Lyrics")
-      .setEmoji("📝")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("music-shuffle")
-      .setLabel("Shuffle")
-      .setEmoji("🔀")
-      .setStyle(ButtonStyle.Success),
-  );
+  const buttons = buildMusicControlRow(player.paused);
 
   const embed = new EmbedBuilder()
     .setAuthor({
@@ -84,34 +58,34 @@ module.exports = async (client, player, track) => {
 
   try {
     if (player.nowPlayingMessageId) {
-      // Edit pesan lama
+      // Edit existing message
       const oldMsg = await channel.messages
         .fetch(player.nowPlayingMessageId)
         .catch(() => null);
       if (oldMsg) {
         await oldMsg.edit({ embeds: [embed], components: [buttons] });
 
-        // Auto-fetch lyrics jika toggle aktif
+        // Auto-fetch lyrics if toggle enabled
         if (player.lyricsEnabled) {
-          await autoFetchLyrics(client, player, track, oldMsg);
+          autoFetchLyrics(client, player, track, oldMsg);
         }
         return;
       }
     }
 
-    // Jika belum ada message tersimpan, kirim baru & simpan ID-nya
+    // No saved message yet, send a new one and store its ID
     const sentMsg = await channel.send({
       embeds: [embed],
       components: [buttons],
     });
     player.nowPlayingMessageId = sentMsg.id;
 
-    // Auto-fetch lyrics jika toggle aktif
+    // Auto-fetch lyrics if toggle enabled
     if (player.lyricsEnabled) {
-      await autoFetchLyrics(client, player, track, sentMsg);
+      autoFetchLyrics(client, player, track, sentMsg);
     }
   } catch (err) {
-    console.error("Error sending/updating Now Playing embed:", err);
+    logger.error(`Error sending/updating Now Playing embed: ${err.message}`);
   }
 };
 
@@ -120,13 +94,21 @@ function UpCase(char) {
 }
 
 async function autoFetchLyrics(client, player, track, message) {
+  // Per-player fetch token: only the most-recent autoFetchLyrics call is
+  // allowed to mutate the message. When a new track starts we bump the token
+  // and any in-flight fetches for the old track abandon their edits.
+  const token = (player._lyricsFetchToken || 0) + 1;
+  player._lyricsFetchToken = token;
+  const isStale = () => player._lyricsFetchToken !== token;
+
   try {
     // Add loading notification
     const currentEmbeds = message.embeds;
     const loadingEmbed = new EmbedBuilder()
-      .setDescription("🔍 Mencari lyrics...")
+      .setDescription("🔍 Searching lyrics...")
       .setColor(client.color);
 
+    if (isStale()) return;
     await message.edit({
       embeds: [...currentEmbeds, loadingEmbed],
       components: message.components,
@@ -135,13 +117,15 @@ async function autoFetchLyrics(client, player, track, message) {
     // Fetch lyrics
     const result = await searchLyrics(player, track, client.color);
 
+    if (isStale()) return; // newer track started; do not touch the message
+
     if (result.error) {
       // Remove loading notification if not found
       await message.edit({
         embeds: currentEmbeds,
         components: message.components,
       });
-      console.warn("[playerStart] Lyrics not found:", result.error);
+      logger.warning(`[playerStart] Lyrics not found: ${result.error}`);
       return;
     }
 
@@ -151,7 +135,8 @@ async function autoFetchLyrics(client, player, track, message) {
       components: message.components,
     });
   } catch (err) {
-    console.error("[playerStart] Auto-fetch lyrics failed:", err.message);
+    if (isStale()) return;
+    logger.error(`[playerStart] Auto-fetch lyrics failed: ${err.message}`);
     // Remove loading notification on error
     try {
       const currentEmbeds = message.embeds;

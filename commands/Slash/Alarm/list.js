@@ -1,11 +1,14 @@
 const {
   buildAlarmListEmbed,
-  buildAlarmButtons,
+  buildAlarmListComponents,
 } = require("../../../services/alarm/alarmFormatter");
+const Logger = require("../../../utils/logger");
+
+const logger = new Logger("ALARM");
 
 module.exports = {
-  name: ["alarm", "list"],
-  description: "Lihat daftar alarm yang aktif dengan panel kontrol",
+  name: ["alarm"],
+  description: "Open the alarm panel (view, create, edit, cancel, toggle)",
   category: "Alarm",
   run: async (client, interaction) => {
     await interaction.deferReply({ ephemeral: false });
@@ -16,23 +19,27 @@ module.exports = {
       );
 
       if (alarms.length === 0) {
-        return interaction.editReply("❌ Anda tidak memiliki alarm aktif.");
+        return interaction.editReply("❌ You don't have any active alarms.");
       }
 
+      const page = 0;
       const embed = buildAlarmListEmbed(
         alarms,
         client.color,
         client.user.displayAvatarURL(),
+        page,
       );
 
       await interaction.editReply({
         embeds: [embed],
-        components: [buildAlarmButtons(true)],
+        components: buildAlarmListComponents(alarms, page),
       });
     } catch (error) {
-      console.error("Error listing alarms:", error);
+      logger.error(
+        `Error listing alarms for user ${interaction.user.id}: ${error.message}`,
+      );
       await interaction.editReply(
-        "❌ Terjadi error saat mengambil daftar alarm.",
+        "❌ An error occurred while fetching your alarm list.",
       );
     }
   },

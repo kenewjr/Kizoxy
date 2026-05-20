@@ -1,9 +1,19 @@
 const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
 const { convertTime } = require("../../../structures/ConvertTime.js");
 
+// Auto-cleanup TTL for ephemeral confirmations (in ms)
+const EPHEMERAL_TTL_MS = 3000;
+
+/** Schedule the ephemeral reply to be deleted after TTL. */
+function scheduleAutoDelete(interaction) {
+  setTimeout(() => {
+    interaction.deleteReply().catch(() => {});
+  }, EPHEMERAL_TTL_MS);
+}
+
 module.exports = {
   name: ["music", "remove"],
-  description: "Remove or clear songs from queue!",
+  description: "Remove or clear songs from the queue",
   category: "Music",
   options: [
     {
@@ -12,14 +22,8 @@ module.exports = {
       type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
-        {
-          name: "Remove Song 🗑️",
-          value: "remove",
-        },
-        {
-          name: "Clear All 📛",
-          value: "clear",
-        },
+        { name: "Remove Song 🗑️", value: "remove" },
+        { name: "Clear All 📛", value: "clear" },
       ],
     },
     {
@@ -32,35 +36,45 @@ module.exports = {
     },
   ],
   run: async (client, interaction) => {
-    // Check if player exists
-    const player = client.manager.players.get(interaction.guild.id);
-    if (!player) return interaction.reply(`No playing in this guild!`);
+    await interaction.deferReply({ ephemeral: true });
 
-    // Check if user is in same voice channel
+    const player = client.manager.players.get(interaction.guild.id);
+    if (!player) {
+      await interaction.editReply({
+        content: "❌ No music is currently playing.",
+      });
+      return scheduleAutoDelete(interaction);
+    }
+
     const { channel } = interaction.member.voice;
     if (
       !channel ||
       interaction.member.voice.channel !==
         interaction.guild.members.me.voice.channel
-    )
-      return interaction.reply(`I'm not in the same voice channel as you!`);
+    ) {
+      await interaction.editReply({
+        content: "❌ You must be in the same voice channel as the bot.",
+      });
+      return scheduleAutoDelete(interaction);
+    }
 
     const action = interaction.options.getString("action");
 
     if (action === "remove") {
-      // Remove specific song from queue
       const position = interaction.options.getInteger("position");
 
       if (!position) {
-        return interaction.reply(
-          `Please specify the position of the song you want to remove!`,
-        );
+        await interaction.editReply({
+          content: "❌ Please specify the position of the song to remove.",
+        });
+        return scheduleAutoDelete(interaction);
       }
 
       if (position > player.queue.size) {
-        return interaction.reply(
-          `Song not found. The queue only has ${player.queue.size} song(s).`,
-        );
+        await interaction.editReply({
+          content: `❌ Song not found. The queue only has ${player.queue.size} song(s).`,
+        });
+        return scheduleAutoDelete(interaction);
       }
 
       const song = player.queue[position - 1];
@@ -72,11 +86,16 @@ module.exports = {
           `**Removed • [${song.title}](${song.uri})** \`${convertTime(song.length, true)}\` • ${song.requester}`,
         );
 
-      return interaction.reply({ embeds: [embed] });
-    } else if (action === "clear") {
-      // Clear entire queue
+      await interaction.editReply({ embeds: [embed] });
+      return scheduleAutoDelete(interaction);
+    }
+
+    if (action === "clear") {
       if (player.queue.size === 0) {
-        return interaction.reply(`The queue is already empty!`);
+        await interaction.editReply({
+          content: "❌ The queue is already empty.",
+        });
+        return scheduleAutoDelete(interaction);
       }
 
       await player.queue.clear();
@@ -85,7 +104,8 @@ module.exports = {
         .setDescription("`📛` | *Queue has been:* `Cleared`")
         .setColor(client.color);
 
-      return interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
+      return scheduleAutoDelete(interaction);
     }
   },
 };

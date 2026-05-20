@@ -1,18 +1,20 @@
 const {
   ApplicationCommandOptionType,
-  EmbedBuilder,
   PermissionsBitField,
+  ChannelType,
 } = require("discord.js");
+const { replySuccess, replyError } = require("../../../utils/interactions");
 
 module.exports = {
   name: ["setlog"],
-  description: "Sets the server log channel for events.",
+  description: "Set the channel for server logs (member join/leave, etc.).",
   category: "Settings",
   options: [
     {
       name: "channel",
-      description: "The channel to send server logs to.",
+      description: "Target text channel for server logs.",
       type: ApplicationCommandOptionType.Channel,
+      channelTypes: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
       required: true,
     },
   ],
@@ -23,23 +25,34 @@ module.exports = {
   run: async (client, interaction) => {
     const channel = interaction.options.getChannel("channel");
 
-    // Must be a text-based channel
-    if (!channel.isTextBased()) {
-      return interaction.reply({
-        content: "Please provide a valid text channel.",
-        ephemeral: true,
-      });
+    if (!channel?.isTextBased?.()) {
+      return replyError(
+        interaction,
+        "The selected channel is not a text channel. Pick a text or announcement channel.",
+      );
     }
 
-    // Save configuration
+    const me = interaction.guild.members.me;
+    const perms = channel.permissionsFor(me);
+    if (!perms?.has(PermissionsBitField.Flags.SendMessages)) {
+      return replyError(
+        interaction,
+        `I don't have **Send Messages** permission in ${channel}. Grant the permission and try again.`,
+      );
+    }
+
     client.logStorage.setChannel(interaction.guild.id, channel.id);
 
-    const embed = new EmbedBuilder()
-      .setColor(client.color)
-      .setTitle("Logger Setup")
-      .setDescription(`Server logs will now be sent to ${channel}.`)
-      .setTimestamp();
-
-    return interaction.reply({ embeds: [embed] });
+    return replySuccess(
+      interaction,
+      `Log channel set to ${channel}.`,
+      {
+        title: "Logger active",
+        fields: [
+          { name: "Channel", value: `${channel}`, inline: true },
+          { name: "Set by", value: `${interaction.user}`, inline: true },
+        ],
+      },
+    );
   },
 };

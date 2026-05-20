@@ -265,9 +265,53 @@ async function fetchLavalinkLyrics(player) {
   }
 }
 
+function buildCacheKey(track) {
+  return (
+    track?.identifier ||
+    track?.uri ||
+    `${track?.title ?? ""}|${track?.author ?? ""}`
+  );
+}
+
+function buildEmbedFromData(firstData, color, rawTitle) {
+  const flag = firstData.is_japanese ? "🇯🇵 " : "";
+  const src = sourceLabel(firstData.source ?? "");
+
+  const footerParts = [
+    `${flag}${firstData.artist}`,
+    firstData.album ? `📀 ${firstData.album}` : null,
+    `Powered by ${src}`,
+  ].filter(Boolean);
+
+  let displayText = firstData.lyrics;
+  if (displayText.length > 4096) {
+    const suffix = firstData.url
+      ? `...\n[Read more](${firstData.url})`
+      : "...\n[Lyrics truncated]";
+    displayText = displayText.slice(0, 4096 - suffix.length) + suffix;
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(color ?? 0x9b59b6)
+    .setTitle(`🎵 ${firstData.title || rawTitle || "Unknown"}`)
+    .setDescription(displayText)
+    .setFooter({ text: footerParts.join("  ·  ") });
+
+  if (firstData.url) embed.setURL(firstData.url);
+  return embed;
+}
+
 async function searchLyrics(player, track, color) {
   const rawTitle = track.title ?? "";
   const rawAuthor = track.author ?? "";
+
+  // Cache check: skip Lavalink + LRCLIB + Kuroshiro for repeat requests
+  const cacheKey = buildCacheKey(track);
+  const cached = lyricsCache.get(cacheKey);
+  if (cached) {
+    console.warn(`[lyrics] ✅ Cache hit for: ${cacheKey}`);
+    return { embed: buildEmbedFromData(cached, color, rawTitle) };
+  }
 
   const { queries, labels, cleanedTitle, cleanedAuthor } = buildQueryStrategies(
     rawTitle,
@@ -364,34 +408,11 @@ async function searchLyrics(player, track, color) {
     return { error: "🔹 Lyrics are empty or unavailable for this track." };
   }
 
-  // Build embed
-  const flag = firstData.is_japanese ? "🇯🇵 " : "";
-  const src = sourceLabel(firstData.source ?? "");
-
-  const footerParts = [
-    `${flag}${firstData.artist}`,
-    firstData.album ? `📀 ${firstData.album}` : null,
-    `Powered by ${src}`,
-  ].filter(Boolean);
-
-  let displayText = fullLyrics;
-  if (displayText.length > 4096) {
-    const suffix = firstData.url
-      ? `...\n[Read more](${firstData.url})`
-      : "...\n[Lyrics truncated]";
-    displayText = displayText.slice(0, 4096 - suffix.length) + suffix;
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor(color ?? 0x9b59b6)
-    .setTitle(`🎵 ${firstData.title || rawTitle || "Unknown"}`)
-    .setDescription(displayText)
-    .setFooter({ text: footerParts.join("  ·  ") });
-
-  if (firstData.url) embed.setURL(firstData.url);
+  // Store in cache for next request on the same track
+  lyricsCache.set(cacheKey, firstData);
 
   return {
-    embed,
+    embed: buildEmbedFromData(firstData, color, rawTitle),
   };
 }
 

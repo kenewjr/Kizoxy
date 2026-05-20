@@ -1,4 +1,12 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../utils/embeds");
+const { disableComponents } = require("../utils/interactions");
+const Logger = require("../utils/logger");
+const {
+  validateMusicContext,
+  scheduleAutoDelete,
+} = require("../utils/musicHelpers");
+
+const logger = new Logger("MUSIC-STOP");
 
 module.exports = {
   customId: "music-stop",
@@ -8,48 +16,45 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
       }
 
-      const player = client.manager.players.get(interaction.guild.id);
-      if (!player) {
-        return interaction.editReply({
-          content: "❌ No music is currently playing",
+      const ctx = validateMusicContext(client, interaction);
+      if (ctx.error) {
+        await interaction.editReply({
+          embeds: [Embeds.error(client, { description: ctx.error })],
         });
+        return scheduleAutoDelete(interaction);
       }
 
-      const voiceChannel = interaction.member.voice.channel;
-      if (!voiceChannel || voiceChannel.id !== player.voiceId) {
-        return interaction.editReply({
-          content: "❌ You must be in the same voice channel as the bot",
-        });
-      }
+      const { player } = ctx;
+      const channelName = interaction.guild.members.me?.voice?.channel?.name ?? "voice channel";
 
-      const channelName = voiceChannel.name;
-
-      // Remove buttons dari now playing message (stop = end session)
+      // Disable now-playing buttons before destroying player
       try {
-        await interaction.message.edit({ components: [] });
-      } catch (error) {
-        console.error("Failed to remove buttons:", error);
+        const disabled = disableComponents(interaction.message.components);
+        await interaction.message.edit({ components: disabled });
+      } catch (err) {
+        logger.error(`Failed to disable now-playing buttons: ${err.message}`);
       }
 
       await player.destroy();
 
-      const embed = new EmbedBuilder()
-        .setDescription(`🚫 | *Left:* | \`${channelName}\``)
-        .setColor(client.color);
-
+      const embed = Embeds.success(client, {
+        title: "Playback stopped",
+        description: `Bot left **${channelName}**.`,
+      });
       await interaction.editReply({ embeds: [embed] });
 
-      // Delete ephemeral reply after 5 seconds
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (_err) {
-          // Ignore error if already deleted
-        }
-      }, 5000);
+      scheduleAutoDelete(interaction);
     } catch (error) {
-      console.error("Stop Button Error:", error);
-      await interaction.editReply({ content: "❌ Failed to stop the music." });
+      logger.error(`Stop Button Error: ${error.message}`);
+      try {
+        await interaction.editReply({
+          embeds: [
+            Embeds.error(client, {
+              description: "Failed to stop playback. Please try again shortly.",
+            }),
+          ],
+        });
+      } catch (_) {}
     }
   },
 };

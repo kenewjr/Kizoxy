@@ -1,3 +1,13 @@
+const Logger = require("../utils/logger");
+const {
+  validateMusicContext,
+  scheduleAutoDelete,
+  buildMusicControlRow,
+  swapNowPlayingComponents,
+} = require("../utils/musicHelpers");
+
+const logger = new Logger("MUSIC-PAUSE");
+
 module.exports = {
   customId: "music-pause",
   execute: async (interaction, client) => {
@@ -6,44 +16,37 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
       }
 
-      const player = client.manager.players.get(interaction.guild.id);
-      if (!player) {
-        return interaction.editReply({
-          content: "❌ No music is currently playing",
-        });
+      const ctx = validateMusicContext(client, interaction);
+      if (ctx.error) {
+        await interaction.editReply({ content: ctx.error });
+        return scheduleAutoDelete(interaction);
       }
 
-      const voiceChannel = interaction.member.voice.channel;
-      if (!voiceChannel || voiceChannel.id !== player.voiceId) {
-        return interaction.editReply({
-          content: "❌ You must be in the same voice channel",
-        });
-      }
+      const { player } = ctx;
 
-      // toggle pause status
+      // Toggle pause
       const wasPaused = player.paused;
       player.pause(!wasPaused);
+      const isPausedNow = !wasPaused;
+
+      // Swap only the components on the original Now Playing message;
+      // do NOT regenerate the embed (avoids channel spam on repeat clicks).
+      await swapNowPlayingComponents(interaction, [
+        buildMusicControlRow(isPausedNow),
+      ]);
 
       await interaction.editReply({
-        content: wasPaused ? "▶️ Playback resumed" : "⏸️ Playback paused",
+        content: isPausedNow
+          ? "⏸️ Song has been paused."
+          : "▶️ Song has been resumed.",
       });
 
-      const nowPlayingCmd = client.commands.get("nowplaying");
-      if (nowPlayingCmd) {
-        await nowPlayingCmd.run(client, interaction);
-      }
-
-      // Delete ephemeral reply after 5 seconds
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (_err) {
-          // Ignore error if already deleted
-        }
-      }, 5000);
+      scheduleAutoDelete(interaction);
     } catch (error) {
-      console.error("Pause Button Error:", error);
-      await interaction.editReply({ content: "❌ Failed to toggle pause." });
+      logger.error(`Pause Button Error: ${error.message}`);
+      try {
+        await interaction.editReply({ content: "❌ Failed to toggle pause." });
+      } catch (_) {}
     }
   },
 };

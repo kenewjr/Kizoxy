@@ -1,4 +1,7 @@
 const { EmbedBuilder } = require("discord.js");
+const Logger = require("../../utils/logger");
+
+const logger = new Logger("LOG-MSG-DELETE");
 
 module.exports = async (client, message) => {
   if (!message.guild || !message.author) return;
@@ -38,6 +41,6 @@ module.exports = async (client, message) => {
   try {
     await logChannel.send({ embeds: [embed] });
   } catch (err) {
-    console.error(`Could not send messageDelete log:`, err);
+    logger.error(`Could not send messageDelete log: ${err.message}`);
   }
 };

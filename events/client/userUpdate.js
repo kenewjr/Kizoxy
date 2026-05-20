@@ -1,4 +1,7 @@
 const { EmbedBuilder } = require("discord.js");
+const Logger = require("../../utils/logger");
+
+const logger = new Logger("LOG-USER-UPDATE");
 
 module.exports = async (client, oldUser, newUser) => {
   if (newUser.bot) return; // Skip bot updates
@@ -82,9 +85,8 @@ module.exports = async (client, oldUser, newUser) => {
       try {
         await logChannel.send({ embeds: [embed] });
       } catch (err) {
-        console.error(
-          `Could not send log to ${guild.name} (${guild.id}):`,
-          err,
+        logger.error(
+          `Could not send userUpdate log to ${guild.name} (${guild.id}): ${err.message}`,
         );
       }
     }

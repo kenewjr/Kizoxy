@@ -110,10 +110,10 @@ const RESOLVERS = [
       ) ||
       /https?:\/\/(?:vt|vm)\.tiktok\.com\/[A-Za-z0-9]+\/?/i.test(u),
     resolve: async (u, viewMode) => {
-      // Expand short URL dulu jika dari vt.tiktok.com
+      // Expand short URL first if it's a vt.tiktok.com link
       if (/vt\.tiktok\.com|vm\.tiktok\.com/.test(u)) {
         const res = await fetch(u, { method: "HEAD", redirect: "follow" });
-        u = res.url; // URL asli setelah redirect
+        u = res.url; // canonical URL after redirect
       }
 
       const subdomain = TIKTOK_SUBDOMAIN[viewMode] ?? "a.";

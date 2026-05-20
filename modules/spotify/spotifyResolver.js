@@ -43,7 +43,7 @@ function getCached(key) {
 function setCache(key, data) {
   cache.set(key, { data, timestamp: Date.now() });
 
-  // Auto cleanup: hapus cache lama jika terlalu banyak
+  // Auto cleanup: drop old cache entries when capacity exceeded
   if (cache.size > 100) {
     const oldestKey = cache.keys().next().value;
     cache.delete(oldestKey);
@@ -62,7 +62,7 @@ async function getClientCredentialsToken() {
   const clientSecret = process.env.spotifySecret?.trim();
 
   if (!clientId || !clientSecret) {
-    throw new Error("spotifyClientID atau spotifySecret tidak ada di .env");
+    throw new Error("spotifyClientID or spotifySecret missing in .env");
   }
 
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
@@ -95,7 +95,7 @@ async function getClientCredentialsToken() {
 
 async function spotifyFetch(url, retries = 5) {
   const token = await getClientCredentialsToken();
-  if (!token) throw new Error("Gagal mendapatkan Spotify access token");
+  if (!token) throw new Error("Failed to obtain Spotify access token");
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     await rateLimitedDelay(); // WAJIB: delay sebelum setiap request
@@ -146,7 +146,7 @@ async function spotifyFetch(url, retries = 5) {
     return res.json();
   }
 
-  throw new Error("Spotify API gagal setelah semua retry");
+  throw new Error("Spotify API failed after all retries");
 }
 
 function extractPlaylistId(url) {

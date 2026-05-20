@@ -1,4 +1,7 @@
 const { EmbedBuilder } = require("discord.js");
+const Logger = require("../../utils/logger");
+
+const logger = new Logger("LOG-MSG-UPDATE");
 
 module.exports = async (client, oldMessage, newMessage) => {
   if (!oldMessage.guild || !oldMessage.author) return;
@@ -41,6 +44,6 @@ module.exports = async (client, oldMessage, newMessage) => {
   try {
     await logChannel.send({ embeds: [embed] });
   } catch (err) {
-    console.error(`Could not send messageUpdate log:`, err);
+    logger.error(`Could not send messageUpdate log: ${err.message}`);
   }
 };

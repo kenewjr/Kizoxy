@@ -1,26 +1,23 @@
+const Logger = require("../utils/logger");
 const {
   searchLyrics,
   validatePlayerForLyrics,
 } = require("../services/lyrics/lyricsService");
+const {
+  scheduleAutoDelete,
+  EPHEMERAL_ERROR_TTL_MS,
+  addLyricsToNowPlaying,
+  removeLyricsFromNowPlaying,
+} = require("../utils/musicHelpers");
 
-async function safeReply(interaction, payload) {
-  try {
-    if (interaction.deferred || interaction.replied) {
-      return await interaction.editReply(payload);
-    }
-    return await interaction.reply({ ...payload, ephemeral: true });
-  } catch (err) {
-    console.error("[lyrics] safeReply failed:", err?.message ?? err);
-  }
-}
+const logger = new Logger("MUSIC-LYRICS");
 
 module.exports = {
   customId: "music-lyrics",
-
   execute: async (interaction, client) => {
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ ephemeral: true }).catch((err) => {
-        console.warn("[lyrics] deferReply failed:", err?.message ?? err);
+        logger.warning(`deferReply failed: ${err?.message ?? err}`);
       });
       if (!interaction.deferred && !interaction.replied) return;
     }
@@ -28,81 +25,55 @@ module.exports = {
     try {
       const validation = validatePlayerForLyrics(client, interaction);
       if (validation.error) {
-        return safeReply(interaction, { content: validation.error });
+        await interaction.editReply({ content: validation.error });
+        return scheduleAutoDelete(interaction);
       }
 
-      const player = validation.player;
+      const { player, track } = validation;
 
       // Toggle lyrics state
       player.lyricsEnabled = !player.lyricsEnabled;
 
       if (player.lyricsEnabled) {
-        // Show lyrics - fetch and update now playing message
-        await safeReply(interaction, { content: "🔍 Mencari lyrics..." });
+        // Toggle ON: fetch lyrics and append to Now Playing
+        await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
-        const result = await searchLyrics(
-          player,
-          validation.track,
-          client.color,
-        );
+        const result = await searchLyrics(player, track, client.color);
 
         if (result.error) {
+          // Lyrics not found — revert toggle and notify clearly
           player.lyricsEnabled = false;
-          return safeReply(interaction, { content: result.error });
+          await interaction.editReply({
+            content: `⚠️ Lyrics not found for **${track.title}**.\n${result.error}`,
+          });
+          return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        // Update now playing message with lyrics
-        try {
-          const channel = client.channels.cache.get(player.textId);
-          if (channel && player.nowPlayingMessageId) {
-            const message = await channel.messages
-              .fetch(player.nowPlayingMessageId)
-              .catch(() => null);
-            if (message) {
-              const currentEmbeds = message.embeds;
-              await message.edit({
-                embeds: [...currentEmbeds, result.embed],
-                components: message.components,
-              });
-            }
-          }
-        } catch (err) {
-          console.error("[lyrics] Failed to update now playing:", err.message);
+        const updated = await addLyricsToNowPlaying(client, player, result.embed);
+        if (!updated) {
+          logger.warning("addLyricsToNowPlaying returned false");
         }
 
-        return safeReply(interaction, { content: "✅ Lyrics ditampilkan" });
-      } else {
-        // Hide lyrics - remove lyrics embed from now playing message
-        try {
-          const channel = client.channels.cache.get(player.textId);
-          if (channel && player.nowPlayingMessageId) {
-            const message = await channel.messages
-              .fetch(player.nowPlayingMessageId)
-              .catch(() => null);
-            if (message) {
-              // Keep only the first embed (now playing), remove lyrics
-              const nowPlayingEmbed = message.embeds[0];
-              await message.edit({
-                embeds: nowPlayingEmbed ? [nowPlayingEmbed] : [],
-                components: message.components,
-              });
-            }
-          }
-        } catch (err) {
-          console.error("[lyrics] Failed to hide lyrics:", err.message);
-        }
-
-        return safeReply(interaction, { content: "✅ Lyrics disembunyikan" });
+        await interaction.editReply({ content: "✅ Lyrics shown." });
+        return scheduleAutoDelete(interaction);
       }
+
+      // Toggle OFF: strip lyrics embed
+      await removeLyricsFromNowPlaying(client, player);
+      await interaction.editReply({ content: "✅ Lyrics hidden." });
+      return scheduleAutoDelete(interaction);
     } catch (error) {
-      console.error("[lyrics] Unexpected error:", error);
+      logger.error(`Unexpected lyrics button error: ${error.message}`);
       const msg =
         error.type === "request" || error.request
           ? "❌ Could not connect to lyrics service."
           : error.response
             ? "❌ Failed to fetch lyrics. Please try again later."
             : "❌ An error occurred while fetching lyrics.";
-      return safeReply(interaction, { content: msg });
+      try {
+        await interaction.editReply({ content: msg });
+        return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
+      } catch (_) {}
     }
   },
 };

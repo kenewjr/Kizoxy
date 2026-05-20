@@ -1,5 +1,8 @@
 const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
 
+// Auto-cleanup TTL for ephemeral confirmations (in ms) — keeps channel clean on repeat skips
+const EPHEMERAL_TTL_MS = 3000;
+
 module.exports = {
   name: ["skip"],
   description: "Skips the current song or skip to a specific position.",
@@ -58,7 +61,7 @@ module.exports = {
         } catch (_err) {
           // Ignore error if already deleted
         }
-      }, 5000);
+      }, EPHEMERAL_TTL_MS);
       return;
     }
 
@@ -79,7 +82,7 @@ module.exports = {
         } catch (_err) {
           // Ignore error if already deleted
         }
-      }, 5000);
+      }, EPHEMERAL_TTL_MS);
       return;
     }
 
@@ -105,6 +108,6 @@ module.exports = {
       } catch (_err) {
         // Ignore error if already deleted
       }
-    }, 5000);
+    }, EPHEMERAL_TTL_MS);
   },
 };

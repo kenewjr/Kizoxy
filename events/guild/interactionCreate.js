@@ -27,7 +27,7 @@ async function playSearchAutocompleteChoices(manager, query) {
 }
 
 module.exports = async (client, interaction) => {
-  logger.info(`Interaction created: ${interaction.type}`);
+  logger.debug(`Interaction created: ${interaction.type}`);
 
   // ----- 1) Handle button + all select menu interactions -----
   const isAnySelectOrButton =
@@ -47,6 +47,23 @@ module.exports = async (client, interaction) => {
       await buttonHandler(client, interaction);
     } catch (err) {
       logger.error(`Error handling button/select interaction: ${err.message}`);
+    }
+    return;
+  }
+
+  // ----- 1.5) Modal submissions for alarm panel (route to button handler) -----
+  if (
+    interaction.isModalSubmit?.() &&
+    interaction.customId.startsWith("alarm_")
+  ) {
+    logger.debug(
+      `Modal submit: customId=${interaction.customId} by ${interaction.user?.tag || interaction.user?.id}`,
+    );
+    try {
+      const buttonHandler = require("./buttonInteraction");
+      await buttonHandler(client, interaction);
+    } catch (err) {
+      logger.error(`Error handling modal submit: ${err.message}`);
     }
     return;
   }
@@ -159,13 +176,11 @@ module.exports = async (client, interaction) => {
     }
 
     try {
-      logger.info(
+      logger.debug(
         `Executing command: ${command.name.join(" ")} by ${interaction.user.tag}`,
       );
       await command.run(client, interaction);
-      logger.success(
-        `Command executed successfully: ${command.name.join(" ")}`,
-      );
+      logger.debug(`Command executed successfully: ${command.name.join(" ")}`);
     } catch (error) {
       logger.error(
         `Error executing command ${command.name.join(" ")}: ${error.message}`,

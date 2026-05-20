@@ -7,7 +7,39 @@ class JSONStorage {
   constructor(filename) {
     this.filepath = path.join(__dirname, "../../utils/data", filename);
     this.data = {}; // Initialize as object
+    this._saveTimer = null;
+    this._savePending = false;
+    this._saveDelayMs = 500;
     logger.info(`Initialized storage for: ${filename}`);
+  }
+
+  // Debounced save: coalesces rapid mutations (e.g. addXp on every message)
+  // into a single disk write within `_saveDelayMs`.
+  scheduleSave() {
+    this._savePending = true;
+    if (this._saveTimer) return;
+    this._saveTimer = setTimeout(() => {
+      this._saveTimer = null;
+      if (this._savePending) {
+        this._savePending = false;
+        this.save().catch((err) => {
+          logger.error(`Scheduled save failed: ${err.message}`);
+        });
+      }
+    }, this._saveDelayMs);
+    if (this._saveTimer.unref) this._saveTimer.unref();
+  }
+
+  // Force a synchronous flush of any pending save. Call this on shutdown.
+  async flush() {
+    if (this._saveTimer) {
+      clearTimeout(this._saveTimer);
+      this._saveTimer = null;
+    }
+    if (this._savePending) {
+      this._savePending = false;
+      await this.save();
+    }
   }
 
   async load() {
@@ -120,7 +152,7 @@ class JSONStorage {
       if (!this.data[gid]) this.data[gid] = [];
       this.data[gid].push(item);
 
-      await this.save();
+      this.scheduleSave();
       logger.info(`Item created: ${item.id}`);
       return item;
     } catch (error) {
@@ -139,7 +171,7 @@ class JSONStorage {
             ...this.data[guildId][index],
             ...updates,
           };
-          await this.save();
+          this.scheduleSave();
           logger.info(`Item updated: ${id}`);
           return this.data[guildId][index];
         }
@@ -161,7 +193,7 @@ class JSONStorage {
         if (index !== -1) {
           this.data[guildId].splice(index, 1);
           // If guild empty, maybe delete key? prefer keeping it for now.
-          await this.save();
+          this.scheduleSave();
           logger.info(`Item deleted: ${id}`);
           return true;
         }
@@ -186,7 +218,7 @@ class JSONStorage {
     }
   }
 
-  // Method untuk sync data dengan message embed
+  // Method to sync data with the embedded message
   async syncWithMessage(alarmId, messageId, channelId) {
     return this.update(alarmId, { messageId, embedChannelId: channelId });
   }

@@ -1,48 +1,36 @@
-const { EmbedBuilder } = require("discord.js");
+const Logger = require("../utils/logger");
+const {
+  validateMusicContext,
+  scheduleAutoDelete,
+} = require("../utils/musicHelpers");
+
+const logger = new Logger("MUSIC-SKIP");
 
 module.exports = {
   customId: "music-skip",
   execute: async (interaction, client) => {
     try {
-      const player = client.manager.players.get(interaction.guild.id);
-      if (!player) {
-        return interaction.editReply({
-          content: "❌ No music is currently playing",
-        });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
       }
 
-      const voiceChannel = interaction.member.voice.channel;
-      if (!voiceChannel || voiceChannel.id !== player.voiceId) {
-        return interaction.editReply({
-          content: "❌ You must be in the same voice channel as the bot",
-        });
+      const ctx = validateMusicContext(client, interaction);
+      if (ctx.error) {
+        await interaction.editReply({ content: ctx.error });
+        return scheduleAutoDelete(interaction);
       }
 
-      await player.skip();
+      await ctx.player.skip();
 
-      const embed = new EmbedBuilder()
-        .setDescription(`⏭ | *Song has been:* \`Skipped\``)
-        .setColor(client.color);
-
-      await interaction.editReply({ embeds: [embed] });
-
-      // Optional: update now playing
-      const nowPlayingCmd = client.commands.get("nowplaying");
-      if (nowPlayingCmd) {
-        await nowPlayingCmd.run(client, interaction);
-      }
-
-      // Delete ephemeral reply after 5 seconds
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (_err) {
-          // Ignore error if already deleted
-        }
-      }, 5000);
+      await interaction.editReply({
+        content: "⏭️ Song has been skipped.",
+      });
+      scheduleAutoDelete(interaction);
     } catch (error) {
-      console.error("Skip Button Error:", error);
-      await interaction.editReply({ content: "❌ Failed to skip track." });
+      logger.error(`Skip Button Error: ${error.message}`);
+      try {
+        await interaction.editReply({ content: "❌ Failed to skip track." });
+      } catch (_) {}
     }
   },
 };

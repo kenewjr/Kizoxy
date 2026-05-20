@@ -21,6 +21,7 @@ module.exports = async (client) => {
         const evt = require(filePath);
         const eName = file.split(".")[0];
         client.on(eName, evt.bind(null, client));
+        totalLoaded++;
       } catch (err) {
         logger.error(`[LOAD EVENT] Failed to load ${dir}/${file}:`, err);
       }

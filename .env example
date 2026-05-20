@@ -11,6 +11,9 @@ OWNER_ID=
 NODE_NAME=insertyournodehere
 NODE_URL=0.0.0.0:2333
 NODE_AUTH=youshallnotpass
+# Used by lyricsService for direct Lavalink lyrics fetch
+LAVALINK_URL=http://0.0.0.0:2333
+LAVALINK_PASSWORD=youshallnotpass
 
 # Spotify
 spotifyClientID=""

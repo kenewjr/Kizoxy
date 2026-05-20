@@ -32,15 +32,23 @@ module.exports = async (client, interaction) => {
       return;
     }
 
-    // Get the button handler — support dynamic prefixed IDs (e.g. fxs:*, fixembed_delete:*)
+    // Get the button handler — support dynamic prefixed IDs:
+    //   - "fxs:..." (colon-separated prefix)
+    //   - "fixembed_delete:..." (colon-separated prefix)
+    //   - "alarm", "alarm_*", "alarm_*_page:*" (alarm prefix family)
     const PREFIXED_HANDLERS = ["fxs", "fixembed_delete", "alarm"];
     let button = client.buttons.get(interaction.customId);
 
     if (!button) {
-      // Try prefix-based lookup
-      const prefix = interaction.customId.split(":")[0];
-      if (PREFIXED_HANDLERS.includes(prefix)) {
-        button = client.buttons.get(prefix);
+      // First try colon-separated prefix lookup
+      const colonPrefix = interaction.customId.split(":")[0];
+      if (PREFIXED_HANDLERS.includes(colonPrefix)) {
+        button = client.buttons.get(colonPrefix);
+      }
+
+      // Then try startsWith for alarm family (alarm_refresh, alarm_list_page:..., etc.)
+      if (!button && interaction.customId.startsWith("alarm")) {
+        button = client.buttons.get("alarm");
       }
     }
 
@@ -55,12 +63,20 @@ module.exports = async (client, interaction) => {
 
     try {
       const prefix = interaction.customId.split(":")[0];
+
+      // Buttons whose handler will call interaction.showModal() — must NOT
+      // be deferred, otherwise showModal throws "already acknowledged".
+      const SHOW_MODAL_BUTTONS = ["alarm_new"];
+      const skipDefer = SHOW_MODAL_BUTTONS.includes(interaction.customId);
+
       // fxs + alarm: update the existing message in-place
       // everything else (including fixembed_delete) gets its own ephemeral reply
       const useDeferUpdate =
         prefix === "fxs" || interaction.customId.startsWith("alarm_");
 
-      if (useDeferUpdate) {
+      if (skipDefer) {
+        logger.debug(`Skipping defer (modal) for: ${interaction.customId}`);
+      } else if (useDeferUpdate) {
         logger.debug(
           `Deferring update (in-place) for: ${interaction.customId}`,
         );
@@ -86,7 +102,7 @@ module.exports = async (client, interaction) => {
 
       try {
         await interaction.followUp({
-          content: "❌ Gagal memproses aksi button. Mohon coba lagi.",
+          content: "❌ Failed to process the button action. Please try again.",
           ephemeral: true,
         });
       } catch (followUpError) {

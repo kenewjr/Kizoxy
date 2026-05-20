@@ -71,6 +71,11 @@ client.manager = new Kazagumo(
 
 require("./api/jikan-api/handlers/loadJikanSchedule")(client);
 
+// Pre-warm Kuroshiro dictionary in background so first lyrics request is fast
+require("./modules/lyrics/romajiConverter")
+  .preInitialize()
+  .catch(() => {});
+
 // ── Webhook Error Reporter ──────────────────────────────
 const { sendErrorWebhook } = require("./utils/webhookReporter");
 
@@ -116,5 +121,33 @@ client.manager.shoukaku.on("error", (name, error) => {
     { Node: name },
   );
 });
+
+// ── Graceful shutdown ───────────────────────────────────
+// Storage classes use a debounced scheduleSave(); on SIGTERM/SIGINT we
+// must flush any pending writes (XP, alarms, fixembed, etc.) to disk.
+async function gracefulShutdown(signal) {
+  console.warn(`[SHUTDOWN] Received ${signal}, flushing storage...`);
+  const storages = [
+    client.alarmStorage,
+    client.levelStorage,
+    client.fixembedStorage,
+  ];
+  await Promise.all(
+    storages
+      .filter((s) => s && typeof s.flush === "function")
+      .map((s) =>
+        s.flush().catch((err) => console.error("Flush failed:", err)),
+      ),
+  );
+  if (client.alarmScheduler) {
+    for (const job of client.alarmScheduler.jobs.values()) {
+      if (job && typeof job.clear === "function") job.clear();
+      else clearTimeout(job);
+    }
+  }
+  process.exit(0);
+}
+process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 
 client.login(client.token);

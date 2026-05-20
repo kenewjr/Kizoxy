@@ -8,6 +8,7 @@ class LevelStorage extends JSONStorage {
   constructor(filename = "levels.json") {
     super(filename);
     this.data = {}; // Initialize as object instead of array
+    this._writeChain = Promise.resolve();
   }
 
   // Override load to handle object structure
@@ -46,45 +47,51 @@ class LevelStorage extends JSONStorage {
   }
 
   async addXp(userId, guildId, amount) {
-    if (
-      !this.data ||
-      (Object.keys(this.data).length === 0 && !this.initialized)
-    ) {
-      // Simple check to ensure we loaded at least once or empty
-      await this.load();
-      this.initialized = true;
-    }
+    // Serialize concurrent addXp calls per storage instance to prevent
+    // two readers reading the same xp, both incrementing, then both writing.
+    const next = this._writeChain.then(async () => {
+      if (
+        !this.data ||
+        (Object.keys(this.data).length === 0 && !this.initialized)
+      ) {
+        await this.load();
+        this.initialized = true;
+      }
 
-    if (!this.data[guildId]) {
-      this.data[guildId] = { users: {} };
-    }
+      if (!this.data[guildId]) {
+        this.data[guildId] = { users: {} };
+      }
 
-    let user = this.data[guildId].users[userId];
-    if (!user) {
-      user = {
-        userId,
-        guildId,
-        xp: 0,
-        level: 0,
-        lastUpdated: new Date().toISOString(),
-      };
-      this.data[guildId].users[userId] = user;
-    }
+      let user = this.data[guildId].users[userId];
+      if (!user) {
+        user = {
+          userId,
+          guildId,
+          xp: 0,
+          level: 0,
+          lastUpdated: new Date().toISOString(),
+        };
+        this.data[guildId].users[userId] = user;
+      }
 
-    user.xp += amount;
-    user.lastUpdated = new Date().toISOString();
+      user.xp += amount;
+      user.lastUpdated = new Date().toISOString();
 
-    const xpToNextLevel = 5 * Math.pow(user.level, 2) + 50 * user.level + 100;
-    let leveledUp = false;
+      const xpToNextLevel = 5 * Math.pow(user.level, 2) + 50 * user.level + 100;
+      let leveledUp = false;
 
-    if (user.xp >= xpToNextLevel) {
-      user.level++;
-      user.xp -= xpToNextLevel; // Reset XP approach
-      leveledUp = true;
-    }
+      if (user.xp >= xpToNextLevel) {
+        user.level++;
+        user.xp -= xpToNextLevel; // Reset XP approach
+        leveledUp = true;
+      }
 
-    await this.save();
-    return { user, leveledUp, level: user.level };
+      this.scheduleSave();
+      return { user, leveledUp, level: user.level };
+    });
+    // Keep chain alive even if a step throws, so subsequent calls don't stall.
+    this._writeChain = next.catch(() => {});
+    return next;
   }
 
   async getUser(userId, guildId) {

@@ -2,7 +2,6 @@
   "dependencies": {
     "axios": "^1.16.1",
     "canvacord": "^6.0.4",
-    "dayjs": "^1.11.20",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
     "kazagumo": "^3.4.3",
@@ -12,7 +11,6 @@
     "node-cache": "^5.1.2",
     "node-schedule": "^2.1.1",
     "pg": "^8.21.0",
-    "recursive-readdir": "^2.2.3",
     "sharp": "^0.34.3",
     "shoukaku": "^4.3.0",
     "uuid": "^14.0.0"

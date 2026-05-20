@@ -5,6 +5,9 @@ const {
   isSpotifyTrack,
   spotifyToYouTubeSearch,
 } = require("../../../modules/spotify/spotifyHelper");
+const Logger = require("../../../utils/logger");
+
+const logger = new Logger("PLAY");
 
 module.exports = async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();
@@ -26,32 +29,32 @@ module.exports = async function playLogic(client, ctx, args) {
     if (isSlash) await ctx.deferReply();
 
     let query = isSlash ? ctx.options.getString("search") : args.join(" ");
-    if (!query) return reply("❌ | Masukkan nama lagu atau URL.", true);
+    if (!query) return reply("❌ | Please provide a song name or URL.", true);
 
     if (isSpotifyUrl(query)) {
       if (isSpotifyPlaylist(query)) {
         return reply(
-          "❌ | Spotify playlist tidak support tanpa Premium subscription.\n" +
-            "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
+          "❌ | Spotify playlists are not supported without a Premium subscription.\n" +
+            "💡 Use a YouTube playlist or paste Spotify tracks one at a time.",
           true,
         );
       }
 
       if (isSpotifyAlbum(query)) {
         return reply(
-          "❌ | Spotify album tidak support tanpa Premium subscription.\n" +
-            "💡 Gunakan YouTube playlist atau paste track Spotify satu per satu.",
+          "❌ | Spotify albums are not supported without a Premium subscription.\n" +
+            "💡 Use a YouTube playlist or paste Spotify tracks one at a time.",
           true,
         );
       }
 
       if (isSpotifyTrack(query)) {
-        await reply("🎵 | Memuat dari Spotify...", true);
+        await reply("🎵 | Loading from Spotify...", true);
         const ytSearch = await spotifyToYouTubeSearch(query);
         if (ytSearch) {
           query = ytSearch; // Let Kazagumo handle search prefix
         } else {
-          return reply("❌ | Gagal memuat dari Spotify. Coba lagi.", true);
+          return reply("❌ | Failed to load from Spotify. Please try again.", true);
         }
       }
     }
@@ -59,12 +62,12 @@ module.exports = async function playLogic(client, ctx, args) {
     const member = ctx.member;
     const userVoice = member?.voice?.channel;
     if (!userVoice)
-      return reply("❌ | Kamu harus berada di voice channel.", true);
+      return reply("❌ | You must be in a voice channel.", true);
 
     const botVoiceId = ctx.guild.members.me?.voice?.channelId;
     if (botVoiceId && botVoiceId !== userVoice.id)
       return reply(
-        "❌ | Kamu harus di voice channel yang sama dengan bot.",
+        "❌ | You must be in the same voice channel as the bot.",
         true,
       );
 
@@ -86,7 +89,7 @@ module.exports = async function playLogic(client, ctx, args) {
     const result = await client.manager.search(query, { requester });
 
     if (!result?.tracks?.length)
-      return reply("❌ | Tidak ada hasil ditemukan.", true);
+      return reply("❌ | No results found.", true);
 
     const isPlaylist =
       (result.type && String(result.type).toUpperCase().includes("PLAYLIST")) ||
@@ -108,7 +111,7 @@ module.exports = async function playLogic(client, ctx, args) {
       }
       const name = result.playlistName || result.playlist?.name || "Playlist";
       return reply(
-        `📃 Menambahkan playlist **${name}** dengan **${added}** lagu ke queue.`,
+        `📃 Added playlist **${name}** with **${added}** track(s) to the queue.`,
         true,
       );
     } else {
@@ -121,11 +124,11 @@ module.exports = async function playLogic(client, ctx, args) {
           /* ignore */
         }
       }
-      return reply(`🎵 Menambahkan **${track.title}** ke queue.`, true);
+      return reply(`🎵 Added **${track.title}** to the queue.`, true);
     }
   } catch (err) {
-    console.error("[PLAY ERROR]", err);
-    const msg = `❌ | ${err.message || "Gagal memutar lagu."}`;
+    logger.error(`[PLAY ERROR] ${err.message || err}`);
+    const msg = `❌ | ${err.message || "Failed to play the track."}`;
     try {
       if (isSlash) {
         if (ctx.deferred || ctx.replied) return ctx.editReply({ content: msg });
@@ -134,7 +137,7 @@ module.exports = async function playLogic(client, ctx, args) {
         return ctx.channel.send(msg);
       }
     } catch (replyErr) {
-      console.error("[PLAY ERROR] failed to reply:", replyErr);
+      logger.error(`[PLAY ERROR] failed to reply: ${replyErr.message}`);
     }
   }
 };

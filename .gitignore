@@ -4,3 +4,4 @@ utils/data/*.json
 api/jikan-api/data/*.json
 logs/
 .eslintcache
+CONTEXT.md

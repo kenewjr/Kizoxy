@@ -1,3 +1,11 @@
+const Logger = require("../utils/logger");
+const {
+  validateMusicContext,
+  scheduleAutoDelete,
+} = require("../utils/musicHelpers");
+
+const logger = new Logger("MUSIC-SHUFFLE");
+
 module.exports = {
   customId: "music-shuffle",
   execute: async (interaction, client) => {
@@ -6,49 +14,32 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
       }
 
-      const player = client.manager.players.get(interaction.guild.id);
-      if (!player) {
-        return interaction.editReply({
-          content: "❌ No music is currently playing",
-        });
+      const ctx = validateMusicContext(client, interaction);
+      if (ctx.error) {
+        await interaction.editReply({ content: ctx.error });
+        return scheduleAutoDelete(interaction);
       }
 
-      const voiceChannel = interaction.member.voice.channel;
-      if (!voiceChannel || voiceChannel.id !== player.voiceId) {
-        return interaction.editReply({
-          content: "❌ You must be in the same voice channel as the bot",
-        });
-      }
-
+      const { player } = ctx;
       if (!player.queue || player.queue.length <= 1) {
-        return interaction.editReply({
+        await interaction.editReply({
           content: "⚠️ Not enough tracks in the queue to shuffle.",
         });
+        return scheduleAutoDelete(interaction);
       }
 
       player.queue.shuffle();
-
       await interaction.editReply({
         content: "🔀 Queue shuffled successfully.",
       });
-
-      // Delete ephemeral reply after 5 seconds
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (_err) {
-          // Ignore error if already deleted
-        }
-      }, 5000);
+      scheduleAutoDelete(interaction);
     } catch (error) {
-      console.error("Shuffle Button Error:", error);
+      logger.error(`Shuffle Button Error: ${error.message}`);
       try {
         await interaction.editReply({
           content: "❌ Failed to shuffle the queue.",
         });
-      } catch (err) {
-        console.error("Shuffle Reply Error:", err);
-      }
+      } catch (_) {}
     }
   },
 };
