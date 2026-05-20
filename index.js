@@ -40,8 +40,8 @@ client.manager = new Kazagumo(
       new KazagumoSpotify({
         clientId: client.config.spotifyClientID,
         clientSecret: client.config.spotifySecret,
-        playlistPageLimit: 50, // optional ( 100 tracks per page )
-        albumPageLimit: 50, // optional ( 50 tracks per page )
+        playlistPageLimit: 100, // Spotify API max page size (100 tracks)
+        albumPageLimit: 100, // Spotify API max page size (50 tracks)
         searchLimit: 10, // optional ( track search limit. Max 50 )
         searchMarket: "US", // optional || default: US ( Enter the country you live in. [ Can only be of 2 letters. For eg: US, IN, EN ] )//
       }),

@@ -1,40 +1,11 @@
 const Logger = require("../../utils/logger");
 const logger = new Logger("ALARM");
-const { EmbedBuilder } = require("discord.js");
-
-// Node.js setTimeout caps at 2^31 - 1 ms (~24.8 days). Anything larger
-// silently overflows and fires immediately. safeSetTimeout chains shorter
-// timeouts until the real delay is reached.
-const MAX_TIMEOUT_MS = 2_147_483_647;
-
-function safeSetTimeout(callback, delayMs) {
-  const handle = { _timer: null, _cleared: false };
-  const schedule = (remaining) => {
-    if (handle._cleared) return;
-    if (remaining <= MAX_TIMEOUT_MS) {
-      handle._timer = setTimeout(
-        () => {
-          if (!handle._cleared) callback();
-        },
-        Math.max(0, remaining),
-      );
-      return;
-    }
-    handle._timer = setTimeout(
-      () => schedule(remaining - MAX_TIMEOUT_MS),
-      MAX_TIMEOUT_MS,
-    );
-  };
-  schedule(delayMs);
-  handle.clear = () => {
-    handle._cleared = true;
-    if (handle._timer) {
-      clearTimeout(handle._timer);
-      handle._timer = null;
-    }
-  };
-  return handle;
-}
+const {
+  safeSetTimeout,
+  computeNextRecurringDate,
+  formatAlarmDateString,
+  buildScheduledEmbed,
+} = require("../../utils/helpers/alarmSchedulerHelper");
 
 class AlarmScheduler {
   constructor(client) {
@@ -126,15 +97,10 @@ class AlarmScheduler {
             logger.info(`Alarm triggered: ${alarmMessage} (ID: ${id})`);
 
             if (recurring !== "none") {
-              const nextAlarmDate = new Date(alarmDate);
-
-              if (recurring === "daily") {
-                nextAlarmDate.setDate(nextAlarmDate.getDate() + 1);
-              } else if (recurring === "weekly") {
-                nextAlarmDate.setDate(nextAlarmDate.getDate() + 7);
-              } else if (recurring === "monthly") {
-                nextAlarmDate.setMonth(nextAlarmDate.getMonth() + 1);
-              }
+              const nextAlarmDate = computeNextRecurringDate(
+                alarmDate,
+                recurring,
+              );
 
               const updatedAlarm = {
                 ...alarm,
@@ -176,33 +142,13 @@ class AlarmScheduler {
       logger.warning(`Alarm time is in the past: ${alarmMessage} (ID: ${id})`);
 
       if (recurring !== "none") {
-        const nextAlarmDate = new Date();
-
-        if (recurring === "daily") {
-          nextAlarmDate.setDate(nextAlarmDate.getDate() + 1);
-          nextAlarmDate.setHours(
-            alarmDate.getHours(),
-            alarmDate.getMinutes(),
-            0,
-            0,
-          );
-        } else if (recurring === "weekly") {
-          nextAlarmDate.setDate(nextAlarmDate.getDate() + 7);
-          nextAlarmDate.setHours(
-            alarmDate.getHours(),
-            alarmDate.getMinutes(),
-            0,
-            0,
-          );
-        } else if (recurring === "monthly") {
-          nextAlarmDate.setMonth(nextAlarmDate.getMonth() + 1);
-          nextAlarmDate.setHours(
-            alarmDate.getHours(),
-            alarmDate.getMinutes(),
-            0,
-            0,
-          );
-        }
+        const nextAlarmDate = computeNextRecurringDate(new Date(), recurring);
+        nextAlarmDate.setHours(
+          alarmDate.getHours(),
+          alarmDate.getMinutes(),
+          0,
+          0,
+        );
 
         const updatedAlarm = {
           ...alarm,
@@ -260,36 +206,19 @@ class AlarmScheduler {
           return;
         }
 
-        const formattedTime = `${alarmDate.getDate().toString().padStart(2, "0")}/${(alarmDate.getMonth() + 1).toString().padStart(2, "0")}/${alarmDate.getFullYear()} ${alarmDate.getHours().toString().padStart(2, "0")}:${alarmDate.getMinutes().toString().padStart(2, "0")}`;
+        const formattedTime = formatAlarmDateString(alarmDate);
 
         const unixTimestamp = Math.floor(alarmDate.getTime() / 1000);
         const discordTimestamp = `<t:${unixTimestamp}:R>`;
 
-        let recurringText = "Non-recurring";
-        let countdownText = `⏳ Countdown: ${discordTimestamp}`;
-
-        if (recurring !== "none") {
-          recurringText =
-            recurring === "daily"
-              ? "Daily"
-              : recurring === "weekly"
-                ? "Weekly"
-                : "Monthly";
-
-          countdownText = `⏳ Countdown to next trigger: ${discordTimestamp}`;
-        }
-
-        const updatedEmbed = new EmbedBuilder()
-          .setDescription(
-            `✅ Alarm "${alarmMessage}" has been set!\n` +
-              `⏰ Time: ${formattedTime}\n` +
-              `🔔 Will trigger in: <#${channelId}>\n` +
-              `👥 Role to mention: <@&${roleId}>\n` +
-              `🔄 Type: ${recurringText}\n` +
-              `${countdownText}\n` +
-              `🗑️ The alarm message will be auto-deleted after 2 hours`,
-          )
-          .setColor(0x00ff00);
+        const updatedEmbed = buildScheduledEmbed({
+          alarmMessage,
+          formattedTime,
+          channelId,
+          roleId,
+          recurring,
+          discordTimestamp,
+        });
 
         await message.edit({ embeds: [updatedEmbed] });
         logger.debug(`Embed updated for alarm: ${id}`);

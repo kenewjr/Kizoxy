@@ -400,72 +400,8 @@ async function deployCommands(clientId, commands, mode, guildId) {
     }
   } catch (error) {
     console.error("❌ Deployment failed:", error.message);
-
-    // Try batch deployment if single deployment fails
-    if (commands.length > 1) {
-      console.warn("🔄 Trying batch deployment...");
-      await deployInBatches(clientId, commands, mode, guildId);
-    } else {
-      process.exit(1);
-    }
+    process.exit(1);
   }
-}
-
-async function deployInBatches(clientId, commands, mode, guildId) {
-  const rest = new REST({ version: "10" }).setToken(TOKEN);
-  const batchSize = 5;
-  let successful = 0;
-
-  for (let i = 0; i < commands.length; i += batchSize) {
-    const batch = commands.slice(i, i + batchSize);
-    console.warn(
-      `\n📦 Batch ${Math.floor(i / batchSize) + 1} (${batch.length} commands)...`,
-    );
-
-    try {
-      if (mode === "global") {
-        await rest.put(Routes.applicationCommands(clientId), { body: batch });
-      } else {
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-          body: batch,
-        });
-      }
-
-      successful += batch.length;
-      console.warn(`✅ Batch ${Math.floor(i / batchSize) + 1} deployed`);
-
-      // Rate limit delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    } catch (batchError) {
-      console.error(
-        `❌ Batch ${Math.floor(i / batchSize) + 1} failed: ${batchError.message}`,
-      );
-
-      // Try deploying individually
-      for (const cmd of batch) {
-        try {
-          if (mode === "global") {
-            await rest.put(Routes.applicationCommands(clientId), {
-              body: [cmd],
-            });
-          } else {
-            await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-              body: [cmd],
-            });
-          }
-          successful++;
-          console.warn(`   ✅ /${cmd.name} deployed individually`);
-        } catch (cmdError) {
-          console.warn(`   ❌ /${cmd.name} failed: ${cmdError.message}`);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    }
-  }
-
-  console.warn(
-    `\n📊 Batch deployment complete: ${successful}/${commands.length} commands deployed`,
-  );
 }
 
 // ============================================

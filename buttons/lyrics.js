@@ -8,7 +8,7 @@ const {
   EPHEMERAL_ERROR_TTL_MS,
   addLyricsToNowPlaying,
   removeLyricsFromNowPlaying,
-} = require("../utils/musicHelpers");
+} = require("../utils/helpers/musicHelper");
 
 const logger = new Logger("MUSIC-LYRICS");
 

@@ -2,7 +2,7 @@ const { EmbedBuilder } = require("discord.js");
 const formatduration = require("../../structures/FormatDuration.js");
 const { searchLyrics } = require("../../services/lyrics/lyricsService");
 const Logger = require("../../utils/logger");
-const { buildMusicControlRow } = require("../../utils/musicHelpers");
+const { buildMusicControlRow } = require("../../utils/helpers/musicHelper");
 
 const logger = new Logger("PLAYER-START");
 

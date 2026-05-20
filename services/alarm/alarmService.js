@@ -174,6 +174,87 @@ async function toggleAlarm(scheduler, alarmId) {
   return { alarm, enabled: newEnabled };
 }
 
+/**
+ * Update an existing alarm. Accepts a partial patch and re-runs validation
+ * for any time/date/recurring change. The job is cancelled and rescheduled
+ * if the alarm is currently enabled.
+ *
+ * @param {object} scheduler
+ * @param {string} alarmId
+ * @param {object} patch  { message?, time?, date?, recurring?, channelId?, roleId? }
+ * @returns {Promise<{ alarm, error? }>}
+ */
+async function updateAlarm(scheduler, alarmId, patch) {
+  const existing = await scheduler.storage.get(alarmId);
+  if (!existing) return { error: "❌ Alarm not found." };
+
+  const updates = {};
+
+  if (patch.message !== undefined) {
+    const trimmed = String(patch.message).trim();
+    if (!trimmed) return { error: "❌ Alarm name cannot be empty." };
+    updates.message = trimmed;
+  }
+
+  // Time / date / recurring need re-validation as a group, since each affects
+  // the resulting alarm date.
+  const timeChanged =
+    patch.time !== undefined ||
+    patch.date !== undefined ||
+    patch.recurring !== undefined;
+
+  if (timeChanged) {
+    const existingDate = new Date(existing.time);
+    const dd = String(existingDate.getDate()).padStart(2, "0");
+    const mm = String(existingDate.getMonth() + 1).padStart(2, "0");
+    const yyyy = existingDate.getFullYear();
+    const hh = String(existingDate.getHours()).padStart(2, "0");
+    const mi = String(existingDate.getMinutes()).padStart(2, "0");
+
+    const time = patch.time !== undefined ? patch.time : `${hh}:${mi}`;
+    const date =
+      patch.date !== undefined ? patch.date : `${dd}/${mm}/${yyyy}`;
+    const recurring =
+      patch.recurring !== undefined ? patch.recurring : existing.recurring;
+
+    const timeError = validateTime(time);
+    if (timeError) return { error: timeError };
+
+    if (!["none", "daily", "weekly", "monthly"].includes(recurring)) {
+      return { error: "❌ Invalid recurring value." };
+    }
+
+    const dateResult = buildAlarmDate({ time, date, recurring });
+    if (dateResult.error) return dateResult;
+
+    updates.time = dateResult.alarmDate.toISOString();
+    updates.recurring = recurring;
+  }
+
+  if (patch.channelId !== undefined) updates.channelId = patch.channelId;
+  if (patch.roleId !== undefined) updates.roleId = patch.roleId;
+
+  if (Object.keys(updates).length === 0) {
+    return { alarm: existing };
+  }
+
+  await scheduler.storage.update(alarmId, updates);
+  const updated = await scheduler.storage.get(alarmId);
+
+  // Reschedule if any timing-relevant field changed and alarm is enabled.
+  const reschedule =
+    timeChanged ||
+    patch.channelId !== undefined ||
+    patch.roleId !== undefined;
+
+  if (reschedule && updated.enabled !== false) {
+    scheduler.cancelAlarm(alarmId);
+    await scheduler.scheduleAlarm(updated);
+  }
+
+  return { alarm: updated };
+}
+
 module.exports = {
   validateTime,
   parseDate,
@@ -182,4 +263,5 @@ module.exports = {
   createAlarm,
   cancelAlarm,
   toggleAlarm,
+  updateAlarm,
 };

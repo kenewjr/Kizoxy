@@ -5,14 +5,17 @@ const logger = new Logger("BUTTON");
 
 module.exports = async (client, interaction) => {
   try {
-    // Accept buttons and ALL select menu types (string, channel, user, role)
+    // Accept buttons, ALL select menu types, and modal submissions.
+    // Modal submissions are routed here from interactionCreate.js for
+    // alarm_* customIds; without this gate they were silently dropped.
     const isButton = interaction.isButton?.();
     const isSelect =
       interaction.isStringSelectMenu?.() ||
       interaction.isChannelSelectMenu?.() ||
       interaction.isUserSelectMenu?.() ||
       interaction.isRoleSelectMenu?.();
-    if (!isButton && !isSelect) return;
+    const isModalSubmit = interaction.isModalSubmit?.();
+    if (!isButton && !isSelect && !isModalSubmit) return;
 
     logger.debug(
       `Received button interaction: ${interaction.customId} by ${interaction.user.tag}`,
@@ -66,8 +69,12 @@ module.exports = async (client, interaction) => {
 
       // Buttons whose handler will call interaction.showModal() — must NOT
       // be deferred, otherwise showModal throws "already acknowledged".
-      const SHOW_MODAL_BUTTONS = ["alarm_new"];
-      const skipDefer = SHOW_MODAL_BUTTONS.includes(interaction.customId);
+      // Modal submissions also skip auto-defer because their handler calls
+      // deferReply itself with the appropriate ephemeral flag.
+      const isShowModalButton =
+        interaction.customId === "alarm_new" ||
+        interaction.customId.startsWith("alarm_edit_modal:");
+      const skipDefer = isShowModalButton || isModalSubmit;
 
       // fxs + alarm: update the existing message in-place
       // everything else (including fixembed_delete) gets its own ephemeral reply

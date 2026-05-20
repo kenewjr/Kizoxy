@@ -4,7 +4,7 @@ const Logger = require("../utils/logger");
 const {
   validateMusicContext,
   scheduleAutoDelete,
-} = require("../utils/musicHelpers");
+} = require("../utils/helpers/musicHelper");
 
 const logger = new Logger("MUSIC-STOP");
 

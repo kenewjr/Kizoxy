@@ -18,10 +18,10 @@ module.exports = {
         interaction.user.id,
       );
 
-      if (alarms.length === 0) {
-        return interaction.editReply("❌ You don't have any active alarms.");
-      }
-
+      // Always render the panel — even with zero alarms — so the "New"
+      // button stays reachable for first-time users. Destructive actions
+      // (Cancel/Edit/Toggle) are auto-disabled inside the component builder
+      // when there are no alarms.
       const page = 0;
       const embed = buildAlarmListEmbed(
         alarms,

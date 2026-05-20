@@ -1,10 +1,3 @@
-const {
-  isSpotifyUrl,
-  isSpotifyPlaylist,
-  isSpotifyAlbum,
-  isSpotifyTrack,
-  spotifyToYouTubeSearch,
-} = require("../../../modules/spotify/spotifyHelper");
 const Logger = require("../../../utils/logger");
 
 const logger = new Logger("PLAY");
@@ -30,34 +23,6 @@ module.exports = async function playLogic(client, ctx, args) {
 
     let query = isSlash ? ctx.options.getString("search") : args.join(" ");
     if (!query) return reply("❌ | Please provide a song name or URL.", true);
-
-    if (isSpotifyUrl(query)) {
-      if (isSpotifyPlaylist(query)) {
-        return reply(
-          "❌ | Spotify playlists are not supported without a Premium subscription.\n" +
-            "💡 Use a YouTube playlist or paste Spotify tracks one at a time.",
-          true,
-        );
-      }
-
-      if (isSpotifyAlbum(query)) {
-        return reply(
-          "❌ | Spotify albums are not supported without a Premium subscription.\n" +
-            "💡 Use a YouTube playlist or paste Spotify tracks one at a time.",
-          true,
-        );
-      }
-
-      if (isSpotifyTrack(query)) {
-        await reply("🎵 | Loading from Spotify...", true);
-        const ytSearch = await spotifyToYouTubeSearch(query);
-        if (ytSearch) {
-          query = ytSearch; // Let Kazagumo handle search prefix
-        } else {
-          return reply("❌ | Failed to load from Spotify. Please try again.", true);
-        }
-      }
-    }
 
     const member = ctx.member;
     const userVoice = member?.voice?.channel;

@@ -4,7 +4,7 @@ const {
   scheduleAutoDelete,
   buildMusicControlRow,
   swapNowPlayingComponents,
-} = require("../utils/musicHelpers");
+} = require("../utils/helpers/musicHelper");
 
 const logger = new Logger("MUSIC-PAUSE");
 

@@ -5,62 +5,16 @@ const {
   ButtonStyle,
   StringSelectMenuBuilder,
 } = require("discord.js");
-
-// ══════════════════════════════════════════════════════════
-// Pagination Constants
-// ══════════════════════════════════════════════════════════
-
-/** Items per page for embed list views (Discord field limits + readability) */
-const LIST_PAGE_SIZE = 5;
-/** Items per page for select menus (Discord max options = 25) */
-const SELECT_PAGE_SIZE = 25;
-
-/** Compute total pages for a given dataset and page size */
-function totalPages(items, pageSize) {
-  return Math.max(1, Math.ceil(items.length / pageSize));
-}
-
-/** Clamp page within [0, totalPages-1] */
-function clampPage(page, total) {
-  if (Number.isNaN(page) || page < 0) return 0;
-  if (page >= total) return total - 1;
-  return page;
-}
-
-/** Get the slice of items for a given page */
-function sliceForPage(items, page, pageSize) {
-  const start = page * pageSize;
-  return items.slice(start, start + pageSize);
-}
-
-// ══════════════════════════════════════════════════════════
-// Date / Label helpers
-// ══════════════════════════════════════════════════════════
-
-function formatAlarmDate(dateStr) {
-  const d = new Date(dateStr);
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
-}
-
-function recurringLabel(recurring) {
-  if (recurring === "daily") return "Daily";
-  if (recurring === "weekly") return "Weekly";
-  if (recurring === "monthly") return "Monthly";
-  return "Non-recurring";
-}
-
-function alarmStatus(alarm) {
-  const timeLeft = new Date(alarm.time).getTime() - Date.now();
-  if (alarm.enabled === false) return "⏸️ Disabled";
-  if (timeLeft < 0) return "🔔 Missed";
-  if (timeLeft < 60000) return "🔔 Soon";
-  return "⏳ Waiting";
-}
+const {
+  LIST_PAGE_SIZE,
+  SELECT_PAGE_SIZE,
+  totalPages,
+  clampPage,
+  sliceForPage,
+  formatAlarmDate,
+  recurringLabel,
+  alarmStatus,
+} = require("../../utils/helpers/alarmFormatterHelper");
 
 // ══════════════════════════════════════════════════════════
 // Embed builders
@@ -99,6 +53,14 @@ function buildAlarmListEmbed(alarms, color, footerIconURL, page = 0) {
       iconURL: footerIconURL,
     })
     .setTimestamp();
+
+  if (alarms.length === 0) {
+    embed.setDescription(
+      "You don't have any active alarms yet.\n" +
+        "Press **➕ New** below to create your first one.",
+    );
+    return embed;
+  }
 
   pageItems.forEach((alarm, idx) => {
     embed.addFields(buildAlarmField(alarm, startIdx + idx));
@@ -297,18 +259,98 @@ function buildBackButton() {
   );
 }
 
-/** Detail view buttons: Back to List + Close */
-function buildDetailButtons() {
-  return new ActionRowBuilder().addComponents(
+/**
+ * Detail view component rows. Returns an array of ActionRow builders ready
+ * to spread into editReply({ components }).
+ *
+ * Layout when called with an alarm:
+ *   Row 1: Edit Fields | Recurring | Toggle | Delete
+ *   Row 2: Channel select
+ *   Row 3: Role select
+ *   Row 4: Back to List
+ *
+ * customIds embed the alarm id so handlers don't need session state.
+ * Returns the legacy single nav row when called without an alarm.
+ */
+function buildDetailButtons(alarm) {
+  if (!alarm) {
+    return new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("alarm_refresh")
+        .setLabel("⬅️ Back to List")
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId("alarm_close")
+        .setLabel("❌ Close")
+        .setStyle(ButtonStyle.Secondary),
+    );
+  }
+
+  const enabled = alarm.enabled !== false;
+  const {
+    ChannelSelectMenuBuilder,
+    RoleSelectMenuBuilder,
+    ChannelType,
+  } = require("discord.js");
+
+  const actionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`alarm_edit_modal:${alarm.id}`)
+      .setLabel("✏️ Edit Fields")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`alarm_recurring_change:${alarm.id}`)
+      .setLabel("🔄 Recurring")
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`alarm_detail_toggle:${alarm.id}`)
+      .setLabel(enabled ? "⏸️ Disable" : "▶️ Enable")
+      .setStyle(enabled ? ButtonStyle.Secondary : ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`alarm_detail_delete:${alarm.id}`)
+      .setLabel("🗑️ Delete")
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  const channelRow = new ActionRowBuilder().addComponents(
+    new ChannelSelectMenuBuilder()
+      .setCustomId(`alarm_detail_channel:${alarm.id}`)
+      .setPlaceholder("Change notification channel")
+      .setChannelTypes(ChannelType.GuildText)
+      .setMinValues(1)
+      .setMaxValues(1),
+  );
+
+  const roleRow = new ActionRowBuilder().addComponents(
+    new RoleSelectMenuBuilder()
+      .setCustomId(`alarm_detail_role:${alarm.id}`)
+      .setPlaceholder("Change ping role")
+      .setMinValues(1)
+      .setMaxValues(1),
+  );
+
+  const navRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("alarm_refresh")
       .setLabel("⬅️ Back to List")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("alarm_close")
-      .setLabel("❌ Close")
       .setStyle(ButtonStyle.Secondary),
   );
+
+  return [actionRow, channelRow, roleRow, navRow];
+}
+
+/** Build the recurring-change select for the detail flow. */
+function buildRecurringSelectRow(alarmId, current) {
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`alarm_recurring_set:${alarmId}`)
+    .setPlaceholder(`Recurring: ${current}`)
+    .addOptions(
+      { label: "Non-recurring", value: "none", default: current === "none" },
+      { label: "Daily", value: "daily", default: current === "daily" },
+      { label: "Weekly", value: "weekly", default: current === "weekly" },
+      { label: "Monthly", value: "monthly", default: current === "monthly" },
+    );
+  return new ActionRowBuilder().addComponents(select);
 }
 
 /**
@@ -388,6 +430,7 @@ module.exports = {
   buildAlarmToggleSelect,
   buildBackButton,
   buildDetailButtons,
+  buildRecurringSelectRow,
   buildPaginationRow,
   buildAlarmListComponents,
 };
