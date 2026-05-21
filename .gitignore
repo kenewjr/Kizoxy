@@ -1,6 +1,17 @@
 node_modules
 .env
+.env.*
+!.env.example
 data/*.json
+data/*.bak
+data/*.json.bak
+data/backups/
+*.bak
 logs/
+*.log
 .eslintcache
 CONTEXT.md
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
