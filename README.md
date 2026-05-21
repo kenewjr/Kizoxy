@@ -83,11 +83,11 @@ cd Kizoxy
 npm install
 
 # 3. Configure
-cp ".env example" .env
+cp .env.example .env
 # edit .env with your token, owner ID, and Lavalink node
 
 # 4. Deploy slash commands (one-time)
-node deploySlash.js global --clear-all
+npm run deploy:slash global --clear-all
 
 # 5. Run
 npm start              # foreground
@@ -194,12 +194,10 @@ Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · 
 <details>
 <summary><b>⏰ Alarms</b></summary>
 
-| Command            | Description                                            |
-| :----------------- | :----------------------------------------------------- |
-| `/alarm set`       | Schedule a new alarm                                   |
-| `/alarm list`      | Open the alarm panel (view, cancel, toggle on/off)     |
-| `/alarm edit`      | Edit an existing alarm                                 |
-| `/alarm adminlist` | _(Admin)_ View all server alarms                       |
+| Command       | Description                                                                                              |
+| :------------ | :------------------------------------------------------------------------------------------------------- |
+| `/alarm`      | Open the alarm panel — view, create (modal), edit (modal), cancel, toggle, change channel/role/recurring |
+| `/alarmadmin` | _(Admin)_ View all server alarms                                                                         |
 
 </details>
 

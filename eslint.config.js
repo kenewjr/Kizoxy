@@ -40,6 +40,13 @@ module.exports = [
     },
   },
   {
-    ignores: ["node_modules/", "data/", "logs/"],
+    ignores: [
+      "node_modules/",
+      "data/",
+      "logs/",
+      "infra/",
+      "coverage/",
+      ".github/",
+    ],
   },
 ];

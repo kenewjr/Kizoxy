@@ -1,6 +1,6 @@
 // deploySlash.js - Version with cleanup
 const { REST, Routes, ApplicationCommandOptionType } = require("discord.js");
-const { TOKEN } = require("./settings/config.js");
+const { TOKEN } = require("../src/config/config");
 const fs = require("fs");
 const path = require("path");
 
@@ -156,7 +156,13 @@ async function cleanupExistingCommands(clientId, mode, guildId) {
 // ============================================
 
 async function loadAndValidateCommands() {
-  const slashCommandsPath = path.join(__dirname, "commands", "Slash");
+  const slashCommandsPath = path.join(
+    __dirname,
+    "..",
+    "src",
+    "commands",
+    "slash",
+  );
 
   if (!fs.existsSync(slashCommandsPath)) {
     console.error("❌ Slash commands folder not found.");

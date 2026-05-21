@@ -1,9 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 
-const envExamplePath = path.join(__dirname, "../../.env example");
+const envExamplePath = path.join(__dirname, "../.env.example");
 if (!fs.existsSync(envExamplePath)) {
-  console.warn('No ".env example" found, skipping validation.');
+  console.warn('No ".env.example" found, skipping validation.');
   process.exit(0);
 }
 
@@ -16,12 +16,9 @@ const expectedKeys = exampleContent
   )
   .map((line) => line.split("=")[0].trim());
 
-const hasEnv = fs.existsSync(path.join(__dirname, "../../.env"));
+const hasEnv = fs.existsSync(path.join(__dirname, "../.env"));
 if (hasEnv) {
-  const envContent = fs.readFileSync(
-    path.join(__dirname, "../../.env"),
-    "utf8",
-  );
+  const envContent = fs.readFileSync(path.join(__dirname, "../.env"), "utf8");
   const actualKeys = envContent
     .split("\n")
     .map((line) => line.trim())
@@ -35,9 +32,9 @@ if (hasEnv) {
     console.error(`❌ Missing keys in .env: ${missingKeys.join(", ")}`);
     process.exit(1);
   } else {
-    console.warn("✅ .env file is fully synced with .env example!");
+    console.warn("✅ .env file is fully synced with .env.example!");
   }
 } else {
-  console.warn("✅ .env example format is valid.");
+  console.warn("✅ .env.example format is valid.");
   console.warn("Expected Keys:", expectedKeys.join(", "));
 }

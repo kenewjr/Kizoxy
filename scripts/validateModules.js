@@ -33,7 +33,7 @@ function checkDir(dirPath, checkFn) {
 }
 
 console.warn("Validating Slash Commands...");
-checkDir(path.join(__dirname, "../../commands/Slash"), (cmd, file) => {
+checkDir(path.join(__dirname, "../src/commands/slash"), (cmd, file) => {
   const cmds = Array.isArray(cmd) ? cmd : [cmd];
   for (const c of cmds) {
     if (!c.name || !c.run) {
@@ -44,7 +44,7 @@ checkDir(path.join(__dirname, "../../commands/Slash"), (cmd, file) => {
 });
 
 console.warn("Validating Prefix Commands...");
-checkDir(path.join(__dirname, "../../commands/Prefix"), (cmd, file) => {
+checkDir(path.join(__dirname, "../src/commands/prefix"), (cmd, file) => {
   const cmds = Array.isArray(cmd) ? cmd : [cmd];
   for (const c of cmds) {
     if (!c.name) {
@@ -55,7 +55,7 @@ checkDir(path.join(__dirname, "../../commands/Prefix"), (cmd, file) => {
 });
 
 console.warn("Validating Events...");
-checkDir(path.join(__dirname, "../../events"), (event, file) => {
+checkDir(path.join(__dirname, "../src/events"), (event, file) => {
   // Events export a single function, not an object with name and run
   if (typeof event !== "function") {
     console.error(

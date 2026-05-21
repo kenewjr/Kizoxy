@@ -17,20 +17,21 @@
   },
   "name": "kizoxy",
   "description": "✈ Join Discord: https://discord.gg/qeemvqq 👌",
-  "version": "2.0",
-  "main": "index.js",
+  "version": "3.0",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/index.js",
     "start:pm2": "pm2 start ecosystem.config.js",
     "stop:pm2": "pm2 stop kizoxy",
     "restart:pm2": "pm2 restart kizoxy",
     "logs:pm2": "pm2 logs kizoxy",
+    "deploy:slash": "node scripts/deploySlash.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "test": "jest .github/tests/",
-    "validate:modules": "node .github/scripts/validateModules.js",
-    "validate:env": "node .github/scripts/validateEnv.js"
+    "test": "jest tests/",
+    "validate:modules": "node scripts/validateModules.js",
+    "validate:env": "node scripts/validateEnv.js"
   },
   "repository": {
     "type": "git",

@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "kizoxy",
-      script: "index.js",
+      script: "src/index.js",
       instances: 1,
       autorestart: true,
       watch: false,
