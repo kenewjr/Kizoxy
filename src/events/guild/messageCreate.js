@@ -2,9 +2,7 @@ const Logger = require("../../lib/logger");
 const {
   handleFixembedMessage,
 } = require("../../features/fixembed/fixembedMessageHandler");
-const {
-  handleMessageXp,
-} = require("../../features/level/messageXpHandler");
+const { handleMessageXp } = require("../../features/level/messageXpHandler");
 
 const logger = new Logger("MESSAGE");
 
@@ -44,9 +42,9 @@ async function dispatchPrefixCommand(client, message, prefix) {
     }
   } catch (error) {
     logger.error(`Error executing prefix command ${cmd}: ${error.message}`);
-    message.reply("There was an error trying to execute that command!").catch(
-      () => { },
-    );
+    message
+      .reply("There was an error trying to execute that command!")
+      .catch(() => {});
   }
   return true;
 }

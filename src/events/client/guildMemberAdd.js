@@ -31,10 +31,11 @@ module.exports = async (client, member) => {
         iconURL: member.user.displayAvatarURL({ dynamic: true }),
       },
       title: "📥 Member Joined",
-      description: `${member} joined the server.${isSuspicious
+      description: `${member} joined the server.${
+        isSuspicious
           ? `\n⚠️ **New account** — created **${ageDays} day(s)** ago.`
           : ""
-        }`,
+      }`,
       thumbnail: member.user.displayAvatarURL({ dynamic: true, size: 256 }),
       fields: [
         { name: "User", value: `${member.user.tag}`, inline: true },

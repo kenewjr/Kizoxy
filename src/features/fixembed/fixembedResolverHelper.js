@@ -13,8 +13,7 @@ async function resolveEmbedEZ(url) {
     if (res.status === 200 && res.data?.data?.key) {
       return `https://embedez.com/embed/${res.data.data.key}`;
     }
-  } catch (_) {
-  }
+  } catch (_) {}
   return null;
 }
 const FX_EMBED_SUBDOMAIN = {

@@ -47,7 +47,7 @@ function buildAlarmListEmbed(alarms, color, footerIconURL, page = 0) {
   if (alarms.length === 0) {
     embed.setDescription(
       "You don't have any active alarms yet.\n" +
-      "Press **➕ New** below to create your first one.",
+        "Press **➕ New** below to create your first one.",
     );
     return embed;
   }
@@ -71,12 +71,12 @@ function buildAlarmSetEmbed(alarm, color) {
   return new EmbedBuilder()
     .setDescription(
       `✅ Alarm "${alarm.message}" has been set!\n` +
-      `⏰ Time: ${formatAlarmDate(alarm.time)}\n` +
-      `🔔 Will trigger in: <#${alarm.channelId}>\n` +
-      `👥 Role to mention: <@&${alarm.roleId}>\n` +
-      `🔄 Type: ${recurringLabel(alarm.recurring)}\n` +
-      `${countdownText}\n` +
-      `🗑️ The alarm message will be auto-deleted after 2 hours`,
+        `⏰ Time: ${formatAlarmDate(alarm.time)}\n` +
+        `🔔 Will trigger in: <#${alarm.channelId}>\n` +
+        `👥 Role to mention: <@&${alarm.roleId}>\n` +
+        `🔄 Type: ${recurringLabel(alarm.recurring)}\n` +
+        `${countdownText}\n` +
+        `🗑️ The alarm message will be auto-deleted after 2 hours`,
     )
     .setColor(color);
 }
@@ -143,7 +143,7 @@ function buildAlarmDetailEmbed(alarm) {
     )
     .setDescription(
       "Use the following command to edit:\n" +
-      `\`/alarm edit id_alarm:${alarm.id}\` + the parameter you want to change`,
+        `\`/alarm edit id_alarm:${alarm.id}\` + the parameter you want to change`,
     )
     .setFooter({
       text: "Parameters: time, alarm_name, date, role, channel, recurring",

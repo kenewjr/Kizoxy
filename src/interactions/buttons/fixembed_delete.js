@@ -10,7 +10,7 @@ module.exports = {
 
     try {
       await interaction.message.delete();
-      await interaction.deleteReply().catch(() => { });
+      await interaction.deleteReply().catch(() => {});
     } catch (_err) {
       return interaction.editReply({
         content:

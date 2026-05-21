@@ -76,12 +76,12 @@ function buildScheduledEmbed({
   return new EmbedBuilder()
     .setDescription(
       `✅ Alarm "${alarmMessage}" has been set!\n` +
-      `⏰ Time: ${formattedTime}\n` +
-      `🔔 Will trigger in: <#${channelId}>\n` +
-      `👥 Role to mention: <@&${roleId}>\n` +
-      `🔄 Type: ${recurringText(recurring)}\n` +
-      `${countdownText}\n` +
-      `🗑️ The alarm message will be auto-deleted after 2 hours`,
+        `⏰ Time: ${formattedTime}\n` +
+        `🔔 Will trigger in: <#${channelId}>\n` +
+        `👥 Role to mention: <@&${roleId}>\n` +
+        `🔄 Type: ${recurringText(recurring)}\n` +
+        `${countdownText}\n` +
+        `🗑️ The alarm message will be auto-deleted after 2 hours`,
     )
     .setColor(COLORS.SUCCESS);
 }

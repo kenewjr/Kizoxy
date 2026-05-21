@@ -12,7 +12,7 @@ module.exports = async (client, player, track, payload) => {
     const embed = Embeds.brand(client, {
       description: "`🔄` | *Lofi stream interrupted, reconnecting...*",
     });
-    channel.send({ embeds: [embed] }).catch(() => { });
+    channel.send({ embeds: [embed] }).catch(() => {});
   }
 
   try {

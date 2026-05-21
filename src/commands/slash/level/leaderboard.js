@@ -1,8 +1,4 @@
-const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const Embeds = require("../../../lib/embeds");
 const LevelStorage = require("../../../persistence/levelStorage");
 

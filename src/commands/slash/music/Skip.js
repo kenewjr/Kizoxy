@@ -31,7 +31,7 @@ module.exports = {
     if (
       !channel ||
       interaction.member.voice.channel !==
-      interaction.guild.members.me.voice.channel
+        interaction.guild.members.me.voice.channel
     ) {
       await interaction.reply({
         content: "I'm not in the same voice channel as you!",

@@ -23,9 +23,7 @@ async function replyError(interaction, errorOrMessage, options = {}) {
       ? errorOrMessage
       : Embeds.formatError(errorOrMessage);
   const title =
-    options.title === null
-      ? undefined
-      : options.title || "Terjadi kesalahan";
+    options.title === null ? undefined : options.title || "Terjadi kesalahan";
   const embed = Embeds.error(interaction.client, {
     title,
     description,
@@ -99,7 +97,6 @@ function disableComponents(componentRows) {
   });
 }
 
-
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes per UX spec
 
 function createCollector(message, options = {}) {
@@ -113,7 +110,7 @@ function createCollector(message, options = {}) {
     if (reason === "messageDelete") return;
     try {
       const disabled = disableComponents(message.components);
-      await message.edit({ components: disabled }).catch(() => { });
+      await message.edit({ components: disabled }).catch(() => {});
       if (reason === "time" && options.notifyOnTimeout !== false) {
         await message
           .reply({
@@ -121,7 +118,7 @@ function createCollector(message, options = {}) {
               "⏰ Interaction session ended after 15 minutes of inactivity.",
             allowedMentions: { repliedUser: false },
           })
-          .catch(() => { });
+          .catch(() => {});
       }
     } catch {
       /* swallow */
@@ -169,13 +166,13 @@ async function confirmAction(interaction, options = {}) {
     const choice = click.customId.startsWith("confirm_") ? "confirm" : "cancel";
     await click
       .update({ components: disableComponents([row]) })
-      .catch(() => { });
+      .catch(() => {});
     return choice;
   } catch {
     // Timed out
     await safeReply(interaction, {
       components: disableComponents([row]),
-    }).catch(() => { });
+    }).catch(() => {});
     return "timeout";
   }
 }

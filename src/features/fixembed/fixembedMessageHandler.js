@@ -1,8 +1,4 @@
-const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const fixembedStorage = require("../../persistence/fixembedStorage");
 const { extractFixedLinks } = require("./fixembedResolver");
 
@@ -64,7 +60,10 @@ async function handleFixembedMessage(message) {
   }
 
   const settings = fixembedStorage.getSettings(message.guild.id);
-  const fixedLinks = await extractFixedLinks(message.content, settings.viewMode);
+  const fixedLinks = await extractFixedLinks(
+    message.content,
+    settings.viewMode,
+  );
   if (fixedLinks.length === 0) return;
 
   const changed = fixedLinks.filter((l) => l.changed);

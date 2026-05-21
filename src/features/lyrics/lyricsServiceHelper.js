@@ -112,8 +112,8 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
 
   const q1 =
     !cover &&
-      author &&
-      !cleanedTitle.toLowerCase().includes(author.toLowerCase())
+    author &&
+    !cleanedTitle.toLowerCase().includes(author.toLowerCase())
       ? `${cleanedTitle} ${author}`.trim()
       : cleanedTitle;
 
@@ -129,8 +129,8 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
 
   const q3 =
     lastSeg &&
-      lastSeg.toLowerCase() !== firstSeg.toLowerCase() &&
-      lastSeg.toLowerCase() !== cleanedTitle.toLowerCase()
+    lastSeg.toLowerCase() !== firstSeg.toLowerCase() &&
+    lastSeg.toLowerCase() !== cleanedTitle.toLowerCase()
       ? `${cleanedTitle} ${lastSeg}`.trim()
       : null;
 

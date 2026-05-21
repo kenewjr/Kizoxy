@@ -266,7 +266,7 @@ module.exports = {
       });
 
       collector.on("end", () => {
-        message.edit({ components: [] }).catch(() => { });
+        message.edit({ components: [] }).catch(() => {});
       });
     } catch (error) {
       logger.error(`Error in admin alarm list: ${error.message}`);

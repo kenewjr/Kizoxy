@@ -44,8 +44,7 @@ module.exports = {
     try {
       if (await ACTIONS.handlePagination(ctx)) return;
 
-      const handler =
-        STATIC_ROUTES[action] || findPrefixHandler(action);
+      const handler = STATIC_ROUTES[action] || findPrefixHandler(action);
 
       if (!handler) {
         logger.debug(`Unhandled alarm customId: ${action}`);

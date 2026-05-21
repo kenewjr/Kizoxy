@@ -18,7 +18,7 @@ module.exports = {
     if (
       !channel ||
       interaction.member.voice.channel !==
-      interaction.guild.members.me.voice.channel
+        interaction.guild.members.me.voice.channel
     ) {
       await interaction.reply({
         content: "I'm not in the same voice channel as you!",
@@ -38,8 +38,7 @@ module.exports = {
     setTimeout(async () => {
       try {
         await interaction.deleteReply();
-      } catch (_err) {
-      }
+      } catch (_err) {}
     }, 5000);
   },
 };

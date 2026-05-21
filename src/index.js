@@ -100,7 +100,7 @@ async function bootstrap() {
 
   require("./features/lyrics/romajiConverter")
     .preInitialize()
-    .catch(() => { });
+    .catch(() => {});
 
   const failed = results.filter((r) => !r.ok).map((r) => r.name);
   const totalMs = Date.now() - bootStart;
@@ -132,7 +132,7 @@ function describeRejection(reason) {
   while (cause && depth < 5) {
     lines.push(
       `  caused by: ${cause.name || "Error"}: ${cause.message || cause}` +
-      (cause.code ? ` (code=${cause.code})` : ""),
+        (cause.code ? ` (code=${cause.code})` : ""),
     );
     if (cause.stack) {
       const firstFrame = String(cause.stack).split("\n")[1];

@@ -4,9 +4,7 @@ const Logger = require("../../lib/logger");
 const logger = new Logger("READY");
 
 module.exports = async (client) => {
-  logger.success(
-    `${client.user.username} (${client.user.id}) is Ready!`,
-  );
+  logger.success(`${client.user.username} (${client.user.id}) is Ready!`);
 
   const activities = [
     {

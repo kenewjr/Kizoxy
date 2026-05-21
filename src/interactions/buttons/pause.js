@@ -47,7 +47,7 @@ module.exports = {
       logger.error(`Pause Button Error: ${error.message}`);
       try {
         await interaction.editReply({ content: "❌ Failed to toggle pause." });
-      } catch (_) { }
+      } catch (_) {}
     }
   },
 };

@@ -113,7 +113,7 @@ class JSONStorage {
     const next = (this._saveInFlight || Promise.resolve()).then(() =>
       this._writeAtomic(this.data),
     );
-    this._saveInFlight = next.catch(() => { });
+    this._saveInFlight = next.catch(() => {});
     return next;
   }
 
@@ -145,14 +145,14 @@ class JSONStorage {
       const totalItems =
         data && typeof data === "object"
           ? Object.values(data).reduce(
-            (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0),
-            0,
-          )
+              (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0),
+              0,
+            )
           : 0;
       logger.debug(`Data saved to: ${this.filepath} (${totalItems} items)`);
     } catch (error) {
-      logger.error(`Error saving data to ${this.filepath}: ${error.message}`)
-      fs.unlink(this.tmpPath).catch(() => { });
+      logger.error(`Error saving data to ${this.filepath}: ${error.message}`);
+      fs.unlink(this.tmpPath).catch(() => {});
       throw error;
     }
   }

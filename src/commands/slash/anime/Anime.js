@@ -1,7 +1,4 @@
-const {
-  ApplicationCommandOptionType,
-  ChannelType,
-} = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType } = require("discord.js");
 const Embeds = require("../../../lib/embeds");
 const {
   getTodaySchedule,

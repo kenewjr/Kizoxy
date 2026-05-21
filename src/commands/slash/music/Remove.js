@@ -6,7 +6,7 @@ const EPHEMERAL_TTL_MS = 3000;
 
 function scheduleAutoDelete(interaction) {
   setTimeout(() => {
-    interaction.deleteReply().catch(() => { });
+    interaction.deleteReply().catch(() => {});
   }, EPHEMERAL_TTL_MS);
 }
 
@@ -49,7 +49,7 @@ module.exports = {
     if (
       !channel ||
       interaction.member.voice.channel !==
-      interaction.guild.members.me.voice.channel
+        interaction.guild.members.me.voice.channel
     ) {
       await interaction.editReply({
         content: "❌ You must be in the same voice channel as the bot.",

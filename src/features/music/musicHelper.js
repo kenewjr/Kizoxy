@@ -32,7 +32,7 @@ function validateMusicContext(client, interaction) {
 
 function scheduleAutoDelete(interaction, ttl = EPHEMERAL_TTL_MS) {
   setTimeout(() => {
-    interaction.deleteReply().catch(() => { });
+    interaction.deleteReply().catch(() => {});
   }, ttl);
 }
 
@@ -89,7 +89,7 @@ function buildNowPlayingEmbed(client, player, track) {
     .setColor(meta.color)
     .setDescription(
       `**[${track?.title || "Unknown"}](${track?.uri || ""})**\n` +
-      `\`${progressBar}\` \`${positionText} / ${durationText}\``,
+        `\`${progressBar}\` \`${positionText} / ${durationText}\``,
     )
     .addFields(
       {
@@ -105,8 +105,9 @@ function buildNowPlayingEmbed(client, player, track) {
       },
       {
         name: "Queue",
-        value: `${player?.queue?.size ?? 0} track${(player?.queue?.size ?? 0) === 1 ? "" : "s"
-          }`,
+        value: `${player?.queue?.size ?? 0} track${
+          (player?.queue?.size ?? 0) === 1 ? "" : "s"
+        }`,
         inline: true,
       },
       {
@@ -126,7 +127,6 @@ function buildNowPlayingEmbed(client, player, track) {
 
   return embed;
 }
-
 
 function buildMusicControlRow(stateOrPaused = false) {
   const state =
@@ -168,7 +168,6 @@ function buildMusicControlRow(stateOrPaused = false) {
       .setDisabled(queueLength <= 1),
   );
 }
-
 
 async function fetchNowPlayingMessage(client, player) {
   if (!player?.nowPlayingMessageId) return null;

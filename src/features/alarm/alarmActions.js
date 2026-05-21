@@ -1,6 +1,4 @@
-const {
-  buildAlarmDetailEmbed,
-} = require("./alarmEmbeds");
+const { buildAlarmDetailEmbed } = require("./alarmEmbeds");
 const {
   buildAlarmSelect,
   buildAlarmToggleSelect,
@@ -192,8 +190,9 @@ async function handleToggleDo({ interaction, client, scheduler, userId }) {
       components: [],
     });
   }
-  const msg = `${result.enabled ? "✅" : "⏸️"} Alarm **"${result.alarm.message}"** ${result.enabled ? "enabled" : "disabled"
-    }.`;
+  const msg = `${result.enabled ? "✅" : "⏸️"} Alarm **"${result.alarm.message}"** ${
+    result.enabled ? "enabled" : "disabled"
+  }.`;
   return showAlarmList(interaction, client, userId, msg);
 }
 
@@ -287,8 +286,9 @@ async function handleDetailToggle({ interaction, scheduler, userId }) {
   }
   const fresh = await scheduler.storage.get(alarmId);
   return interaction.editReply({
-    content: `${result.enabled ? "✅" : "⏸️"} Alarm ${result.enabled ? "enabled" : "disabled"
-      }.`,
+    content: `${result.enabled ? "✅" : "⏸️"} Alarm ${
+      result.enabled ? "enabled" : "disabled"
+    }.`,
     embeds: [buildAlarmDetailEmbed(fresh)],
     components: buildDetailButtons(fresh),
   });

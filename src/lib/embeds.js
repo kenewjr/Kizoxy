@@ -94,7 +94,6 @@ const Embeds = {
     return applyOptions(baseEmbed(client, COLORS.INFO), options);
   },
 
-
   success(client, options = {}) {
     const opts = { ...options };
     if (opts.description && !opts.description.startsWith("✅")) {

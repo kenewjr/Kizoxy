@@ -4,11 +4,9 @@ const http = require("http");
 const https = require("https");
 const { convertLyricsToRomaji, isJapanese } = require("./romajiConverter");
 
-
 const LAVALINK_URL = process.env.LAVALINK_URL || "http://localhost:2333";
 const LAVALINK_PASSWORD = process.env.LAVALINK_PASSWORD || "youshallnotpass";
 const TIMEOUT_MS = 15_000;
-
 
 const lyricsCache = new NodeCache({
   stdTTL: 86400, // 24 hours TTL
@@ -208,7 +206,7 @@ async function searchLyrics(player, track, color) {
 
   console.warn(
     `[lyrics] source=${firstData.source} | is_jp=${firstData.is_japanese}` +
-    ` | artist="${firstData.artist}" | len=${fullLyrics.length}`,
+      ` | artist="${firstData.artist}" | len=${fullLyrics.length}`,
   );
 
   if (!fullLyrics?.trim()) {

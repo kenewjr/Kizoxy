@@ -106,15 +106,15 @@ function buildBehaviorPage(s, color, notice = "") {
     .setTitle("🔗 FixEmbed — Behavior Settings")
     .setDescription(
       (notice ? `> ${notice}\n\n` : "") +
-      "**Base Message Action** — what happens to the original message\n" +
-      "> `Nothing` — leave the original untouched\n" +
-      "> `Remove Embed` — suppress the original link preview *(default)*\n" +
-      "> `Delete Message` — delete the original message entirely\n\n" +
-      "**View Mode** — which embed style to use *(where supported: Twitter, Bluesky, TikTok, Instagram)*\n" +
-      "> `Normal` — standard embed *(default)*\n" +
-      "> `Direct` — direct video/image file\n" +
-      "> `Gallery` — gallery view (multiple images)\n" +
-      "> `Text` — text-only view (no media)",
+        "**Base Message Action** — what happens to the original message\n" +
+        "> `Nothing` — leave the original untouched\n" +
+        "> `Remove Embed` — suppress the original link preview *(default)*\n" +
+        "> `Delete Message` — delete the original message entirely\n\n" +
+        "**View Mode** — which embed style to use *(where supported: Twitter, Bluesky, TikTok, Instagram)*\n" +
+        "> `Normal` — standard embed *(default)*\n" +
+        "> `Direct` — direct video/image file\n" +
+        "> `Gallery` — gallery view (multiple images)\n" +
+        "> `Text` — text-only view (no media)",
     )
     .addFields(
       {
@@ -136,9 +136,9 @@ function buildIgnorePage(s, color, notice = "") {
     .setTitle("🔗 FixEmbed — Ignore Lists")
     .setDescription(
       (notice ? `> ${notice}\n\n` : "") +
-      "**➕ Add** — use a select menu below to pick a channel/user/role to ignore.\n" +
-      "**➖ Remove** — select the same item again, or press a **Clear** button below.\n" +
-      "**Keywords** — use `/fixembed ignore-keyword <word>` to add/remove keywords.",
+        "**➕ Add** — use a select menu below to pick a channel/user/role to ignore.\n" +
+        "**➖ Remove** — select the same item again, or press a **Clear** button below.\n" +
+        "**Keywords** — use `/fixembed ignore-keyword <word>` to add/remove keywords.",
     )
     .addFields(
       {

@@ -90,7 +90,7 @@ module.exports = {
       try {
         await interaction.editReply({ content: msg });
         return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
-      } catch (_) { }
+      } catch (_) {}
     }
   },
 };

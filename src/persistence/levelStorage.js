@@ -86,7 +86,7 @@ class LevelStorage extends JSONStorage {
       return { user, leveledUp, level: user.level };
     });
     // Keep chain alive even if a step throws, so subsequent calls don't stall.
-    this._writeChain = next.catch(() => { });
+    this._writeChain = next.catch(() => {});
     return next;
   }
 

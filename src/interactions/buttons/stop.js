@@ -1,8 +1,5 @@
 const Embeds = require("../../lib/embeds");
-const {
-  disableComponents,
-  replyError,
-} = require("../../lib/interactions");
+const { disableComponents, replyError } = require("../../lib/interactions");
 const Logger = require("../../lib/logger");
 const {
   validateMusicContext,
@@ -56,7 +53,7 @@ module.exports = {
           "Failed to stop playback. Please try again shortly.",
           { title: null, ephemeral: false },
         );
-      } catch (_) { }
+      } catch (_) {}
     }
   },
 };
