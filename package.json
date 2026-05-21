@@ -25,6 +25,8 @@
     "restart:pm2": "pm2 restart kizoxy",
     "logs:pm2": "pm2 logs kizoxy",
     "deploy:slash": "node scripts/deploySlash.js",
+    "deploy:slash:global": "node scripts/deploySlash.js global --clear-all",
+    "deploy:slash:guild": "node scripts/deploySlash.js guild",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
