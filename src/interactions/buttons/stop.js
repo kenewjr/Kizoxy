@@ -1,5 +1,8 @@
 const Embeds = require("../../lib/embeds");
-const { disableComponents } = require("../../lib/interactions");
+const {
+  disableComponents,
+  replyError,
+} = require("../../lib/interactions");
 const Logger = require("../../lib/logger");
 const {
   validateMusicContext,
@@ -18,8 +21,9 @@ module.exports = {
 
       const ctx = validateMusicContext(client, interaction);
       if (ctx.error) {
-        await interaction.editReply({
-          embeds: [Embeds.error(client, { description: ctx.error })],
+        await replyError(interaction, ctx.error, {
+          title: null,
+          ephemeral: false,
         });
         return scheduleAutoDelete(interaction);
       }
@@ -28,7 +32,6 @@ module.exports = {
       const channelName =
         interaction.guild.members.me?.voice?.channel?.name ?? "voice channel";
 
-      // Disable now-playing buttons before destroying player
       try {
         const disabled = disableComponents(interaction.message.components);
         await interaction.message.edit({ components: disabled });
@@ -48,14 +51,12 @@ module.exports = {
     } catch (error) {
       logger.error(`Stop Button Error: ${error.message}`);
       try {
-        await interaction.editReply({
-          embeds: [
-            Embeds.error(client, {
-              description: "Failed to stop playback. Please try again shortly.",
-            }),
-          ],
-        });
-      } catch (_) {}
+        await replyError(
+          interaction,
+          "Failed to stop playback. Please try again shortly.",
+          { title: null, ephemeral: false },
+        );
+      } catch (_) { }
     }
   },
 };

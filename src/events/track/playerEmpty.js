@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
 
 module.exports = async (client, player) => {
   const channel = client.channels.cache.get(player.textId);
@@ -6,9 +6,9 @@ module.exports = async (client, player) => {
 
   if (player.data.get("stay")) return;
 
-  const embed = new EmbedBuilder()
-    .setColor(client.color)
-    .setDescription("`📛` | *Song has been:* `Ended`");
+  const embed = Embeds.brand(client, {
+    description: "`📛` | *Song has been:* `Ended`",
+  });
 
   channel.send({ embeds: [embed] });
   return player.destroy();

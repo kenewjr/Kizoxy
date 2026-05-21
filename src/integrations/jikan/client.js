@@ -2,9 +2,28 @@ const axios = require("axios");
 
 const BASE_URL = "https://api.jikan.moe/v4";
 
+const SCHEDULE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const _scheduleCache = new Map(); // key → { data, expiresAt }
+
+function _cacheKey(filter) {
+  return `schedule:${filter || "all"}`;
+}
+
+function clearScheduleCache() {
+  _scheduleCache.clear();
+}
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function getSchedule(filter) {
+async function getSchedule(filter, { bypassCache = false } = {}) {
+  const key = _cacheKey(filter);
+  if (!bypassCache) {
+    const hit = _scheduleCache.get(key);
+    if (hit && hit.expiresAt > Date.now()) {
+      console.warn(`[Jikan] cache hit for ${key}`);
+      return hit.data;
+    }
+  }
   let allAnime = [];
   let page = 1;
   let hasNextPage = true;
@@ -44,7 +63,12 @@ async function getSchedule(filter) {
       return popB - popA; // High popularity second
     });
 
-    return { data: allAnime };
+    const result = { data: allAnime };
+    _scheduleCache.set(key, {
+      data: result,
+      expiresAt: Date.now() + SCHEDULE_TTL_MS,
+    });
+    return result;
   } catch (error) {
     console.error("Error fetching Jikan schedule:", error.message);
     throw error;
@@ -68,4 +92,5 @@ async function getTodaySchedule() {
 module.exports = {
   getSchedule,
   getTodaySchedule,
+  clearScheduleCache,
 };

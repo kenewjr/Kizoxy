@@ -1,8 +1,3 @@
-// utils/helpers/fixembedSettingsHelper.js
-// Embed builders + component rows + page assemblers extracted from
-// buttons/fixembed_settings.js so the dispatcher there can stay short and
-// only own action routing.
-
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -16,7 +11,6 @@ const {
   ChannelType,
 } = require("discord.js");
 
-// ── Label maps ──────────────────────────────────────────────────────
 const ACTION_LABELS = {
   nothing: "Nothing",
   remove_embed: "Remove Embed",
@@ -29,6 +23,28 @@ const VIEW_MODE_LABELS = {
   gallery: "Gallery",
   text: "Text-only",
 };
+
+const ACTION_OPTIONS = [
+  { label: "Nothing — leave original", value: "nothing" },
+  { label: "Remove Embed — suppress preview", value: "remove_embed" },
+  { label: "Delete Message — delete original", value: "delete_message" },
+];
+
+const VIEW_OPTIONS = [
+  { label: "Normal — standard embed", value: "normal" },
+  { label: "Direct — direct media (video/image)", value: "direct" },
+  { label: "Gallery — gallery view", value: "gallery" },
+  { label: "Text — text-only view", value: "text" },
+];
+
+function buildOptions(options, current) {
+  return options.map((o) =>
+    new StringSelectMenuOptionBuilder()
+      .setLabel(o.label)
+      .setValue(o.value)
+      .setDefault(o.value === current),
+  );
+}
 
 function fmt(arr, mentionFn) {
   return arr.length ? arr.map(mentionFn).join(", ") : "*None*";
@@ -90,15 +106,15 @@ function buildBehaviorPage(s, color, notice = "") {
     .setTitle("🔗 FixEmbed — Behavior Settings")
     .setDescription(
       (notice ? `> ${notice}\n\n` : "") +
-        "**Base Message Action** — what happens to the original message\n" +
-        "> `Nothing` — leave the original untouched\n" +
-        "> `Remove Embed` — suppress the original link preview *(default)*\n" +
-        "> `Delete Message` — delete the original message entirely\n\n" +
-        "**View Mode** — which embed style to use *(where supported: Twitter, Bluesky, TikTok, Instagram)*\n" +
-        "> `Normal` — standard embed *(default)*\n" +
-        "> `Direct` — direct video/image file\n" +
-        "> `Gallery` — gallery view (multiple images)\n" +
-        "> `Text` — text-only view (no media)",
+      "**Base Message Action** — what happens to the original message\n" +
+      "> `Nothing` — leave the original untouched\n" +
+      "> `Remove Embed` — suppress the original link preview *(default)*\n" +
+      "> `Delete Message` — delete the original message entirely\n\n" +
+      "**View Mode** — which embed style to use *(where supported: Twitter, Bluesky, TikTok, Instagram)*\n" +
+      "> `Normal` — standard embed *(default)*\n" +
+      "> `Direct` — direct video/image file\n" +
+      "> `Gallery` — gallery view (multiple images)\n" +
+      "> `Text` — text-only view (no media)",
     )
     .addFields(
       {
@@ -120,9 +136,9 @@ function buildIgnorePage(s, color, notice = "") {
     .setTitle("🔗 FixEmbed — Ignore Lists")
     .setDescription(
       (notice ? `> ${notice}\n\n` : "") +
-        "**➕ Add** — use a select menu below to pick a channel/user/role to ignore.\n" +
-        "**➖ Remove** — select the same item again, or press a **Clear** button below.\n" +
-        "**Keywords** — use `/fixembed ignore-keyword <word>` to add/remove keywords.",
+      "**➕ Add** — use a select menu below to pick a channel/user/role to ignore.\n" +
+      "**➖ Remove** — select the same item again, or press a **Clear** button below.\n" +
+      "**Keywords** — use `/fixembed ignore-keyword <word>` to add/remove keywords.",
     )
     .addFields(
       {
@@ -190,20 +206,7 @@ function actionSelectRow(guildId, userId, current) {
     new StringSelectMenuBuilder()
       .setCustomId(`fxs:set_action:${guildId}:${userId}`)
       .setPlaceholder(`Base Message Action: ${current}`)
-      .addOptions(
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Nothing — leave original")
-          .setValue("nothing")
-          .setDefault(current === "nothing"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Remove Embed — suppress preview")
-          .setValue("remove_embed")
-          .setDefault(current === "remove_embed"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Delete Message — delete original")
-          .setValue("delete_message")
-          .setDefault(current === "delete_message"),
-      ),
+      .addOptions(...buildOptions(ACTION_OPTIONS, current)),
   );
 }
 
@@ -212,24 +215,7 @@ function viewSelectRow(guildId, userId, current) {
     new StringSelectMenuBuilder()
       .setCustomId(`fxs:set_view:${guildId}:${userId}`)
       .setPlaceholder(`View Mode: ${current}`)
-      .addOptions(
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Normal — standard embed")
-          .setValue("normal")
-          .setDefault(current === "normal"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Direct — direct media (video/image)")
-          .setValue("direct")
-          .setDefault(current === "direct"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Gallery — gallery view")
-          .setValue("gallery")
-          .setDefault(current === "gallery"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("Text — text-only view")
-          .setValue("text")
-          .setDefault(current === "text"),
-      ),
+      .addOptions(...buildOptions(VIEW_OPTIONS, current)),
   );
 }
 

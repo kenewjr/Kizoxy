@@ -70,8 +70,6 @@ class FixEmbedStorage {
     return s.ignoredKeywords.some((kw) => lower.includes(kw.toLowerCase()));
   }
 
-  // ---- Helper toggle methods ----
-
   _toggle(guildId, field, value) {
     const s = this.getSettings(guildId);
     const list = s[field] || [];

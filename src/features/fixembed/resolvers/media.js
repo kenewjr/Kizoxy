@@ -1,4 +1,3 @@
-// modules/fixembed/resolvers/media.js
 // Streaming / video / music platforms: YouTube, Twitch clips, BiliBili, Spotify.
 
 const axios = require("axios");

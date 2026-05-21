@@ -17,13 +17,11 @@ function getScheduleData() {
 }
 
 function initScheduler(client) {
-  // Schedule the job to run every day at 08:00 AM
   schedule.scheduleJob("0 8 * * *", async () => {
     console.warn("Running daily anime schedule task...");
 
     const data = getScheduleData();
 
-    // Fetch schedule once for all guilds
     try {
       const response = await getTodaySchedule();
       const animeData = response.data;
@@ -32,13 +30,10 @@ function initScheduler(client) {
 
       console.warn(`Fetched ${animeData.length} anime for today.`);
 
-      // Format all anime into embeds
       const allEmbeds = animeData.map((anime) => formatAnimeEmbed(anime));
 
-      // Chunk embeds into groups of 10 (Discord limit per message)
       const embedChunks = chunkArray(allEmbeds, 10);
 
-      // Send to all configured channels
       for (const guildId in data) {
         const config = data[guildId];
         if (!config.channelId) continue;
@@ -46,7 +41,6 @@ function initScheduler(client) {
         try {
           const channel = await client.channels.fetch(config.channelId);
           if (channel) {
-            // Send header message
             const days = [
               "Minggu",
               "Senin",
@@ -63,10 +57,8 @@ function initScheduler(client) {
               content: `📅 **Jadwal Update Anime Hari '${dayName}' Pada Tanggal '${dateNum}'**`,
             });
 
-            // Send each chunk as a separate message
             for (const chunk of embedChunks) {
               await channel.send({ embeds: chunk });
-              // Small delay to prevent rate limits
               await new Promise((resolve) => setTimeout(resolve, 1000));
             }
           }

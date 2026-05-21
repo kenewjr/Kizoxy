@@ -1,12 +1,9 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LOG-MEMBER-UPDATE");
 
-/**
- * Fires when a guild member is mutated server-side: nickname change,
- * role grant/revoke, timeout, server avatar swap, etc.
- */
 module.exports = async (client, oldMember, newMember) => {
   if (!newMember.guild || newMember.user.bot) return;
   if (!client.logStorage) return;
@@ -17,21 +14,18 @@ module.exports = async (client, oldMember, newMember) => {
   const logChannel = newMember.guild.channels.cache.get(logChannelId);
   if (!logChannel) return;
 
-  const baseEmbed = () =>
-    new EmbedBuilder()
-      .setAuthor({
+  const baseEmbed = (color) =>
+    Embeds.withColor(client, color, {
+      author: {
         name: newMember.user.tag,
         iconURL: newMember.user.displayAvatarURL({ dynamic: true }),
-      })
-      .setThumbnail(
-        newMember.user.displayAvatarURL({ dynamic: true, size: 256 }),
-      )
-      .setFooter({ text: `User ID: ${newMember.user.id}` })
-      .setTimestamp();
+      },
+      thumbnail: newMember.user.displayAvatarURL({ dynamic: true, size: 256 }),
+      footerText: `User ID: ${newMember.user.id}`,
+    });
 
   const embeds = [];
 
-  // ── Nickname change ────────────────────────────────────────────────
   if (oldMember.nickname !== newMember.nickname) {
     const oldNick =
       oldMember.nickname || `*(none — ${oldMember.user.username})*`;
@@ -39,10 +33,9 @@ module.exports = async (client, oldMember, newMember) => {
       newMember.nickname || `*(none — ${newMember.user.username})*`;
 
     embeds.push(
-      baseEmbed()
+      baseEmbed(COLORS.WARNING)
         .setTitle("✏️ Nickname Updated")
         .setDescription(`${newMember} updated their nickname.`)
-        .setColor("Orange")
         .addFields(
           { name: "Before", value: `\`${oldNick}\``, inline: true },
           { name: "After", value: `\`${newNick}\``, inline: true },
@@ -50,7 +43,6 @@ module.exports = async (client, oldMember, newMember) => {
     );
   }
 
-  // ── Role change ────────────────────────────────────────────────────
   const oldRoleIds = new Set(oldMember.roles.cache.keys());
   const newRoleIds = new Set(newMember.roles.cache.keys());
 
@@ -78,15 +70,13 @@ module.exports = async (client, oldMember, newMember) => {
       });
     }
     embeds.push(
-      baseEmbed()
+      baseEmbed(COLORS.INFO)
         .setTitle("🔧 Roles Updated")
         .setDescription(`${newMember}'s roles were updated.`)
-        .setColor("Blue")
         .addFields(fields),
     );
   }
 
-  // ── Timeout (communicationDisabledUntil) ───────────────────────────
   const oldTimeout = oldMember.communicationDisabledUntilTimestamp || 0;
   const newTimeout = newMember.communicationDisabledUntilTimestamp || 0;
 
@@ -94,10 +84,9 @@ module.exports = async (client, oldMember, newMember) => {
     if (newTimeout > Date.now()) {
       const ts = Math.floor(newTimeout / 1000);
       embeds.push(
-        baseEmbed()
+        baseEmbed(COLORS.ERROR)
           .setTitle("🔇 Member Timed Out")
           .setDescription(`${newMember} was placed in timeout.`)
-          .setColor("DarkRed")
           .addFields({
             name: "Timeout Until",
             value: `<t:${ts}:F> (<t:${ts}:R>)`,
@@ -106,10 +95,9 @@ module.exports = async (client, oldMember, newMember) => {
       );
     } else if (oldTimeout > Date.now()) {
       embeds.push(
-        baseEmbed()
+        baseEmbed(COLORS.SUCCESS)
           .setTitle("🔊 Timeout Lifted")
-          .setDescription(`${newMember}'s timeout was removed.`)
-          .setColor("Green"),
+          .setDescription(`${newMember}'s timeout was removed.`),
       );
     }
   }

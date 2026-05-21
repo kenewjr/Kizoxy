@@ -11,13 +11,11 @@ class LevelStorage extends JSONStorage {
     this._writeChain = Promise.resolve();
   }
 
-  // Override load to handle object structure
   async load() {
     try {
       await fs.mkdir(path.dirname(this.filepath), { recursive: true });
       const content = await fs.readFile(this.filepath, "utf8");
       this.data = JSON.parse(content);
-      // Ensure data is object, if not (migration from array), reset or migrate
       if (Array.isArray(this.data)) {
         logger.warning(
           "Converting old array structure to guild-indexed object",
@@ -40,15 +38,13 @@ class LevelStorage extends JSONStorage {
         logger.info(`Created new storage file: ${this.filepath}`);
       } else {
         logger.error(`Error loading level data: ${error.message}`);
-        this.data = {}; // Fallback
+        this.data = {};
       }
     }
     return this.data;
   }
 
   async addXp(userId, guildId, amount) {
-    // Serialize concurrent addXp calls per storage instance to prevent
-    // two readers reading the same xp, both incrementing, then both writing.
     const next = this._writeChain.then(async () => {
       if (
         !this.data ||
@@ -90,7 +86,7 @@ class LevelStorage extends JSONStorage {
       return { user, leveledUp, level: user.level };
     });
     // Keep chain alive even if a step throws, so subsequent calls don't stall.
-    this._writeChain = next.catch(() => {});
+    this._writeChain = next.catch(() => { });
     return next;
   }
 

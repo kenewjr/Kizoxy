@@ -1,6 +1,4 @@
 module.exports = async (client, player) => {
-  // Auto-restart logic moved to trackEnd.js
-
   if (player.data.get("autoplay")) {
     const requester = player.data.get("requester");
     const identifier = player.data.get("identifier");

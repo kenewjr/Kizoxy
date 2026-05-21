@@ -12,9 +12,6 @@ const colors = {
 
 const LOG_FORMAT = process.env.LOG_FORMAT || "pretty"; // "pretty" or "json"
 
-/**
- * Logger utility for consistent logging across the application.
- */
 class Logger {
   constructor(moduleName) {
     this.moduleName = moduleName;

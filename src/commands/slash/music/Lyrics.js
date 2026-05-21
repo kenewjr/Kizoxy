@@ -32,7 +32,6 @@ module.exports = {
       player.lyricsEnabled = !player.lyricsEnabled;
 
       if (player.lyricsEnabled) {
-        // Toggle ON
         await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
         const result = await searchLyrics(player, track, client.color);
@@ -58,7 +57,6 @@ module.exports = {
         return scheduleAutoDelete(interaction);
       }
 
-      // Toggle OFF
       await removeLyricsFromNowPlaying(client, player);
       await interaction.editReply({ content: "✅ Lyrics hidden." });
       return scheduleAutoDelete(interaction);

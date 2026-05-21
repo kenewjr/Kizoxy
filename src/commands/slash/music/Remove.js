@@ -1,13 +1,12 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const { convertTime } = require("../../../lib/ConvertTime");
 
-// Auto-cleanup TTL for ephemeral confirmations (in ms)
 const EPHEMERAL_TTL_MS = 3000;
 
-/** Schedule the ephemeral reply to be deleted after TTL. */
 function scheduleAutoDelete(interaction) {
   setTimeout(() => {
-    interaction.deleteReply().catch(() => {});
+    interaction.deleteReply().catch(() => { });
   }, EPHEMERAL_TTL_MS);
 }
 
@@ -50,7 +49,7 @@ module.exports = {
     if (
       !channel ||
       interaction.member.voice.channel !==
-        interaction.guild.members.me.voice.channel
+      interaction.guild.members.me.voice.channel
     ) {
       await interaction.editReply({
         content: "❌ You must be in the same voice channel as the bot.",
@@ -80,11 +79,9 @@ module.exports = {
       const song = player.queue[position - 1];
       await player.queue.splice(position - 1, 1);
 
-      const embed = new EmbedBuilder()
-        .setColor(client.color)
-        .setDescription(
-          `**Removed • [${song.title}](${song.uri})** \`${convertTime(song.length, true)}\` • ${song.requester}`,
-        );
+      const embed = Embeds.brand(client, {
+        description: `**Removed • [${song.title}](${song.uri})** \`${convertTime(song.length, true)}\` • ${song.requester}`,
+      });
 
       await interaction.editReply({ embeds: [embed] });
       return scheduleAutoDelete(interaction);
@@ -100,9 +97,9 @@ module.exports = {
 
       await player.queue.clear();
 
-      const embed = new EmbedBuilder()
-        .setDescription("`📛` | *Queue has been:* `Cleared`")
-        .setColor(client.color);
+      const embed = Embeds.brand(client, {
+        description: "`📛` | *Queue has been:* `Cleared`",
+      });
 
       await interaction.editReply({ embeds: [embed] });
       return scheduleAutoDelete(interaction);

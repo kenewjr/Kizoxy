@@ -8,8 +8,6 @@ const {
   behaviorPage,
 } = require("../../features/fixembed/fixembedSettingsHelper");
 
-// ─── Handler ─────────────────────────────────────────────────────────────────
-
 module.exports = {
   customId: "fxs",
   execute: async (interaction, client) => {
@@ -18,7 +16,6 @@ module.exports = {
     const guildId = parts[2];
     const invokerUserId = parts[3];
 
-    // Only the original invoker can use these controls
     if (interaction.user.id !== invokerUserId) {
       return interaction.editReply({
         content:
@@ -30,7 +27,6 @@ module.exports = {
     const color = client.color;
     let s = fixembedStorage.getSettings(guildId);
 
-    // ── toggle_enabled ────────────────────────────────────────────────────────
     if (action === "toggle_enabled") {
       fixembedStorage.setEnabled(guildId, !s.enabled);
       s = fixembedStorage.getSettings(guildId);
@@ -43,7 +39,6 @@ module.exports = {
       });
     }
 
-    // ── set_action ────────────────────────────────────────────────────────────
     if (action === "set_action") {
       const value = interaction.values?.[0];
       if (value) fixembedStorage.setBaseMessageAction(guildId, value);
@@ -54,7 +49,6 @@ module.exports = {
       );
     }
 
-    // ── set_view ──────────────────────────────────────────────────────────────
     if (action === "set_view") {
       const value = interaction.values?.[0];
       if (value) fixembedStorage.setViewMode(guildId, value);
@@ -65,7 +59,6 @@ module.exports = {
       );
     }
 
-    // ── toggle_channel ────────────────────────────────────────────────────────
     if (action === "toggle_channel") {
       const channelId = interaction.values?.[0];
       let notice = "";
@@ -81,7 +74,6 @@ module.exports = {
       );
     }
 
-    // ── toggle_user ───────────────────────────────────────────────────────────
     if (action === "toggle_user") {
       const userId2 = interaction.values?.[0];
       let notice = "";
@@ -97,7 +89,6 @@ module.exports = {
       );
     }
 
-    // ── toggle_role ───────────────────────────────────────────────────────────
     if (action === "toggle_role") {
       const roleId = interaction.values?.[0];
       let notice = "";
@@ -113,7 +104,6 @@ module.exports = {
       );
     }
 
-    // ── clear_channels ────────────────────────────────────────────────────────
     if (action === "clear_channels") {
       fixembedStorage.saveSettings(guildId, { disabledChannels: [] });
       s = fixembedStorage.getSettings(guildId);
@@ -128,7 +118,6 @@ module.exports = {
       );
     }
 
-    // ── clear_users ───────────────────────────────────────────────────────────
     if (action === "clear_users") {
       fixembedStorage.saveSettings(guildId, { ignoredUsers: [] });
       s = fixembedStorage.getSettings(guildId);
@@ -143,7 +132,6 @@ module.exports = {
       );
     }
 
-    // ── clear_roles ───────────────────────────────────────────────────────────
     if (action === "clear_roles") {
       fixembedStorage.saveSettings(guildId, { ignoredRoles: [] });
       s = fixembedStorage.getSettings(guildId);
@@ -158,7 +146,6 @@ module.exports = {
       );
     }
 
-    // ── clear_keywords ────────────────────────────────────────────────────────
     if (action === "clear_keywords") {
       fixembedStorage.saveSettings(guildId, { ignoredKeywords: [] });
       s = fixembedStorage.getSettings(guildId);
@@ -173,7 +160,6 @@ module.exports = {
       );
     }
 
-    // ── page_main ─────────────────────────────────────────────────────────────
     if (action === "page_main") {
       return interaction.editReply({
         embeds: [buildMainPage(s, guild, color)],
@@ -181,14 +167,12 @@ module.exports = {
       });
     }
 
-    // ── page_behavior ─────────────────────────────────────────────────────────
     if (action === "page_behavior") {
       return interaction.editReply(
         behaviorPage(s, color, "", guildId, invokerUserId),
       );
     }
 
-    // ── page_ignore ───────────────────────────────────────────────────────────
     if (action === "page_ignore") {
       return interaction.editReply(
         ignorePage(s, color, "", guildId, invokerUserId),

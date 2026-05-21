@@ -6,6 +6,7 @@ const {
   recurringText,
   buildScheduledEmbed,
 } = require("../src/features/alarm/alarmSchedulerHelper");
+const { COLORS } = require("../src/lib/embeds");
 
 describe("alarmSchedulerHelper", () => {
   describe("safeSetTimeout", () => {
@@ -100,10 +101,10 @@ describe("alarmSchedulerHelper", () => {
       discordTimestamp: "<t:1234567890:R>",
     };
 
-    test("renders the green color and includes all fields", () => {
+    test("renders the success color and includes all fields", () => {
       const embed = buildScheduledEmbed(args);
       const data = embed.toJSON();
-      expect(data.color).toBe(0x00ff00);
+      expect(data.color).toBe(COLORS.SUCCESS);
       expect(data.description).toContain('"Wake up"');
       expect(data.description).toContain("20/05/2026 14:30");
       expect(data.description).toContain("<#111>");

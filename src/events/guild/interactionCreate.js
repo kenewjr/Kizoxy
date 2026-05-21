@@ -29,7 +29,6 @@ async function playSearchAutocompleteChoices(manager, query) {
 module.exports = async (client, interaction) => {
   logger.debug(`Interaction created: ${interaction.type}`);
 
-  // ----- 1) Handle button + all select menu interactions -----
   const isAnySelectOrButton =
     interaction.isButton?.() ||
     interaction.isStringSelectMenu?.() ||
@@ -51,7 +50,6 @@ module.exports = async (client, interaction) => {
     return;
   }
 
-  // ----- 1.5) Modal submissions for alarm panel (route to button handler) -----
   if (
     interaction.isModalSubmit?.() &&
     interaction.customId.startsWith("alarm_")
@@ -68,7 +66,6 @@ module.exports = async (client, interaction) => {
     return;
   }
 
-  // ----- 2) Autocomplete handling -----
   if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
     if (!interaction.guild || interaction.user.bot) return;
 
@@ -131,7 +128,6 @@ module.exports = async (client, interaction) => {
     }
   }
 
-  // ----- 3) Command / ContextMenu / Modal handling -----
   if (
     (interaction.isCommand && interaction.isCommand()) ||
     (interaction.isContextMenuCommand && interaction.isContextMenuCommand()) ||

@@ -1,10 +1,11 @@
 const { EmbedBuilder } = require("discord.js");
+const { COLORS } = require("../../lib/embeds");
 
 function formatAnimeEmbed(anime) {
   const embed = new EmbedBuilder()
     .setTitle(anime.title)
     .setURL(anime.url)
-    .setColor("#1974d2")
+    .setColor(COLORS.ANIME)
     .setImage(anime.images?.jpg?.image_url)
     .addFields(
       {

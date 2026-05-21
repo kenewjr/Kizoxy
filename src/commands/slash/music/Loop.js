@@ -1,4 +1,5 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "loop"],
@@ -23,11 +24,9 @@ module.exports = {
     },
   ],
   run: async (client, interaction) => {
-    // Check if player exists
     const player = client.manager.players.get(interaction.guild.id);
     if (!player) return interaction.reply(`No playing in this guild!`);
 
-    // Check if user is in same voice channel
     const { channel } = interaction.member.voice;
     if (
       !channel ||
@@ -39,7 +38,6 @@ module.exports = {
     const choice = interaction.options.getString("mode");
     let loopType, message;
 
-    // Determine loop type and message based on choice
     if (choice === "current") {
       loopType = player.loop === "track" ? "none" : "track";
       message =
@@ -54,11 +52,8 @@ module.exports = {
           : `\`🔁\` | *Loop queue:* \`Disabled\``;
     }
 
-    // Set loop and send response
     player.setLoop(loopType);
-    const embed = new EmbedBuilder()
-      .setDescription(message)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, { description: message });
 
     interaction.reply({ embeds: [embed] });
   },

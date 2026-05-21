@@ -19,8 +19,6 @@ describe("fixembedResolverHelper", () => {
     test("ignores trailing punctuation by capturing only the URL chars", () => {
       const text = "Visit https://example.com.";
       const matches = [...text.matchAll(URL_REGEX)].map((m) => m[0]);
-      // The regex itself doesn't strip punctuation; that's the orchestrator's
-      // job. So we just confirm something close to the URL was captured.
       expect(matches[0].startsWith("https://example.com")).toBe(true);
     });
   });
@@ -61,8 +59,6 @@ describe("fixembedResolverHelper", () => {
     });
 
     test("escapes regex metacharacters in the URL", () => {
-      // URLs with dots / question marks were a regex injection risk before
-      // the escape; this test pins that behaviour.
       const url = "https://example.com/path?q=hello";
       expect(isSpoiler(`||${url}||`, url)).toBe(true);
       expect(isSpoiler(`other content`, url)).toBe(false);
@@ -74,8 +70,5 @@ describe("fixembedResolverHelper", () => {
       expect(typeof resolveEmbedEZ).toBe("function");
       expect(resolveEmbedEZ.constructor.name).toBe("AsyncFunction");
     });
-
-    // We don't hit the network in unit tests. The integration with EmbedEZ
-    // is exercised manually via /fixembed and link rewriting.
   });
 });

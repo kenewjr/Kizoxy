@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["filter", "3d"],
@@ -23,9 +23,9 @@ module.exports = {
 
     await player.shoukaku.setFilters(data);
 
-    const embed = new EmbedBuilder()
-      .setDescription("`💠` | *Turned on:* `3d`")
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: "`💠` | *Turned on:* `3d`",
+    });
 
     await delay(5000);
     return interaction.editReply({ content: " ", embeds: [embed] });

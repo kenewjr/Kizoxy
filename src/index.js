@@ -2,6 +2,8 @@ const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
 const KazagumoSpotify = require("kazagumo-spotify");
+const Logger = require("./lib/logger");
+const bootLogger = new Logger("BOOT");
 
 const client = new Client({
   shards: "auto",
@@ -28,10 +30,8 @@ client.prefixCommands = new Map();
 const LogStorage = require("./persistence/logStorage");
 client.logStorage = new LogStorage();
 
-// Initialize Shoukaku
 const Nodes = client.config.NODES;
 
-// Initialize Kazagumo
 client.manager = new Kazagumo(
   {
     defaultSearchEngine: client.config.SEARCH_ENGINE, // 'youtube' | 'soundcloud' | 'youtube_music'
@@ -44,10 +44,6 @@ client.manager = new Kazagumo(
         albumPageLimit: 100, // Spotify API max page size (50 tracks)
         searchLimit: 10, // optional ( track search limit. Max 50 )
         searchMarket: "US", // optional || default: US ( Enter the country you live in. [ Can only be of 2 letters. For eg: US, IN, EN ] )//
-        // Skip kazagumo-spotify's Lavalink probe. Our Lavalink build has no
-        // LavaSrc plugin, so the probe always fails with "Unknown file
-        // format" before falling through to the Spotify API resolver.
-        // Setting tries=0 goes straight to the API path.
         lavalinkPluginTries: 0,
       }),
     ],
@@ -64,7 +60,24 @@ client.manager = new Kazagumo(
   },
 );
 
-[
+async function runLoader(name, loaderFn) {
+  const started = Date.now();
+  try {
+    await loaderFn(client);
+    const elapsed = Date.now() - started;
+    bootLogger.info(`Loader \"${name}\" ok (${elapsed}ms)`);
+    return { name, ok: true, ms: elapsed };
+  } catch (error) {
+    const elapsed = Date.now() - started;
+    bootLogger.error(
+      `Loader \"${name}\" failed in ${elapsed}ms: ${error.message}`,
+    );
+    bootLogger.error(error.stack || String(error));
+    return { name, ok: false, ms: elapsed, error };
+  }
+}
+
+const LOADERS = [
   "loadCommand",
   "loadPrefix",
   "loadButtons",
@@ -72,26 +85,41 @@ client.manager = new Kazagumo(
   "loadPlayer",
   "loadTrack",
   "loadAlarm",
-].forEach((x) => require(`./loaders/${x}`)(client));
+];
 
-require("./integrations/jikan/loadJikanSchedule")(client);
+async function bootstrap() {
+  const bootStart = Date.now();
 
-// Pre-warm Kuroshiro dictionary in background so first lyrics request is fast
-require("./features/lyrics/romajiConverter")
-  .preInitialize()
-  .catch(() => {});
+  const results = await Promise.all(
+    LOADERS.map((mod) => runLoader(mod, require(`./loaders/${mod}`))),
+  );
 
-// ── Webhook Error Reporter ──────────────────────────────
+  await runLoader("loadJikanSchedule", (c) =>
+    require("./integrations/jikan/loadJikanSchedule")(c),
+  );
+
+  require("./features/lyrics/romajiConverter")
+    .preInitialize()
+    .catch(() => { });
+
+  const failed = results.filter((r) => !r.ok).map((r) => r.name);
+  const totalMs = Date.now() - bootStart;
+  if (failed.length === 0) {
+    bootLogger.success(`All ${results.length} loaders ready in ${totalMs}ms`);
+  } else {
+    bootLogger.warning(
+      `${failed.length}/${results.length} loaders failed (${failed.join(", ")}); booting in degraded mode (${totalMs}ms)`,
+    );
+  }
+}
+
 const { sendErrorWebhook } = require("./lib/webhookReporter");
 
-// Global: uncaught exceptions
 process.on("uncaughtException", (error) => {
   console.error("[FATAL] Uncaught Exception:", error);
   sendErrorWebhook("Uncaught Exception", error);
 });
 
-// Global: unhandled promise rejections
-// Walk the .cause chain so opaque native errors (TLS, DNS, sockets) are diagnosable.
 function describeRejection(reason) {
   if (!(reason instanceof Error)) return String(reason);
   const lines = [`${reason.name}: ${reason.message}`];
@@ -104,7 +132,7 @@ function describeRejection(reason) {
   while (cause && depth < 5) {
     lines.push(
       `  caused by: ${cause.name || "Error"}: ${cause.message || cause}` +
-        (cause.code ? ` (code=${cause.code})` : ""),
+      (cause.code ? ` (code=${cause.code})` : ""),
     );
     if (cause.stack) {
       const firstFrame = String(cause.stack).split("\n")[1];
@@ -125,25 +153,21 @@ process.on("unhandledRejection", (reason, _promise) => {
   );
 });
 
-// Discord.js: client error
 client.on("error", (error) => {
   console.error("[DISCORD] Client Error:", error);
   sendErrorWebhook("Discord Client Error", error);
 });
 
-// Discord.js: client warn
 client.on("warn", (message) => {
   console.warn("[DISCORD] Warning:", message);
   sendErrorWebhook("Discord Warning", message);
 });
 
-// Discord.js: shard error
 client.on("shardError", (error, shardId) => {
   console.error(`[DISCORD] Shard ${shardId} Error:`, error);
   sendErrorWebhook("Shard Error", error, { "Shard ID": shardId });
 });
 
-// Kazagumo/Shoukaku: node error
 client.manager.shoukaku.on("error", (name, error) => {
   console.error(`[LAVALINK] Node "${name}" Error:`, error);
   sendErrorWebhook(
@@ -153,9 +177,18 @@ client.manager.shoukaku.on("error", (name, error) => {
   );
 });
 
-// ── Graceful shutdown ───────────────────────────────────
-// Storage classes use a debounced scheduleSave(); on SIGTERM/SIGINT we
-// must flush any pending writes (XP, alarms, fixembed, etc.) to disk.
+client.manager.shoukaku.on("ready", (name) => {
+  bootLogger.success(`Lavalink node "${name}" connected`);
+});
+client.manager.shoukaku.on("disconnect", (name) => {
+  bootLogger.warning(`Lavalink node "${name}" disconnected`);
+});
+client.manager.shoukaku.on("close", (name, code) => {
+  bootLogger.warning(
+    `Lavalink node "${name}" connection closed (code=${code}); shoukaku will retry per reconnectInterval`,
+  );
+});
+
 async function gracefulShutdown(signal) {
   console.warn(`[SHUTDOWN] Received ${signal}, flushing storage...`);
   const storages = [
@@ -176,7 +209,6 @@ async function gracefulShutdown(signal) {
       else clearTimeout(job);
     }
   }
-  // Clear long-lived intervals registered by loaders (countdown poller, etc.)
   try {
     const { clearAlarmIntervals } = require("./loaders/loadAlarm");
     if (typeof clearAlarmIntervals === "function") clearAlarmIntervals();
@@ -187,5 +219,13 @@ async function gracefulShutdown(signal) {
 }
 process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.once("SIGINT", () => gracefulShutdown("SIGINT"));
+
+bootstrap().catch((err) => {
+  bootLogger.error(`Bootstrap failed: ${err.message}`);
+  sendErrorWebhook(
+    "Bootstrap Failure",
+    err instanceof Error ? err : new Error(String(err)),
+  );
+});
 
 client.login(client.token);

@@ -1,27 +1,16 @@
-// utils/helpers/alarmFormatterHelper.js
-// Pure utilities lifted out of services/alarm/alarmFormatter.js so the
-// formatter file can stay focused on embed/component construction.
-
-// ── Pagination constants ─────────────────────────────────────────────
-/** Items per page for embed list views (Discord field limits + readability) */
 const LIST_PAGE_SIZE = 5;
-/** Items per page for select menus (Discord max options = 25) */
 const SELECT_PAGE_SIZE = 25;
 
-// ── Pagination math ──────────────────────────────────────────────────
-/** Compute total pages for a given dataset and page size */
 function totalPages(items, pageSize) {
   return Math.max(1, Math.ceil(items.length / pageSize));
 }
 
-/** Clamp page within [0, totalPages-1] */
 function clampPage(page, total) {
   if (Number.isNaN(page) || page < 0) return 0;
   if (page >= total) return total - 1;
   return page;
 }
 
-/** Get the slice of items for a given page */
 function sliceForPage(items, page, pageSize) {
   const start = page * pageSize;
   return items.slice(start, start + pageSize);

@@ -1,9 +1,9 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LOG-MEMBER-ADD");
 
-// Discord accounts younger than this raise a flag in the embed
 const SUSPICIOUS_AGE_DAYS = 7;
 
 module.exports = async (client, member) => {
@@ -22,38 +22,38 @@ module.exports = async (client, member) => {
   );
   const isSuspicious = ageDays < SUSPICIOUS_AGE_DAYS;
 
-  const embed = new EmbedBuilder()
-    .setAuthor({
-      name: member.user.tag,
-      iconURL: member.user.displayAvatarURL({ dynamic: true }),
-    })
-    .setTitle("📥 Member Joined")
-    .setDescription(
-      `${member} joined the server.${
-        isSuspicious
+  const embed = Embeds.withColor(
+    client,
+    isSuspicious ? COLORS.WARNING : COLORS.SUCCESS,
+    {
+      author: {
+        name: member.user.tag,
+        iconURL: member.user.displayAvatarURL({ dynamic: true }),
+      },
+      title: "📥 Member Joined",
+      description: `${member} joined the server.${isSuspicious
           ? `\n⚠️ **New account** — created **${ageDays} day(s)** ago.`
           : ""
-      }`,
-    )
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-    .addFields(
-      { name: "User", value: `${member.user.tag}`, inline: true },
-      { name: "User ID", value: member.user.id, inline: true },
-      { name: "Mention", value: `${member}`, inline: true },
-      {
-        name: "Account Created",
-        value: `<t:${accountAge}:F> (<t:${accountAge}:R>)`,
-        inline: false,
-      },
-      {
-        name: "Member Count",
-        value: `${member.guild.memberCount}`,
-        inline: true,
-      },
-    )
-    .setColor(isSuspicious ? "Yellow" : "Green")
-    .setFooter({ text: `User ID: ${member.user.id}` })
-    .setTimestamp();
+        }`,
+      thumbnail: member.user.displayAvatarURL({ dynamic: true, size: 256 }),
+      fields: [
+        { name: "User", value: `${member.user.tag}`, inline: true },
+        { name: "User ID", value: member.user.id, inline: true },
+        { name: "Mention", value: `${member}`, inline: true },
+        {
+          name: "Account Created",
+          value: `<t:${accountAge}:F> (<t:${accountAge}:R>)`,
+          inline: false,
+        },
+        {
+          name: "Member Count",
+          value: `${member.guild.memberCount}`,
+          inline: true,
+        },
+      ],
+      footerText: `User ID: ${member.user.id}`,
+    },
+  );
 
   try {
     await logChannel.send({ embeds: [embed] });

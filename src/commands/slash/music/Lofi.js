@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["lofi"],
@@ -15,7 +15,6 @@ module.exports = {
       });
     }
 
-    // Check if bot is in another channel
     if (
       interaction.guild.members.me.voice.channelId &&
       interaction.guild.members.me.voice.channelId !== voiceChannel.id
@@ -28,7 +27,6 @@ module.exports = {
 
     await interaction.deferReply();
 
-    // Create or get player
     let player = client.manager.players.get(interaction.guild.id);
     if (!player) {
       player = await client.manager.createPlayer({
@@ -48,7 +46,6 @@ module.exports = {
       }
     }
 
-    // Specific Lofi URL
     const query = "https://www.youtube.com/watch?v=jfKfPfyJRdk";
     const res = await client.manager.search(query, {
       requester: interaction.user,
@@ -60,23 +57,19 @@ module.exports = {
 
     const track = res.tracks[0];
 
-    // Clear queue and play special track
     player.queue.clear();
     player.queue.add(track);
 
-    // Set 24/7 AND Lofi mode
     player.data.set("stay", true);
     player.data.set("lofi", true); // Flag for auto-restart on stream end
     player.data.set("lofiUrl", query); // Store URL for reliable re-fetch
 
     if (!player.playing && !player.paused) await player.play();
 
-    const embed = new EmbedBuilder()
-      .setColor(client.color)
-      .setDescription(
-        `☕ | **Started Lofi 24/7 Radio**\n[${track.title}](${track.uri})`,
-      )
-      .setFooter({ text: "Auto-reconnect enabled for this stream." });
+    const embed = Embeds.brand(client, {
+      description: `☕ | **Started Lofi 24/7 Radio**\n[${track.title}](${track.uri})`,
+      footerText: "Auto-reconnect enabled for this stream.",
+    });
 
     return interaction.editReply({ embeds: [embed] });
   },

@@ -1,8 +1,4 @@
 // Tests for the new alarm edit flow (Phase: rich detail UI).
-
-// uuid v9+ ships ESM-only and jest can't load it without extra config.
-// alarmService only uses uuid in createAlarm (not updateAlarm), so a stub
-// is enough to satisfy the module-level require.
 jest.mock("uuid", () => ({ v4: () => "test-uuid" }));
 
 const {
@@ -96,7 +92,6 @@ describe("alarm edit flow", () => {
     test("delete button uses Danger style", () => {
       const rows = buildDetailButtons(baseAlarm);
       const deleteBtn = rows[0].toJSON().components[3];
-      // Discord.js ButtonStyle.Danger === 4
       expect(deleteBtn.style).toBe(4);
     });
   });
@@ -124,8 +119,6 @@ describe("alarm edit flow", () => {
   });
 
   describe("updateAlarm", () => {
-    // Build a minimal in-memory scheduler stub so we can test the service
-    // without spinning up the real one.
     function makeScheduler(initialAlarm) {
       const store = new Map();
       if (initialAlarm) store.set(initialAlarm.id, { ...initialAlarm });
@@ -188,7 +181,6 @@ describe("alarm edit flow", () => {
 
     test("reschedules when time changes and alarm enabled", async () => {
       const sch = makeScheduler(baseAlarm);
-      // Pick a time string different from current minute to force change.
       const result = await updateAlarm(sch, "a1", { time: "23:59" });
       expect(result.error).toBeUndefined();
       expect(sch.cancelAlarmCalls).toContain("a1");

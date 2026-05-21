@@ -1,12 +1,6 @@
-// utils/helpers/alarmSchedulerHelper.js
-// Stateless helpers extracted from modules/alarm/alarmScheduler.js so the
-// scheduler class itself can stay focused on orchestration / I/O.
-
 const { EmbedBuilder } = require("discord.js");
+const { COLORS } = require("../../lib/embeds");
 
-// Node.js setTimeout caps at 2^31 - 1 ms (~24.8 days). Anything larger
-// silently overflows and fires immediately. safeSetTimeout chains shorter
-// timeouts until the real delay is reached.
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
 function safeSetTimeout(callback, delayMs) {
@@ -38,13 +32,6 @@ function safeSetTimeout(callback, delayMs) {
   return handle;
 }
 
-/**
- * Compute the next occurrence date for a recurring alarm.
- *
- * @param {Date} fromDate     - reference date to advance from
- * @param {string} recurring  - "daily" | "weekly" | "monthly" | "none"
- * @returns {Date} new Date instance (does not mutate fromDate)
- */
 function computeNextRecurringDate(fromDate, recurring) {
   const next = new Date(fromDate);
   if (recurring === "daily") {
@@ -57,7 +44,6 @@ function computeNextRecurringDate(fromDate, recurring) {
   return next;
 }
 
-/** Format a Date as DD/MM/YYYY HH:mm using the host TZ (legacy embed format). */
 function formatAlarmDateString(date) {
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -67,7 +53,6 @@ function formatAlarmDateString(date) {
   return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
 }
 
-/** Map recurring code → display label for embed copy. */
 function recurringText(recurring) {
   if (recurring === "daily") return "Daily";
   if (recurring === "weekly") return "Weekly";
@@ -75,17 +60,6 @@ function recurringText(recurring) {
   return "Non-recurring";
 }
 
-/**
- * Build the green "alarm-set / countdown" embed shown in user channels.
- *
- * @param {object} args
- * @param {string} args.alarmMessage
- * @param {string} args.formattedTime  - DD/MM/YYYY HH:mm
- * @param {string} args.channelId
- * @param {string} args.roleId
- * @param {string} args.recurring      - "none" | "daily" | "weekly" | "monthly"
- * @param {string} args.discordTimestamp - "<t:UNIX:R>"
- */
 function buildScheduledEmbed({
   alarmMessage,
   formattedTime,
@@ -102,14 +76,14 @@ function buildScheduledEmbed({
   return new EmbedBuilder()
     .setDescription(
       `✅ Alarm "${alarmMessage}" has been set!\n` +
-        `⏰ Time: ${formattedTime}\n` +
-        `🔔 Will trigger in: <#${channelId}>\n` +
-        `👥 Role to mention: <@&${roleId}>\n` +
-        `🔄 Type: ${recurringText(recurring)}\n` +
-        `${countdownText}\n` +
-        `🗑️ The alarm message will be auto-deleted after 2 hours`,
+      `⏰ Time: ${formattedTime}\n` +
+      `🔔 Will trigger in: <#${channelId}>\n` +
+      `👥 Role to mention: <@&${roleId}>\n` +
+      `🔄 Type: ${recurringText(recurring)}\n` +
+      `${countdownText}\n` +
+      `🗑️ The alarm message will be auto-deleted after 2 hours`,
     )
-    .setColor(0x00ff00);
+    .setColor(COLORS.SUCCESS);
 }
 
 module.exports = {

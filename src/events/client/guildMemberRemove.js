@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LOG-MEMBER-REMOVE");
@@ -13,7 +14,6 @@ module.exports = async (client, member) => {
   const logChannel = member.guild.channels.cache.get(logChannelId);
   if (!logChannel) return;
 
-  // Roles excluding @everyone
   const roles = member.roles?.cache
     ? member.roles.cache
         .filter((r) => r.id !== member.guild.id)
@@ -33,15 +33,15 @@ module.exports = async (client, member) => {
 
   const accountAge = Math.floor(member.user.createdTimestamp / 1000);
 
-  const embed = new EmbedBuilder()
-    .setAuthor({
+  const embed = Embeds.withColor(client, COLORS.ERROR, {
+    author: {
       name: member.user.tag,
       iconURL: member.user.displayAvatarURL({ dynamic: true }),
-    })
-    .setTitle("📤 Member Left")
-    .setDescription(`**${member.user.tag}** left the server.`)
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-    .addFields(
+    },
+    title: "📤 Member Left",
+    description: `**${member.user.tag}** left the server.`,
+    thumbnail: member.user.displayAvatarURL({ dynamic: true, size: 256 }),
+    fields: [
       { name: "User", value: `${member.user.tag}`, inline: true },
       { name: "User ID", value: member.user.id, inline: true },
       { name: "Tenure", value: tenureLabel, inline: true },
@@ -57,10 +57,9 @@ module.exports = async (client, member) => {
         value: `${member.guild.memberCount}`,
         inline: true,
       },
-    )
-    .setColor("Red")
-    .setFooter({ text: `User ID: ${member.user.id}` })
-    .setTimestamp();
+    ],
+    footerText: `User ID: ${member.user.id}`,
+  });
 
   try {
     await logChannel.send({ embeds: [embed] });

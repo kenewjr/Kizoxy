@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["reset"],
@@ -22,9 +22,9 @@ module.exports = {
     await player.shoukaku.setFilters(data);
     await player.setVolume(100);
 
-    const resetted = new EmbedBuilder()
-      .setDescription(`\`💠\` | *Turned on:* \`Reset\``)
-      .setColor(client.color);
+    const resetted = Embeds.brand(client, {
+      description: "`💠` | *Turned on:* `Reset`",
+    });
 
     await delay(5000);
     interaction.editReply({ content: " ", embeds: [resetted] });

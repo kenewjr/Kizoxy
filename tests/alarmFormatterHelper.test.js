@@ -59,7 +59,6 @@ describe("alarmFormatterHelper", () => {
 
   describe("formatAlarmDate", () => {
     test("formats as DD/MM/YYYY HH:mm", () => {
-      // Construct a Date in local time so the test is timezone-stable.
       const d = new Date(2026, 4, 20, 14, 30); // 20 May 2026 14:30 local
       expect(formatAlarmDate(d.toISOString())).toBe("20/05/2026 14:30");
     });

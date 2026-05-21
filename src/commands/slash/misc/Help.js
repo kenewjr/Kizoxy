@@ -6,7 +6,6 @@ const Logger = require("../../../lib/logger");
 
 const logger = new Logger("HELP");
 
-// Map command-folder name to a friendly title + emoji.
 const CATEGORY_META = {
   music: { title: "🎶 Music", order: 1 },
   alarm: { title: "⏰ Alarm", order: 2 },
@@ -92,7 +91,6 @@ module.exports = {
         0,
       );
 
-      // Sort categories by predefined order, unknowns at the end alphabetically
       const sortedCategories = [...allCommands.keys()].sort((a, b) => {
         const oa = CATEGORY_META[a]?.order ?? 99;
         const ob = CATEGORY_META[b]?.order ?? 99;

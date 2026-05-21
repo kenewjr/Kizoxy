@@ -1,4 +1,5 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const LevelStorage = require("../../../persistence/levelStorage");
 
 module.exports = {
@@ -27,7 +28,6 @@ module.exports = {
     },
   ],
   run: async (client, interaction) => {
-    // Check if user is owner
     if (interaction.user.id !== client.owner) {
       return interaction.reply({
         content:
@@ -55,14 +55,13 @@ module.exports = {
           amount,
         );
 
-        const embed = new EmbedBuilder()
-          .setColor(client.color)
-          .setTitle("✅ XP Added")
-          .setDescription(
+        const embed = Embeds.brand(client, {
+          title: "✅ XP Added",
+          description:
             `Successfully added **${amount} XP** to ${targetUser}.\n` +
-              `Current Level: **${result.level}**\n` +
-              `Current XP: **${result.user.xp}**`,
-          );
+            `Current Level: **${result.level}**\n` +
+            `Current XP: **${result.user.xp}**`,
+        });
 
         return interaction.editReply({ embeds: [embed] });
       } catch (error) {

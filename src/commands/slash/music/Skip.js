@@ -1,6 +1,6 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
-// Auto-cleanup TTL for ephemeral confirmations (in ms) — keeps channel clean on repeat skips
 const EPHEMERAL_TTL_MS = 3000;
 
 module.exports = {
@@ -18,7 +18,6 @@ module.exports = {
     },
   ],
   run: async (client, interaction) => {
-    // Check if player exists
     const player = client.manager.players.get(interaction.guild.id);
     if (!player) {
       await interaction.reply({
@@ -28,12 +27,11 @@ module.exports = {
       return;
     }
 
-    // Check if user is in same voice channel
     const { channel } = interaction.member.voice;
     if (
       !channel ||
       interaction.member.voice.channel !==
-        interaction.guild.members.me.voice.channel
+      interaction.guild.members.me.voice.channel
     ) {
       await interaction.reply({
         content: "I'm not in the same voice channel as you!",
@@ -44,17 +42,15 @@ module.exports = {
 
     const position = interaction.options.getInteger("position");
 
-    // If no position provided, skip to next song
     if (!position) {
       await player.skip();
 
-      const embed = new EmbedBuilder()
-        .setDescription(`\`⏭\` | *Song has been:* \`Skipped\``)
-        .setColor(client.color);
+      const embed = Embeds.brand(client, {
+        description: "`⏭` | *Song has been:* `Skipped`",
+      });
 
       await interaction.reply({ embeds: [embed], ephemeral: true });
 
-      // Delete ephemeral reply after 5 seconds
       setTimeout(async () => {
         try {
           await interaction.deleteReply();
@@ -65,7 +61,6 @@ module.exports = {
       return;
     }
 
-    // If position provided, skip to that position
     if (
       position > player.queue.size ||
       (position && !player.queue[position - 1])
@@ -75,7 +70,6 @@ module.exports = {
         ephemeral: true,
       });
 
-      // Delete ephemeral reply after 5 seconds
       setTimeout(async () => {
         try {
           await interaction.deleteReply();
@@ -86,22 +80,19 @@ module.exports = {
       return;
     }
 
-    // If position is 1, just skip current song
     if (position === 1) {
       await player.skip();
     } else {
-      // Remove all songs before the target position and skip
       await player.queue.splice(0, position - 1);
       await player.skip();
     }
 
-    const embed = new EmbedBuilder()
-      .setDescription(`\`⏭\` | *Skipped to position:* \`${position}\``)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: `\`⏭\` | *Skipped to position:* \`${position}\``,
+    });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
 
-    // Delete ephemeral reply after 5 seconds
     setTimeout(async () => {
       try {
         await interaction.deleteReply();

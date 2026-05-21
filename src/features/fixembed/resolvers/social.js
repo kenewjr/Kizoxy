@@ -1,4 +1,3 @@
-// modules/fixembed/resolvers/social.js
 // Social media platforms: Twitter/X/Nitter, Instagram, TikTok, Reddit,
 // Threads, Bluesky, Facebook, Tumblr, Mastodon.
 

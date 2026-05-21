@@ -16,7 +16,6 @@ async function searchLRCLIB(
       `[LRCLIB Direct] Searching: "${trackName}" by "${artistName}"`,
     );
 
-    // Build search params
     const params = {
       track_name: trackName,
       artist_name: artistName,
@@ -25,7 +24,6 @@ async function searchLRCLIB(
     if (albumName) params.album_name = albumName;
     if (duration) params.duration = Math.floor(duration);
 
-    // Try GET method (exact match)
     const getUrl = `${LRCLIB_API}/get`;
     const getResponse = await axios.get(getUrl, {
       params,
@@ -39,7 +37,6 @@ async function searchLRCLIB(
       return formatLRCLIBResponse(getResponse.data);
     }
 
-    // If GET fails, try SEARCH method (fuzzy match)
     console.warn(`[LRCLIB Direct] GET failed, trying SEARCH...`);
     const searchUrl = `${LRCLIB_API}/search`;
     const searchResponse = await axios.get(searchUrl, {
@@ -59,7 +56,6 @@ async function searchLRCLIB(
         return null;
       }
 
-      // Find best match
       const bestMatch = findBestMatch(results, trackName, artistName);
 
       if (bestMatch) {
@@ -80,13 +76,11 @@ function findBestMatch(results, trackName, artistName) {
   const trackLower = trackName.toLowerCase();
   const artistLower = artistName.toLowerCase();
 
-  // Score each result
   const scored = results.map((result) => {
     let score = 0;
     const resultTrack = (result.trackName || "").toLowerCase();
     const resultArtist = (result.artistName || "").toLowerCase();
 
-    // Exact match = highest score
     if (resultTrack === trackLower) score += 100;
     else if (resultTrack.includes(trackLower)) score += 50;
     else if (trackLower.includes(resultTrack)) score += 30;
@@ -95,16 +89,13 @@ function findBestMatch(results, trackName, artistName) {
     else if (resultArtist.includes(artistLower)) score += 50;
     else if (artistLower.includes(resultArtist)) score += 30;
 
-    // Prefer results with synced lyrics
     if (result.syncedLyrics) score += 20;
 
     return { result, score };
   });
 
-  // Sort by score and return best
   scored.sort((a, b) => b.score - a.score);
 
-  // Only return if score is reasonable (at least 50)
   if (scored[0].score >= 50) {
     return scored[0].result;
   }
@@ -120,13 +111,10 @@ function formatLRCLIBResponse(data) {
     hasSyncedLyrics: false,
   };
 
-  // Parse synced lyrics if available
   if (data.syncedLyrics) {
     formatted.lines = parseSyncedLyrics(data.syncedLyrics);
     formatted.hasSyncedLyrics = formatted.lines.length > 0;
   }
-
-  // If no plain lyrics but has synced, extract text from synced
   if (!formatted.text && formatted.lines.length > 0) {
     formatted.text = formatted.lines.map((l) => l.line).join("\n");
   }
@@ -141,7 +129,6 @@ function parseSyncedLyrics(lrcText) {
   const lrcLines = lrcText.split("\n");
 
   for (const line of lrcLines) {
-    // Match [mm:ss.xx] or [mm:ss]
     const match = line.match(/^\[(\d+):(\d+)\.?(\d+)?\](.*)/);
     if (match) {
       const minutes = parseInt(match[1]);
@@ -150,7 +137,6 @@ function parseSyncedLyrics(lrcText) {
       const text = match[4].trim();
 
       if (text) {
-        // Skip metadata lines
         if (
           text.startsWith("[") ||
           text.toLowerCase().includes("instrumental")
@@ -169,7 +155,6 @@ function parseSyncedLyrics(lrcText) {
     }
   }
 
-  // Calculate actual durations based on next line's timestamp
   for (let i = 0; i < lines.length - 1; i++) {
     lines[i].duration = lines[i + 1].timestamp - lines[i].timestamp;
   }

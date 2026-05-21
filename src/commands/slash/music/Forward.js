@@ -1,4 +1,5 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const formatDuration = require("../../../lib/FormatDuration");
 
 const fastForwardNum = 10;
@@ -36,9 +37,9 @@ module.exports = {
       if (player.position + value * 1000 < song.length) {
         await player.seek(player.position + value * 1000);
 
-        const embed = new EmbedBuilder()
-          .setDescription(`\`⏭\` | *Forward to:* \`${CurrentDuration}\``)
-          .setColor(client.color);
+        const embed = Embeds.brand(client, {
+          description: `\`⏭\` | *Forward to:* \`${CurrentDuration}\``,
+        });
 
         interaction.reply({ content: " ", embeds: [embed] });
       } else {

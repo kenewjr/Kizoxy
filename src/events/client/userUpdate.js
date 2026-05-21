@@ -1,35 +1,32 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LOG-USER-UPDATE");
 
 module.exports = async (client, oldUser, newUser) => {
-  if (newUser.bot) return; // Skip bot updates
+  if (newUser.bot) return;
 
-  // Let's find all guilds the user is in that have logging enabled
   client.guilds.cache.forEach(async (guild) => {
-    // Check if user is in this guild
     const member = guild.members.cache.get(newUser.id);
     if (!member) return;
 
-    // Check if this guild has logs set up
     const logChannelId = client.logStorage.getChannel(guild.id);
     if (!logChannelId) return;
 
     const logChannel = guild.channels.cache.get(logChannelId);
     if (!logChannel) return;
 
-    const embed = new EmbedBuilder()
-      .setAuthor({
+    const embed = Embeds.withColor(client, COLORS.WARNING, {
+      author: {
         name: newUser.tag,
         iconURL: newUser.displayAvatarURL({ dynamic: true }),
-      })
-      .setTimestamp()
-      .setFooter({ text: `User ID: ${newUser.id}` });
+      },
+      footerText: `User ID: ${newUser.id}`,
+    });
 
     let updated = false;
 
-    // Username or Discriminator changes
     if (
       oldUser.username !== newUser.username ||
       oldUser.discriminator !== newUser.discriminator
@@ -39,11 +36,10 @@ module.exports = async (client, oldUser, newUser) => {
         { name: "Old Username", value: `\`${oldUser.tag}\``, inline: true },
         { name: "New Username", value: `\`${newUser.tag}\``, inline: true },
       );
-      embed.setColor("Orange");
+      embed.setColor(COLORS.WARNING);
       updated = true;
     }
 
-    // Global Name change (Discord display name)
     if (oldUser.globalName !== newUser.globalName) {
       embed.setTitle("User Profile Updated: Display Name");
       embed.addFields(
@@ -58,15 +54,14 @@ module.exports = async (client, oldUser, newUser) => {
           inline: true,
         },
       );
-      embed.setColor("Orange");
+      embed.setColor(COLORS.WARNING);
       updated = true;
     }
 
-    // Avatar change
     if (oldUser.avatar !== newUser.avatar) {
       embed.setTitle("User Profile Updated: Avatar");
       embed.setDescription(`${newUser} changed their avatar.`);
-      embed.setColor("Orange");
+      embed.setColor(COLORS.WARNING);
 
       if (oldUser.avatar) {
         embed.setThumbnail(
@@ -81,7 +76,6 @@ module.exports = async (client, oldUser, newUser) => {
     }
 
     if (updated) {
-      // Send the log
       try {
         await logChannel.send({ embeds: [embed] });
       } catch (err) {

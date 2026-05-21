@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["filter", "vibrato"],
@@ -26,9 +26,9 @@ module.exports = {
 
     await player.shoukaku.setFilters(data);
 
-    const embed = new EmbedBuilder()
-      .setDescription(`\`💠\` | *Turned on:* \`Vibrato\``)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: "`💠` | *Turned on:* `Vibrato`",
+    });
 
     await delay(5000);
     interaction.editReply({ content: " ", embeds: [embed] });

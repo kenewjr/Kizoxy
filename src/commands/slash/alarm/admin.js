@@ -11,16 +11,13 @@ const {
   totalPages,
   clampPage,
 } = require("../../../features/alarm/alarmFormatter");
+const { COLORS } = require("../../../lib/embeds");
 const Logger = require("../../../lib/logger");
 const logger = new Logger("ALARM");
 
-// Pagination: 3 user-groups per page (each user can have multiple alarms)
 const ADMIN_PAGE_SIZE = 3;
 const ADMIN_PAGINATION_PREFIX = "admin_alarm_page";
 
-/**
- * Group alarms by user, return array of [userId, alarms[]] tuples (stable order).
- */
 function groupAlarmsByUser(alarms) {
   const grouped = {};
   for (const alarm of alarms) {
@@ -39,9 +36,6 @@ function formatAlarmTime(time) {
   return `${dd}/${mm}/${d.getFullYear()} ${hh}:${mi}`;
 }
 
-/**
- * Build admin embed for a given page.
- */
 async function buildAdminEmbed(client, guild, alarms, page, refreshed = false) {
   const groups = groupAlarmsByUser(alarms);
   const total = totalPages(groups, ADMIN_PAGE_SIZE);
@@ -53,7 +47,7 @@ async function buildAdminEmbed(client, guild, alarms, page, refreshed = false) {
     .setTitle(
       `🔔 All Alarms in ${guild.name}${refreshed ? " (Refreshed)" : ""}`,
     )
-    .setColor(0x0099ff)
+    .setColor(COLORS.INFO)
     .setFooter({
       text:
         `Total: ${alarms.length} alarm dari ${groups.length} member` +
@@ -171,7 +165,6 @@ module.exports = {
           });
         }
 
-        // Pagination handling
         if (i.customId.startsWith(`${ADMIN_PAGINATION_PREFIX}:`)) {
           await i.deferUpdate();
           const [, action, pageStr] = i.customId.split(":");
@@ -273,7 +266,7 @@ module.exports = {
       });
 
       collector.on("end", () => {
-        message.edit({ components: [] }).catch(() => {});
+        message.edit({ components: [] }).catch(() => { });
       });
     } catch (error) {
       logger.error(`Error in admin alarm list: ${error.message}`);

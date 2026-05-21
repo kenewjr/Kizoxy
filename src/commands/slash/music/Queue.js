@@ -1,4 +1,5 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const { NormalPage } = require("../../../lib/PageQueue");
 const formatDuration = require("../../../lib/FormatDuration");
 
@@ -48,18 +49,14 @@ module.exports = {
     for (let i = 0; i < pagesNum; i++) {
       const str = songStrings.slice(i * 10, i * 10 + 10).join("");
 
-      const embed = new EmbedBuilder()
-        .setAuthor({
+      const embed = Embeds.brand(client, {
+        author: {
           name: `Queue - ${interaction.guild.name}`,
           iconURL: interaction.guild.iconURL({ dynamic: true }),
-        })
-        .setColor(client.color) //**Currently Playing:**\n**[${song.title}](${song.uri})** \`[${formatDuration(song.duration)}]\` • ${song.requester}\n\n**Rest of queue**:${str == '' ? '  Nothing' : '\n' + str}
-        .setDescription(
-          `**Currently Playing**\n[${song.title}](${song.uri}) \`[${formatDuration(song.length)}]\` • ${song.requester}\n\n**Rest of queue**:${str == "" ? "  Nothing" : "\n" + str}`,
-        ) //Page • ${i + 1}/${pagesNum} | ${player.queue.length} • Song | ${qduration} • Total duration
-        .setFooter({
-          text: `Page • ${i + 1}/${pagesNum} | ${player.queue.length} • Song/s | ${qduration} • Total Duration`,
-        });
+        },
+        description: `**Currently Playing**\n[${song.title}](${song.uri}) \`[${formatDuration(song.length)}]\` • ${song.requester}\n\n**Rest of queue**:${str == "" ? "  Nothing" : "\n" + str}`,
+        footerText: `Page • ${i + 1}/${pagesNum} | ${player.queue.length} • Song/s | ${qduration} • Total Duration`,
+      });
 
       if (song.thumbnail) {
         embed.setThumbnail(song.thumbnail);

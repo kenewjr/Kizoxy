@@ -2,8 +2,6 @@ const Kuroshiro = require("kuroshiro").default || require("kuroshiro");
 const KuromojiAnalyzer =
   require("kuroshiro-analyzer-kuromoji").default ||
   require("kuroshiro-analyzer-kuromoji");
-
-// Singleton instance
 let kuroshiroInstance = null;
 let isInitialized = false;
 let initializationPromise = null;
@@ -49,7 +47,6 @@ async function convertToRomaji(text) {
     return "";
   }
 
-  // If no Japanese characters, return as-is
   if (!isJapanese(text)) {
     return text;
   }
@@ -57,7 +54,6 @@ async function convertToRomaji(text) {
   try {
     const kuroshiro = await initializeKuroshiro();
 
-    // Convert to romaji using Hepburn system
     const romaji = await kuroshiro.convert(text, {
       to: "romaji",
       mode: "spaced", // Add spaces between words
@@ -78,7 +74,6 @@ async function convertLyricsToRomaji(lyricsText) {
   }
 
   try {
-    // Split by double newlines (paragraphs)
     const paragraphs = lyricsText.split(/\n\n+/);
     const romajiParagraphs = [];
 
@@ -88,7 +83,6 @@ async function convertLyricsToRomaji(lyricsText) {
         continue;
       }
 
-      // Split by single newlines (lines within paragraph)
       const lines = paragraph.split(/\n/);
       const romajiLines = [];
 
@@ -113,12 +107,9 @@ async function convertLyricsToRomaji(lyricsText) {
 }
 
 function isJapaneseTrack(title, author) {
-  // Check for Japanese characters
   if (isJapanese(title) || isJapanese(author)) {
     return true;
   }
-
-  // Check for Japanese keywords
   const japaneseKeywords = [
     "歌ってみた",
     "歌いました",

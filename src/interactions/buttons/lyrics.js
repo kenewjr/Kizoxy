@@ -8,7 +8,17 @@ const {
   EPHEMERAL_ERROR_TTL_MS,
   addLyricsToNowPlaying,
   removeLyricsFromNowPlaying,
+  buildMusicControlRow,
+  swapNowPlayingComponents,
 } = require("../../features/music/musicHelper");
+
+function nowPlayingControls(player, lyricsEnabled) {
+  return buildMusicControlRow({
+    paused: !!player.paused,
+    queueLength: player.queue?.size ?? 0,
+    lyricsEnabled,
+  });
+}
 
 const logger = new Logger("MUSIC-LYRICS");
 
@@ -31,17 +41,14 @@ module.exports = {
 
       const { player, track } = validation;
 
-      // Toggle lyrics state
       player.lyricsEnabled = !player.lyricsEnabled;
 
       if (player.lyricsEnabled) {
-        // Toggle ON: fetch lyrics and append to Now Playing
         await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
         const result = await searchLyrics(player, track, client.color);
 
         if (result.error) {
-          // Lyrics not found — revert toggle and notify clearly
           player.lyricsEnabled = false;
           await interaction.editReply({
             content: `⚠️ Lyrics not found for **${track.title}**.\n${result.error}`,
@@ -58,12 +65,18 @@ module.exports = {
           logger.warning("addLyricsToNowPlaying returned false");
         }
 
+        await swapNowPlayingComponents(interaction, [
+          nowPlayingControls(player, true),
+        ]);
+
         await interaction.editReply({ content: "✅ Lyrics shown." });
         return scheduleAutoDelete(interaction);
       }
 
-      // Toggle OFF: strip lyrics embed
       await removeLyricsFromNowPlaying(client, player);
+      await swapNowPlayingComponents(interaction, [
+        nowPlayingControls(player, false),
+      ]);
       await interaction.editReply({ content: "✅ Lyrics hidden." });
       return scheduleAutoDelete(interaction);
     } catch (error) {
@@ -77,7 +90,7 @@ module.exports = {
       try {
         await interaction.editReply({ content: msg });
         return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
-      } catch (_) {}
+      } catch (_) { }
     }
   },
 };

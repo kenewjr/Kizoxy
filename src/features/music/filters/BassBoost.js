@@ -1,4 +1,5 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["filter", "bassboost"],
@@ -50,9 +51,9 @@ module.exports = {
 
       await player.shoukaku.setFilters(data);
 
-      const embed = new EmbedBuilder()
-        .setDescription("`💠` | *Turned on:* `BassBoost`")
-        .setColor(client.color);
+      const embed = Embeds.brand(client, {
+        description: "`💠` | *Turned on:* `BassBoost`",
+      });
 
       await delay(5000);
       return interaction.editReply({ content: " ", embeds: [embed] });
@@ -78,11 +79,9 @@ module.exports = {
 
       await player.shoukaku.setFilters(data);
 
-      const embed = new EmbedBuilder()
-        .setDescription(
-          `\`💠\` | *Turned on:* \`Bassboost\` | *Gain:* \`${value}\``,
-        )
-        .setColor(client.color);
+      const embed = Embeds.brand(client, {
+        description: `\`💠\` | *Turned on:* \`Bassboost\` | *Gain:* \`${value}\``,
+      });
 
       await delay(5000);
       return interaction.editReply({ content: " ", embeds: [embed] });

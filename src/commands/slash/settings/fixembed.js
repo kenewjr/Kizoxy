@@ -1,14 +1,14 @@
 const {
   ApplicationCommandOptionType,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   PermissionsBitField,
 } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const fixembedStorage = require("../../../persistence/fixembedStorage");
 
-function buildMainPage(s, guild, color) {
+function buildMainPage(s, guild, client) {
   const fmt = (arr, mentionFn) =>
     arr.length ? arr.map(mentionFn).join(", ") : "*None*";
   const actionLabel = {
@@ -23,11 +23,10 @@ function buildMainPage(s, guild, color) {
     text: "Text-only",
   };
 
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`🔗 FixEmbed — ${guild.name}`)
-    .setThumbnail(guild.iconURL({ dynamic: true }) ?? null)
-    .addFields(
+  return Embeds.brand(client, {
+    title: `🔗 FixEmbed — ${guild.name}`,
+    thumbnail: guild.iconURL({ dynamic: true }) ?? null,
+    fields: [
       {
         name: "Status",
         value: s.enabled ? "✅ Enabled" : "🚫 Disabled",
@@ -65,9 +64,9 @@ function buildMainPage(s, guild, color) {
           : "*None*",
         inline: false,
       },
-    )
-    .setFooter({ text: "📄 Page 1/3 — Status Overview" })
-    .setTimestamp();
+    ],
+    footerText: "📄 Page 1/3 — Status Overview",
+  });
 }
 
 function navRow(guildId, userId, currentPage) {
@@ -102,8 +101,6 @@ function navRow(guildId, userId, currentPage) {
   );
 }
 
-// ─── Command ──────────────────────────────────────────────────────────────────
-
 module.exports = {
   name: ["fixembed"],
   description: "Configure the social media embed fixer for this server.",
@@ -137,31 +134,25 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;
     const userId = interaction.user.id;
-    const color = client.color;
 
-    // ── settings → open paginated UI ──────────────────────────────────────────
     if (sub === "settings") {
       const s = fixembedStorage.getSettings(guildId);
       return interaction.reply({
-        embeds: [buildMainPage(s, interaction.guild, color)],
+        embeds: [buildMainPage(s, interaction.guild, client)],
         components: [navRow(guildId, userId, "main")],
         ephemeral: true,
       });
     }
 
-    // ── ignore-keyword ────────────────────────────────────────────────────────
     if (sub === "ignore-keyword") {
       const keyword = interaction.options.getString("keyword");
       const added = fixembedStorage.toggleKeyword(guildId, keyword);
-      const embed = new EmbedBuilder()
-        .setColor(color)
-        .setTitle("🔗 FixEmbed")
-        .setDescription(
-          added
-            ? `➕ Keyword \`${keyword}\` added — messages containing it will be skipped.`
-            : `➖ Keyword \`${keyword}\` removed.`,
-        )
-        .setTimestamp();
+      const embed = Embeds.brand(client, {
+        title: "🔗 FixEmbed",
+        description: added
+          ? `➕ Keyword \`${keyword}\` added — messages containing it will be skipped.`
+          : `➖ Keyword \`${keyword}\` removed.`,
+      });
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
   },

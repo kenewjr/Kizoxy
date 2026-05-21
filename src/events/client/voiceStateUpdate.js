@@ -1,24 +1,21 @@
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const LevelStorage = require("../../persistence/levelStorage");
 
-// Constants
 const XP_PER_MINUTE = 10;
 const MIN_DURATION = 60000; // 1 minute
 
 module.exports = async (client, oldState, newState) => {
-  // Ignore bots
   if (newState.member.user.bot) return;
 
-  // Initialize storage if not already done
   if (!client.levelStorage) {
     client.levelStorage = new LevelStorage();
   }
 
-  // Initialize voice session map if needed
   if (!client.voiceSessions) {
     client.voiceSessions = new Map();
   }
 
-  // User joined a voice channel
   if (!oldState.channelId && newState.channelId) {
     client.voiceSessions.set(newState.member.id, Date.now());
   }
@@ -31,7 +28,6 @@ module.exports = async (client, oldState, newState) => {
       client.voiceSessions.delete(oldState.member.id);
 
       if (duration >= MIN_DURATION) {
-        // Calculate minutes
         const minutes = Math.floor(duration / 60000);
         const xpToAdd = minutes * XP_PER_MINUTE;
 
@@ -42,7 +38,6 @@ module.exports = async (client, oldState, newState) => {
               oldState.guild.id,
               xpToAdd,
             );
-            // Log removed to keep console clean as per user request
           } catch (error) {
             console.error("Error adding voice XP:", error);
           }
@@ -51,7 +46,6 @@ module.exports = async (client, oldState, newState) => {
     }
   }
 
-  // --- Server Logs ---
   if (!client.logStorage) return;
   const logChannelId = client.logStorage.getChannel(newState.guild.id);
   if (!logChannelId) return;
@@ -59,50 +53,43 @@ module.exports = async (client, oldState, newState) => {
   const logChannel = newState.guild.channels.cache.get(logChannelId);
   if (!logChannel) return;
 
-  const { EmbedBuilder } = require("discord.js");
-  const embed = new EmbedBuilder()
-    .setAuthor({
-      name: newState.member.user.tag,
-      iconURL: newState.member.user.displayAvatarURL({ dynamic: true }),
-    })
-    .setTimestamp()
-    .setFooter({ text: `User ID: ${newState.member.id}` });
+  let title = null;
+  let description = null;
+  let color = null;
 
-  let sendLog = false;
-
-  // Joined VC
   if (!oldState.channelId && newState.channelId) {
-    embed.setTitle("Joined Voice Channel");
-    embed.setDescription(`${newState.member} joined ${newState.channel}`);
-    embed.setColor("Green");
-    sendLog = true;
-  }
-  // Left VC
-  else if (oldState.channelId && !newState.channelId) {
-    embed.setTitle("Left Voice Channel");
-    embed.setDescription(`${oldState.member} left ${oldState.channel}`);
-    embed.setColor("Red");
-    sendLog = true;
-  }
-  // Moved VC
-  else if (
+    title = "Joined Voice Channel";
+    description = `${newState.member} joined ${newState.channel}`;
+    color = COLORS.SUCCESS;
+  } else if (oldState.channelId && !newState.channelId) {
+    title = "Left Voice Channel";
+    description = `${oldState.member} left ${oldState.channel}`;
+    color = COLORS.ERROR;
+  } else if (
     oldState.channelId &&
     newState.channelId &&
     oldState.channelId !== newState.channelId
   ) {
-    embed.setTitle("Moved Voice Channel");
-    embed.setDescription(
-      `${newState.member} moved from ${oldState.channel} to ${newState.channel}`,
-    );
-    embed.setColor("Blue");
-    sendLog = true;
+    title = "Moved Voice Channel";
+    description = `${newState.member} moved from ${oldState.channel} to ${newState.channel}`;
+    color = COLORS.INFO;
   }
 
-  if (sendLog) {
-    try {
-      await logChannel.send({ embeds: [embed] });
-    } catch (err) {
-      console.error(`Could not send voiceStateUpdate log:`, err);
-    }
+  if (!title) return;
+
+  const embed = Embeds.withColor(client, color, {
+    author: {
+      name: newState.member.user.tag,
+      iconURL: newState.member.user.displayAvatarURL({ dynamic: true }),
+    },
+    title,
+    description,
+    footerText: `User ID: ${newState.member.id}`,
+  });
+
+  try {
+    await logChannel.send({ embeds: [embed] });
+  } catch (err) {
+    console.error(`Could not send voiceStateUpdate log:`, err);
   }
 };

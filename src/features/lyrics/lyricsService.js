@@ -1,28 +1,38 @@
-// EmbedBuilder is no longer used here; embeds are built in lyricsServiceHelper.
 const axios = require("axios");
 const NodeCache = require("node-cache");
 const http = require("http");
 const https = require("https");
 const { convertLyricsToRomaji, isJapanese } = require("./romajiConverter");
 
-// ══════════════════════════════════════════════════════════════════════════
-// Config
-// ══════════════════════════════════════════════════════════════════════════
+
 const LAVALINK_URL = process.env.LAVALINK_URL || "http://localhost:2333";
 const LAVALINK_PASSWORD = process.env.LAVALINK_PASSWORD || "youshallnotpass";
 const TIMEOUT_MS = 15_000;
 
-// ══════════════════════════════════════════════════════════════════════════
-// Cache & Connection Pooling (Phase 1 Optimization)
-// ══════════════════════════════════════════════════════════════════════════
+
 const lyricsCache = new NodeCache({
-  stdTTL: 1800, // 30 minutes TTL
-  checkperiod: 120, // cleanup every 2 minutes
-  maxKeys: 200, // max 200 songs in cache
+  stdTTL: 86400, // 24 hours TTL
+  checkperiod: 600, // cleanup every 10 minutes
+  maxKeys: 500, // max 500 songs in cache (≈50–150KB resident)
   useClones: false, // performance: don't clone objects
 });
 
-// HTTP connection pooling with keep-alive
+let _lyricsLookupCount = 0;
+function _maybeLogCacheStats() {
+  _lyricsLookupCount++;
+  if (_lyricsLookupCount % 50 !== 0) return;
+  const { hits, misses, keys } = lyricsCache.getStats();
+  const total = hits + misses;
+  const rate = total === 0 ? 0 : ((hits / total) * 100).toFixed(1);
+  console.warn(
+    `[lyrics] cache stats: hits=${hits} misses=${misses} keys=${keys} hit_rate=${rate}%`,
+  );
+}
+
+function getCacheStats() {
+  return { ...lyricsCache.getStats(), keys: lyricsCache.keys().length };
+}
+
 const httpAgent = new http.Agent({
   keepAlive: true,
   maxSockets: 10,
@@ -37,16 +47,12 @@ const httpsAgent = new https.Agent({
   timeout: TIMEOUT_MS,
 });
 
-// Axios instance with connection pooling
 const axiosInstance = axios.create({
   httpAgent,
   httpsAgent,
   timeout: TIMEOUT_MS,
 });
 
-// ══════════════════════════════════════════════════════════════════════════
-// Helpers — cleaning & strategy building (lifted to lyricsServiceHelper)
-// ══════════════════════════════════════════════════════════════════════════
 const {
   cleanTitle,
   cleanAuthor,
@@ -54,10 +60,6 @@ const {
   buildCacheKey,
   buildEmbedFromData,
 } = require("./lyricsServiceHelper");
-
-// ══════════════════════════════════════════════════════════════════════════
-// Lavalink Lyrics API
-// ══════════════════════════════════════════════════════════════════════════
 
 async function fetchLavalinkLyrics(player) {
   if (!player?.node?.sessionId || !player?.guildId) {
@@ -113,15 +115,13 @@ async function fetchLavalinkLyrics(player) {
   }
 }
 
-// buildCacheKey + buildEmbedFromData live in lyricsServiceHelper now.
-
 async function searchLyrics(player, track, color) {
   const rawTitle = track.title ?? "";
   const rawAuthor = track.author ?? "";
 
-  // Cache check: skip Lavalink + LRCLIB + Kuroshiro for repeat requests
   const cacheKey = buildCacheKey(track);
   const cached = lyricsCache.get(cacheKey);
+  _maybeLogCacheStats();
   if (cached) {
     console.warn(`[lyrics] ✅ Cache hit for: ${cacheKey}`);
     return { embed: buildEmbedFromData(cached, color, rawTitle) };
@@ -157,7 +157,6 @@ async function searchLyrics(player, track, color) {
     console.warn(`[lyrics]   [${i + 1}] (${labels[i]}) "${q}"`),
   );
 
-  // Fetch lyrics from Lavalink LRCLIB
   console.warn(`[lyrics] Fetching from Lavalink LRCLIB...`);
   let lavalinkData = await fetchLavalinkLyrics(player);
 
@@ -166,7 +165,6 @@ async function searchLyrics(player, track, color) {
       `[lyrics] No lyrics found from Lavalink, trying direct LRCLIB...`,
     );
 
-    // Fallback: Try direct LRCLIB API with cleaned query
     const { searchLRCLIB } = require("./lrclibClient");
     const directLRCLIB = await searchLRCLIB(
       cleanedTitle,
@@ -177,7 +175,6 @@ async function searchLyrics(player, track, color) {
 
     if (directLRCLIB && directLRCLIB.text) {
       console.warn(`[lyrics] ✅ Found via direct LRCLIB API`);
-      // Use direct LRCLIB data
       lavalinkData = directLRCLIB;
     } else {
       console.warn(
@@ -187,11 +184,9 @@ async function searchLyrics(player, track, color) {
     }
   }
 
-  // Detect if lyrics are Japanese
   const isJp = isJapanese(lavalinkData.text);
   console.warn(`[lyrics] Japanese detected: ${isJp}`);
 
-  // Convert to romaji if Japanese
   let displayLyrics = lavalinkData.text;
   if (isJp) {
     console.warn(`[lyrics] Converting to romaji...`);
@@ -199,7 +194,6 @@ async function searchLyrics(player, track, color) {
     console.warn(`[lyrics] ✅ Romaji conversion complete`);
   }
 
-  // Build lyrics data object
   const firstData = {
     title: track.title,
     artist: cleanAuthor(rawAuthor) || "Unknown Artist",
@@ -210,19 +204,17 @@ async function searchLyrics(player, track, color) {
     lyrics: displayLyrics,
   };
 
-  // Lyrics data is ready (already processed above)
   const fullLyrics = displayLyrics;
 
   console.warn(
     `[lyrics] source=${firstData.source} | is_jp=${firstData.is_japanese}` +
-      ` | artist="${firstData.artist}" | len=${fullLyrics.length}`,
+    ` | artist="${firstData.artist}" | len=${fullLyrics.length}`,
   );
 
   if (!fullLyrics?.trim()) {
     return { error: "🔹 Lyrics are empty or unavailable for this track." };
   }
 
-  // Store in cache for next request on the same track
   lyricsCache.set(cacheKey, firstData);
 
   return {
@@ -251,4 +243,5 @@ module.exports = {
   cleanAuthor,
   buildQueryStrategies,
   lyricsCache,
+  getCacheStats,
 };

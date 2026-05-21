@@ -3,18 +3,31 @@ const path = require("path");
 const Logger = require("../lib/logger");
 const logger = new Logger("STORAGE");
 
+const SAVE_DELAY_MS = 500;
+const ASYNC_STRINGIFY_GUILD_THRESHOLD = 256;
+
 class JSONStorage {
   constructor(filename) {
     this.filepath = path.join(__dirname, "../../data", filename);
-    this.data = {}; // Initialize as object
+    this.backupPath = `${this.filepath}.bak`;
+    this.tmpPath = `${this.filepath}.tmp`;
+    this.data = {};
+    this._isLoaded = false;
+    this._loadPromise = null;
     this._saveTimer = null;
     this._savePending = false;
-    this._saveDelayMs = 500;
+    this._saveDelayMs = SAVE_DELAY_MS;
+    this._saveInFlight = null;
+
     logger.info(`Initialized storage for: ${filename}`);
   }
 
-  // Debounced save: coalesces rapid mutations (e.g. addXp on every message)
-  // into a single disk write within `_saveDelayMs`.
+  async _ensureLoaded() {
+    if (this._isLoaded) return;
+    if (!this._loadPromise) this._loadPromise = this.load();
+    await this._loadPromise;
+  }
+
   scheduleSave() {
     this._savePending = true;
     if (this._saveTimer) return;
@@ -30,7 +43,6 @@ class JSONStorage {
     if (this._saveTimer.unref) this._saveTimer.unref();
   }
 
-  // Force a synchronous flush of any pending save. Call this on shutdown.
   async flush() {
     if (this._saveTimer) {
       clearTimeout(this._saveTimer);
@@ -40,32 +52,42 @@ class JSONStorage {
       this._savePending = false;
       await this.save();
     }
+    if (this._saveInFlight) {
+      try {
+        await this._saveInFlight;
+      } catch {
+        // Already logged inside _writeAtomic.
+      }
+    }
   }
 
   async load() {
     try {
       await fs.mkdir(path.dirname(this.filepath), { recursive: true });
-      const content = await fs.readFile(this.filepath, "utf8");
-      this.data = JSON.parse(content);
 
-      // Migration: If data is Array, convert to { guildId: [items] }
-      if (Array.isArray(this.data)) {
+      try {
+        const content = await fs.readFile(this.filepath, "utf8");
+        this.data = JSON.parse(content);
+      } catch (err) {
+        if (err.code === "ENOENT") throw err; // bootstrap path below
         logger.warning(
-          `Converting ${path.basename(this.filepath)} array structure to guild-indexed object`,
+          `Primary read/parse failed for ${this.filepath} (${err.message}); attempting .bak recovery`,
         );
-        const oldData = this.data;
-        this.data = {};
-        for (const item of oldData) {
-          // Assume item has guildId, otherwise put in 'unknown' default
-          const gid = item.guildId || "global";
-          if (!this.data[gid]) this.data[gid] = [];
-          this.data[gid].push(item);
+        try {
+          const bakContent = await fs.readFile(this.backupPath, "utf8");
+          this.data = JSON.parse(bakContent);
+          await fs.writeFile(this.filepath, bakContent);
+          logger.warning(`Recovered ${this.filepath} from .bak`);
+        } catch (bakErr) {
+          logger.error(
+            `Backup recovery failed for ${this.filepath}: ${bakErr.message}`,
+          );
+          throw err; // surface the original load error
         }
-        await this.save();
       }
 
       const totalItems = Object.values(this.data).reduce(
-        (acc, arr) => acc + arr.length,
+        (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0),
         0,
       );
       logger.info(
@@ -74,7 +96,7 @@ class JSONStorage {
     } catch (error) {
       if (error.code === "ENOENT") {
         this.data = {};
-        await this.save();
+        await this._writeAtomic(this.data);
         logger.info(`Created new storage file: ${this.filepath}`);
       } else {
         logger.error(
@@ -83,32 +105,76 @@ class JSONStorage {
         throw error;
       }
     }
+    this._isLoaded = true;
     return this.data;
   }
 
   async save() {
+    const next = (this._saveInFlight || Promise.resolve()).then(() =>
+      this._writeAtomic(this.data),
+    );
+    this._saveInFlight = next.catch(() => { });
+    return next;
+  }
+
+  async _writeAtomic(data) {
+    let json;
     try {
-      await fs.writeFile(this.filepath, JSON.stringify(this.data, null, 2));
-      const totalItems = this.data
-        ? Object.values(this.data).reduce(
+      json = await this._stringify(data);
+    } catch (error) {
+      logger.error(
+        `Error serializing data for ${this.filepath}: ${error.message}`,
+      );
+      throw error;
+    }
+
+    try {
+      await fs.copyFile(this.filepath, this.backupPath);
+    } catch (err) {
+      if (err.code !== "ENOENT") {
+        logger.warning(
+          `Backup rotation failed for ${this.filepath}: ${err.message}`,
+        );
+      }
+    }
+
+    try {
+      await fs.writeFile(this.tmpPath, json);
+      await fs.rename(this.tmpPath, this.filepath);
+
+      const totalItems =
+        data && typeof data === "object"
+          ? Object.values(data).reduce(
             (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0),
             0,
           )
-        : 0;
+          : 0;
       logger.debug(`Data saved to: ${this.filepath} (${totalItems} items)`);
     } catch (error) {
-      logger.error(`Error saving data to ${this.filepath}: ${error.message}`);
+      logger.error(`Error saving data to ${this.filepath}: ${error.message}`)
+      fs.unlink(this.tmpPath).catch(() => { });
       throw error;
     }
   }
 
+  async _stringify(data) {
+    const guildCount =
+      data && typeof data === "object" ? Object.keys(data).length : 0;
+    if (guildCount >= ASYNC_STRINGIFY_GUILD_THRESHOLD) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    return JSON.stringify(data, null, 2);
+  }
+
+  // ── Reads ───────────────────────────────────────────────────────
+
   async getAll() {
-    if (this.data === null) await this.load();
+    await this._ensureLoaded();
     return Object.values(this.data).flat();
   }
 
   async findByGuild(guildId) {
-    if (this.data === null) await this.load();
+    await this._ensureLoaded();
     try {
       const guildItems = this.data[guildId] || [];
       logger.debug(`Found ${guildItems.length} items for guild: ${guildId}`);
@@ -122,11 +188,12 @@ class JSONStorage {
   }
 
   async get(id) {
-    if (this.data === null) await this.load();
+    await this._ensureLoaded();
     try {
-      // iterate all guilds
       for (const guildId in this.data) {
-        const item = this.data[guildId].find((i) => i.id === id);
+        const arr = this.data[guildId];
+        if (!Array.isArray(arr)) continue;
+        const item = arr.find((i) => i.id === id);
         if (item) {
           logger.debug(`Item retrieved: ${id}`);
           return item;
@@ -140,8 +207,29 @@ class JSONStorage {
     }
   }
 
+  async findByUser(userId) {
+    await this._ensureLoaded();
+    try {
+      const userItems = [];
+      for (const guildId in this.data) {
+        const arr = this.data[guildId];
+        if (!Array.isArray(arr)) continue;
+        for (const item of arr) {
+          if (item.userId === userId) userItems.push(item);
+        }
+      }
+      logger.debug(`Found ${userItems.length} items for user: ${userId}`);
+      return userItems;
+    } catch (error) {
+      logger.error(`Error finding items for user ${userId}: ${error.message}`);
+      return [];
+    }
+  }
+
+  // ── Writes ──────────────────────────────────────────────────────
+
   async create(item) {
-    if (this.data === null) await this.load();
+    await this._ensureLoaded();
     try {
       const gid = item.guildId;
       if (!gid)
@@ -162,21 +250,19 @@ class JSONStorage {
   }
 
   async update(id, updates) {
-    if (this.data === null) await this.load();
+    await this._ensureLoaded();
     try {
       for (const guildId in this.data) {
-        const index = this.data[guildId].findIndex((i) => i.id === id);
+        const arr = this.data[guildId];
+        if (!Array.isArray(arr)) continue;
+        const index = arr.findIndex((i) => i.id === id);
         if (index !== -1) {
-          this.data[guildId][index] = {
-            ...this.data[guildId][index],
-            ...updates,
-          };
+          arr[index] = { ...arr[index], ...updates };
           this.scheduleSave();
           logger.info(`Item updated: ${id}`);
-          return this.data[guildId][index];
+          return arr[index];
         }
       }
-
       logger.warning(`Item not found for update: ${id}`);
       return null;
     } catch (error) {
@@ -186,39 +272,26 @@ class JSONStorage {
   }
 
   async delete(id) {
-    if (this.data === null) await this.load();
+    await this._ensureLoaded();
     try {
       for (const guildId in this.data) {
-        const index = this.data[guildId].findIndex((i) => i.id === id);
+        const arr = this.data[guildId];
+        if (!Array.isArray(arr)) continue;
+        const index = arr.findIndex((i) => i.id === id);
         if (index !== -1) {
-          this.data[guildId].splice(index, 1);
-          // If guild empty, maybe delete key? prefer keeping it for now.
+          arr.splice(index, 1);
           this.scheduleSave();
           logger.info(`Item deleted: ${id}`);
           return true;
         }
       }
-      return false; // Not found
+      return false;
     } catch (error) {
       logger.error(`Error deleting item ${id}: ${error.message}`);
       throw error;
     }
   }
 
-  async findByUser(userId) {
-    if (this.data === null) await this.load();
-    try {
-      const allItems = Object.values(this.data).flat();
-      const userItems = allItems.filter((item) => item.userId === userId);
-      logger.debug(`Found ${userItems.length} items for user: ${userId}`);
-      return userItems;
-    } catch (error) {
-      logger.error(`Error finding items for user ${userId}: ${error.message}`);
-      return [];
-    }
-  }
-
-  // Method to sync data with the embedded message
   async syncWithMessage(alarmId, messageId, channelId) {
     return this.update(alarmId, { messageId, embedChannelId: channelId });
   }

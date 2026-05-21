@@ -1,8 +1,8 @@
 const {
   ApplicationCommandOptionType,
-  EmbedBuilder,
   ChannelType,
 } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const {
   getTodaySchedule,
   formatAnimeEmbed,
@@ -53,7 +53,6 @@ module.exports = {
       if (subcommand === "set") {
         const channel = interaction.options.getChannel("channel");
 
-        // Load existing data
         let data = {};
         try {
           if (fs.existsSync(DATA_PATH)) {
@@ -63,13 +62,11 @@ module.exports = {
           console.error("Error reading schedule data:", err);
         }
 
-        // Update data
         data[interaction.guildId] = {
           channelId: channel.id,
           updatedAt: new Date().toISOString(),
         };
 
-        // Save data
         try {
           const dirPath = path.dirname(DATA_PATH);
           if (!fs.existsSync(dirPath)) {
@@ -77,13 +74,10 @@ module.exports = {
           }
           fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
 
-          const embed = new EmbedBuilder()
-            .setColor(client.color)
-            .setTitle("✅ Schedule Channel Set")
-            .setDescription(
-              `Daily anime schedules will now be posted in ${channel}.`,
-            )
-            .setTimestamp();
+          const embed = Embeds.brand(client, {
+            title: "✅ Schedule Channel Set",
+            description: `Daily anime schedules will now be posted in ${channel}.`,
+          });
 
           return interaction.reply({ embeds: [embed] });
         } catch (err) {
@@ -104,10 +98,8 @@ module.exports = {
             return interaction.editReply("No anime scheduled for today.");
           }
 
-          // Format embeds
           const allEmbeds = data.map((anime) => formatAnimeEmbed(anime));
 
-          // Chunk into groups of 10
           const embedChunks = chunkArray(allEmbeds, 10);
 
           const days = [
@@ -126,10 +118,8 @@ module.exports = {
             content: `📅 **Anime Update Schedule for ${dayName} (Day ${dateNum})**`,
           });
 
-          // Send chunks
           for (const chunk of embedChunks) {
             await interaction.channel.send({ embeds: chunk });
-            // Small delay
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
         } catch (err) {

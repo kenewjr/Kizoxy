@@ -54,7 +54,6 @@ function buildAlarmDate({ time, date, recurring = "none" }) {
       minutes,
     );
 
-    // Validate calendar date (e.g. no Feb 31)
     if (
       alarmDate.getMonth() !== parsed.month - 1 ||
       alarmDate.getDate() !== parsed.day
@@ -73,7 +72,6 @@ function buildAlarmDate({ time, date, recurring = "none" }) {
     );
   }
 
-  // For recurring alarms with past time, advance to next occurrence
   if (alarmDate <= now && recurring !== "none") {
     if (recurring === "daily") alarmDate.setDate(alarmDate.getDate() + 1);
     else if (recurring === "weekly") alarmDate.setDate(alarmDate.getDate() + 7);
@@ -81,7 +79,6 @@ function buildAlarmDate({ time, date, recurring = "none" }) {
       alarmDate.setMonth(alarmDate.getMonth() + 1);
   }
 
-  // Non-recurring alarms can't be in the past
   if (alarmDate <= now && recurring === "none") {
     return {
       error: "❌ Alarm time cannot be in the past for non-recurring alarms!",
@@ -144,9 +141,6 @@ async function createAlarm(
   return { alarm: alarmData, alarmDate: dateResult.alarmDate };
 }
 
-/**
- * Cancel (delete) an alarm.
- */
 async function cancelAlarm(scheduler, alarmId) {
   scheduler.cancelAlarm(alarmId);
   await scheduler.storage.delete(alarmId);
@@ -171,16 +165,6 @@ async function toggleAlarm(scheduler, alarmId) {
   return { alarm, enabled: newEnabled };
 }
 
-/**
- * Update an existing alarm. Accepts a partial patch and re-runs validation
- * for any time/date/recurring change. The job is cancelled and rescheduled
- * if the alarm is currently enabled.
- *
- * @param {object} scheduler
- * @param {string} alarmId
- * @param {object} patch  { message?, time?, date?, recurring?, channelId?, roleId? }
- * @returns {Promise<{ alarm, error? }>}
- */
 async function updateAlarm(scheduler, alarmId, patch) {
   const existing = await scheduler.storage.get(alarmId);
   if (!existing) return { error: "❌ Alarm not found." };
@@ -193,8 +177,6 @@ async function updateAlarm(scheduler, alarmId, patch) {
     updates.message = trimmed;
   }
 
-  // Time / date / recurring need re-validation as a group, since each affects
-  // the resulting alarm date.
   const timeChanged =
     patch.time !== undefined ||
     patch.date !== undefined ||
@@ -237,7 +219,6 @@ async function updateAlarm(scheduler, alarmId, patch) {
   await scheduler.storage.update(alarmId, updates);
   const updated = await scheduler.storage.get(alarmId);
 
-  // Reschedule if any timing-relevant field changed and alarm is enabled.
   const reschedule =
     timeChanged || patch.channelId !== undefined || patch.roleId !== undefined;
 

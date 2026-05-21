@@ -1,9 +1,8 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
 
 module.exports = async (client, player) => {
   const channel = client.channels.cache.get(player.textId);
 
-  // Lofi 24/7 mode: re-fetch and replay the stream
   if (player.data.get("lofi")) {
     try {
       const lofiUrl =
@@ -26,16 +25,16 @@ module.exports = async (client, player) => {
   if (!channel) return;
 
   if (player.data.get("stay")) {
-    const embed = new EmbedBuilder()
-      .setColor(client.color)
-      .setDescription("`📛` | *Queue has been:* `Ended` (24/7 Active)");
+    const embed = Embeds.brand(client, {
+      description: "`📛` | *Queue has been:* `Ended` (24/7 Active)",
+    });
 
     return channel.send({ embeds: [embed] });
   }
 
-  const embed = new EmbedBuilder()
-    .setColor(client.color)
-    .setDescription("`📛` | *Queue has been:* `Ended`");
+  const embed = Embeds.brand(client, {
+    description: "`📛` | *Queue has been:* `Ended`",
+  });
 
   channel.send({ embeds: [embed] });
   return player.destroy();

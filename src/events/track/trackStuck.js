@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
 const Logger = require("../../lib/logger");
 const logger = new Logger("TRACK_STUCK");
 
@@ -10,11 +10,9 @@ module.exports = async (client, player, track, payload) => {
   const channel = client.channels.cache.get(player.textId);
   if (!channel) return;
 
-  const embed = new EmbedBuilder()
-    .setColor(client.color)
-    .setDescription(
-      `\`⚠️\` | *Track has been stuck:* [${track.title}](${track.uri})`,
-    );
+  const embed = Embeds.brand(client, {
+    description: `\`⚠\ufe0f\` | *Track has been stuck:* [${track.title}](${track.uri})`,
+  });
 
   channel.send({ embeds: [embed] });
 

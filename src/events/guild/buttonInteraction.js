@@ -1,13 +1,9 @@
 const Logger = require("../../lib/logger");
 
-// Initialize logger
 const logger = new Logger("BUTTON");
 
 module.exports = async (client, interaction) => {
   try {
-    // Accept buttons, ALL select menu types, and modal submissions.
-    // Modal submissions are routed here from interactionCreate.js for
-    // alarm_* customIds; without this gate they were silently dropped.
     const isButton = interaction.isButton?.();
     const isSelect =
       interaction.isStringSelectMenu?.() ||
@@ -21,7 +17,6 @@ module.exports = async (client, interaction) => {
       `Received button interaction: ${interaction.customId} by ${interaction.user.tag}`,
     );
 
-    // Ignore buttons that are handled by specific command collectors
     const COLLECTOR_BUTTONS = [
       "refresh_alarms",
       "cancel_alarms",
@@ -35,21 +30,14 @@ module.exports = async (client, interaction) => {
       return;
     }
 
-    // Get the button handler — support dynamic prefixed IDs:
-    //   - "fxs:..." (colon-separated prefix)
-    //   - "fixembed_delete:..." (colon-separated prefix)
-    //   - "alarm", "alarm_*", "alarm_*_page:*" (alarm prefix family)
     const PREFIXED_HANDLERS = ["fxs", "fixembed_delete", "alarm"];
     let button = client.buttons.get(interaction.customId);
 
     if (!button) {
-      // First try colon-separated prefix lookup
       const colonPrefix = interaction.customId.split(":")[0];
       if (PREFIXED_HANDLERS.includes(colonPrefix)) {
         button = client.buttons.get(colonPrefix);
       }
-
-      // Then try startsWith for alarm family (alarm_refresh, alarm_list_page:..., etc.)
       if (!button && interaction.customId.startsWith("alarm")) {
         button = client.buttons.get("alarm");
       }
@@ -66,18 +54,10 @@ module.exports = async (client, interaction) => {
 
     try {
       const prefix = interaction.customId.split(":")[0];
-
-      // Buttons whose handler will call interaction.showModal() — must NOT
-      // be deferred, otherwise showModal throws "already acknowledged".
-      // Modal submissions also skip auto-defer because their handler calls
-      // deferReply itself with the appropriate ephemeral flag.
       const isShowModalButton =
         interaction.customId === "alarm_new" ||
         interaction.customId.startsWith("alarm_edit_modal:");
       const skipDefer = isShowModalButton || isModalSubmit;
-
-      // fxs + alarm: update the existing message in-place
-      // everything else (including fixembed_delete) gets its own ephemeral reply
       const useDeferUpdate =
         prefix === "fxs" || interaction.customId.startsWith("alarm_");
 
@@ -119,7 +99,6 @@ module.exports = async (client, interaction) => {
       }
     }
   } catch (error) {
-    // Catch any unexpected errors in the main function
     console.error("Unexpected error in buttonInteraction:", error);
   }
 };

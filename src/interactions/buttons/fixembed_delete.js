@@ -2,19 +2,15 @@ module.exports = {
   customId: "fixembed_delete",
   execute: async (interaction, _client) => {
     const originalAuthorId = interaction.customId.split(":")[1];
-
-    // Non-OP: show a silent ephemeral error — original message is untouched
     if (interaction.user.id !== originalAuthorId) {
       return interaction.editReply({
         content: "❌ Only the original message author can delete this.",
       });
     }
 
-    // OP: delete the bot's message, then clean up the ephemeral reply
     try {
       await interaction.message.delete();
-      // Delete the ephemeral "thinking" reply so nothing lingers
-      await interaction.deleteReply().catch(() => {});
+      await interaction.deleteReply().catch(() => { });
     } catch (_err) {
       return interaction.editReply({
         content:

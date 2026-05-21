@@ -1,26 +1,19 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+} = require("discord.js");
+const formatduration = require("../../lib/FormatDuration");
+const { COLORS } = require("../../lib/embeds");
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("MUSIC-HELPERS");
 
-// ════════════════════════════════════════════════════════════════════════
-// Constants
-// ════════════════════════════════════════════════════════════════════════
-
-/** TTL for ephemeral confirmations (ms). Keeps the channel clean on repeats. */
 const EPHEMERAL_TTL_MS = 3000;
 
-/** Slightly longer TTL for error notifications so the user can read them. */
 const EPHEMERAL_ERROR_TTL_MS = 5000;
 
-// ════════════════════════════════════════════════════════════════════════
-// Validation
-// ════════════════════════════════════════════════════════════════════════
-
-/**
- * Validate that a music interaction has a player AND the user shares the
- * bot's voice channel. Returns either { player, voiceChannel } or { error }.
- */
 function validateMusicContext(client, interaction) {
   const player = client.manager?.players?.get(interaction.guild.id);
   if (!player) {
@@ -37,30 +30,114 @@ function validateMusicContext(client, interaction) {
   return { player, voiceChannel };
 }
 
-// ════════════════════════════════════════════════════════════════════════
-// Ephemeral auto-cleanup
-// ════════════════════════════════════════════════════════════════════════
-
-/**
- * Schedule deletion of the ephemeral reply after `ttl` ms. Errors swallowed
- * so already-deleted replies never throw.
- */
 function scheduleAutoDelete(interaction, ttl = EPHEMERAL_TTL_MS) {
   setTimeout(() => {
-    interaction.deleteReply().catch(() => {});
+    interaction.deleteReply().catch(() => { });
   }, ttl);
 }
 
-// ════════════════════════════════════════════════════════════════════════
-// Now Playing components
-// ════════════════════════════════════════════════════════════════════════
+function formatProgressBar(position, duration, length = 14) {
+  const safeDur = Number(duration) > 0 ? Number(duration) : 0;
+  const safePos = Math.max(0, Math.min(safeDur, Number(position) || 0));
+  if (safeDur === 0) return "▱".repeat(length);
+  const ratio = safePos / safeDur;
+  const filled = Math.round(ratio * length);
+  return "▰".repeat(filled) + "▱".repeat(length - filled);
+}
 
-/**
- * Build the standard music control row. Pass `isPaused = true` to show the
- * Resume label/emoji instead of Pause. Used by playerStart and the pause
- * button so the row stays consistent across re-renders.
- */
-function buildMusicControlRow(isPaused = false) {
+const SOURCE_META = Object.freeze({
+  youtube: { label: "YouTube", badge: "▶ YouTube", color: 0xff0000 },
+  spotify: { label: "Spotify", badge: "🎵 Spotify", color: COLORS.SUCCESS },
+  soundcloud: {
+    label: "SoundCloud",
+    badge: "🔊 SoundCloud",
+    color: 0xff5500,
+  },
+  twitch: { label: "Twitch", badge: "🎮 Twitch", color: 0x9146ff },
+  applemusic: {
+    label: "Apple Music",
+    badge: "🍎 Apple Music",
+    color: 0xfa233b,
+  },
+  deezer: { label: "Deezer", badge: "🎧 Deezer", color: 0x00c7f2 },
+});
+
+function getSourceMeta(sourceName, fallbackColor) {
+  const key = String(sourceName || "").toLowerCase();
+  if (SOURCE_META[key]) return SOURCE_META[key];
+  return {
+    label: "Unknown",
+    badge: "🎶 Unknown source",
+    color: fallbackColor || COLORS.MUSIC,
+  };
+}
+
+function buildNowPlayingEmbed(client, player, track) {
+  const meta = getSourceMeta(track?.sourceName, client?.color);
+  const requester = track?.requester ? String(track.requester) : "Unknown";
+  const position = player?.position ?? 0;
+  const duration = track?.length ?? 0;
+  const progressBar = formatProgressBar(position, duration);
+  const positionText = formatduration(position, true);
+  const durationText = formatduration(duration, true);
+
+  const embed = new EmbedBuilder()
+    .setAuthor({
+      name: "Now Playing...",
+      iconURL: "https://cdn.discordapp.com/emojis/741605543046807626.gif",
+    })
+    .setColor(meta.color)
+    .setDescription(
+      `**[${track?.title || "Unknown"}](${track?.uri || ""})**\n` +
+      `\`${progressBar}\` \`${positionText} / ${durationText}\``,
+    )
+    .addFields(
+      {
+        name: "Author",
+        value: track?.author || "Unknown",
+        inline: true,
+      },
+      { name: "Requester", value: requester, inline: true },
+      {
+        name: "Volume",
+        value: `${player?.options?.volume ?? player?.volume ?? 100}%`,
+        inline: true,
+      },
+      {
+        name: "Queue",
+        value: `${player?.queue?.size ?? 0} track${(player?.queue?.size ?? 0) === 1 ? "" : "s"
+          }`,
+        inline: true,
+      },
+      {
+        name: "Total Duration",
+        value: formatduration(
+          (player?.queue?.durationLength ?? 0) + duration,
+          true,
+        ),
+        inline: true,
+      },
+    )
+    .setFooter({ text: meta.badge })
+    .setTimestamp();
+
+  if (track?.thumbnail) embed.setThumbnail(track.thumbnail);
+  else if (client?.user) embed.setThumbnail(client.user.displayAvatarURL());
+
+  return embed;
+}
+
+
+function buildMusicControlRow(stateOrPaused = false) {
+  const state =
+    typeof stateOrPaused === "object" && stateOrPaused !== null
+      ? stateOrPaused
+      : { paused: !!stateOrPaused };
+
+  const isPaused = !!state.paused;
+  const queueLength = Number(state.queueLength ?? Infinity);
+  const lyricsOn = !!state.lyricsEnabled;
+
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("music-pause")
@@ -71,7 +148,8 @@ function buildMusicControlRow(isPaused = false) {
       .setCustomId("music-skip")
       .setLabel("Skip")
       .setEmoji("⏭️")
-      .setStyle(ButtonStyle.Success),
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(queueLength <= 0),
     new ButtonBuilder()
       .setCustomId("music-stop")
       .setLabel("Stop")
@@ -79,25 +157,19 @@ function buildMusicControlRow(isPaused = false) {
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId("music-lyrics")
-      .setLabel("Lyrics")
+      .setLabel(lyricsOn ? "Hide Lyrics" : "Lyrics")
       .setEmoji("📝")
-      .setStyle(ButtonStyle.Primary),
+      .setStyle(lyricsOn ? ButtonStyle.Secondary : ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("music-shuffle")
       .setLabel("Shuffle")
       .setEmoji("🔀")
-      .setStyle(ButtonStyle.Success),
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(queueLength <= 1),
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════
-// Now Playing message manipulation
-// ════════════════════════════════════════════════════════════════════════
 
-/**
- * Fetch the player's Now Playing message, if any. Returns null if no message
- * tracked or the message no longer exists.
- */
 async function fetchNowPlayingMessage(client, player) {
   if (!player?.nowPlayingMessageId) return null;
   const channel = client.channels.cache.get(player.textId);
@@ -105,10 +177,6 @@ async function fetchNowPlayingMessage(client, player) {
   return channel.messages.fetch(player.nowPlayingMessageId).catch(() => null);
 }
 
-/**
- * Append a lyrics embed to the Now Playing message. Existing embeds are
- * preserved; this simply pushes the lyrics embed at the end.
- */
 async function addLyricsToNowPlaying(client, player, lyricsEmbed) {
   try {
     const message = await fetchNowPlayingMessage(client, player);
@@ -124,10 +192,6 @@ async function addLyricsToNowPlaying(client, player, lyricsEmbed) {
   }
 }
 
-/**
- * Strip every embed except the primary Now Playing one (index 0). Use this
- * to hide lyrics or to clear failed fetch artefacts.
- */
 async function removeLyricsFromNowPlaying(client, player) {
   try {
     const message = await fetchNowPlayingMessage(client, player);
@@ -144,10 +208,6 @@ async function removeLyricsFromNowPlaying(client, player) {
   }
 }
 
-/**
- * Replace only the components on the Now Playing message — typically used to
- * morph the pause button to resume (and vice versa). Embeds untouched.
- */
 async function swapNowPlayingComponents(interaction, components) {
   try {
     await interaction.message.edit({ components });
@@ -164,6 +224,9 @@ module.exports = {
   validateMusicContext,
   scheduleAutoDelete,
   buildMusicControlRow,
+  buildNowPlayingEmbed,
+  formatProgressBar,
+  getSourceMeta,
   fetchNowPlayingMessage,
   addLyricsToNowPlaying,
   removeLyricsFromNowPlaying,

@@ -1,7 +1,3 @@
-// utils/helpers/alarmButtonHelper.js
-// Pagination + view helpers extracted from buttons/alarm.js so the dispatcher
-// stays focused on routing customIds to the right action.
-
 const {
   ModalBuilder,
   TextInputBuilder,
@@ -18,10 +14,6 @@ const {
   LIST_PAGE_SIZE,
 } = require("./alarmFormatter");
 
-// ── Pagination customId conventions ─────────────────────
-// Format: <prefix>:<action>:<currentPage>
-//   prefix: alarm_list_page | alarm_cancel_page | alarm_edit_page | alarm_toggle_page
-//   action: first | prev | next | last | indicator
 const PAGINATION_PREFIXES = [
   "alarm_list_page",
   "alarm_cancel_page",
@@ -29,7 +21,6 @@ const PAGINATION_PREFIXES = [
   "alarm_toggle_page",
 ];
 
-/** Resolve target page based on action and current page */
 function resolvePage(action, current, total) {
   let next = current;
   if (action === "first") next = 0;
@@ -39,7 +30,6 @@ function resolvePage(action, current, total) {
   return clampPage(next, total);
 }
 
-/** Parse a pagination customId. Returns null if not a pagination ID. */
 function parsePaginationId(customId) {
   const parts = customId.split(":");
   if (parts.length < 3) return null;
@@ -50,11 +40,6 @@ function parsePaginationId(customId) {
   return { prefix, action, page };
 }
 
-/**
- * Render the user's alarm list panel.
- * Always renders, even when empty — the empty-state copy is produced by
- * buildAlarmListEmbed and destructive buttons are auto-disabled.
- */
 async function showAlarmList(
   interaction,
   client,
@@ -78,7 +63,6 @@ async function showAlarmList(
   });
 }
 
-/** Render a paginated select menu (cancel/edit/toggle flow) with optional pagination row. */
 async function showPaginatedSelect({
   interaction,
   alarms,
@@ -106,7 +90,6 @@ async function showPaginatedSelect({
   });
 }
 
-/** Build the 4-input modal for creating a new alarm. */
 function buildNewAlarmModal() {
   const modal = new ModalBuilder()
     .setCustomId("alarm_new_submit")
@@ -149,7 +132,6 @@ function buildNewAlarmModal() {
   return modal;
 }
 
-/** Build the 4-input modal for editing an existing alarm (pre-filled). */
 function buildEditAlarmModal(alarm) {
   const d = new Date(alarm.time);
   const dd = String(d.getDate()).padStart(2, "0");

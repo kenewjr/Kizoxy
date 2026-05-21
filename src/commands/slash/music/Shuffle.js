@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "shuffle"],
@@ -29,13 +29,12 @@ module.exports = {
 
     await player.queue.shuffle();
 
-    const embed = new EmbedBuilder()
-      .setDescription(`\`🔀\` | *Song has been:* \`Shuffle\``)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: "`🔀` | *Song has been:* `Shuffle`",
+    });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
 
-    // Delete ephemeral reply after 5 seconds
     setTimeout(async () => {
       try {
         await interaction.deleteReply();

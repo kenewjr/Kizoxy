@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["filter", "nightcore"],
@@ -27,9 +27,9 @@ module.exports = {
 
     await player.shoukaku.setFilters(data);
 
-    const nightcored = new EmbedBuilder()
-      .setDescription(`\`💠\` | *Turned on:* \`Nightcore\``)
-      .setColor(client.color);
+    const nightcored = Embeds.brand(client, {
+      description: "`💠` | *Turned on:* `Nightcore`",
+    });
 
     await delay(5000);
     interaction.editReply({ content: " ", embeds: [nightcored] });

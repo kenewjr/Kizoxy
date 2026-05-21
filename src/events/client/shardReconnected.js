@@ -1,3 +1,1 @@
-module.exports = async (_client, _id) => {
-  //    console.log(white('[') + yellow('WARN') + white('] ') + yellow('Shard ') + white(id) + yellow(' Shard Reconnected!'));
-};
+module.exports = async (_client, _id) => {};

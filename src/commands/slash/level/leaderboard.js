@@ -1,9 +1,9 @@
 const {
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
 } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 const LevelStorage = require("../../../persistence/levelStorage");
 
 module.exports = {
@@ -25,12 +25,10 @@ module.exports = {
       return interaction.editReply("❌ No data available for leaderboard yet.");
     }
 
-    // Pagination variables
     const itemsPerPage = 10;
     let currentPage = 0;
     const totalPages = Math.ceil(leaderboard.length / itemsPerPage);
 
-    // Get user's own rank for footer
     const userRank =
       leaderboard.findIndex((u) => u.userId === interaction.user.id) + 1;
     const userData = leaderboard.find((u) => u.userId === interaction.user.id);
@@ -44,11 +42,10 @@ module.exports = {
       const end = start + itemsPerPage;
       const currentItems = leaderboard.slice(start, end);
 
-      const embed = new EmbedBuilder()
-        .setTitle(`🏆 Leaderboard - ${interaction.guild.name}`)
-        .setColor(client.color)
-        .setFooter({ text: `Page ${page + 1}/${totalPages} • ${selfRankText}` })
-        .setTimestamp();
+      const embed = Embeds.brand(client, {
+        title: `🏆 Leaderboard - ${interaction.guild.name}`,
+        footerText: `Page ${page + 1}/${totalPages} • ${selfRankText}`,
+      });
 
       let description = "";
 
@@ -56,7 +53,6 @@ module.exports = {
         const item = currentItems[i];
         const position = start + i + 1;
 
-        // Fetch user tag (might need to fetch from cache/API)
         let userTag = "Unknown User";
         try {
           const user = await client.users.fetch(item.userId);
@@ -65,7 +61,6 @@ module.exports = {
           userTag = `User (${item.userId})`;
         }
 
-        // Add medal emoji for top 3
         let prefix = `#${position}`;
         if (position === 1) prefix = "🥇";
         else if (position === 2) prefix = "🥈";
@@ -105,7 +100,6 @@ module.exports = {
       components: [initialButtons],
     });
 
-    // Create collector
     const collector = message.createMessageComponentCollector({
       time: 60000, // 1 minute timeout
     });
@@ -131,7 +125,6 @@ module.exports = {
     });
 
     collector.on("end", () => {
-      // Disable buttons
       const disabledRow = new ActionRowBuilder();
       const prevBtn = new ButtonBuilder()
         .setCustomId("prev")

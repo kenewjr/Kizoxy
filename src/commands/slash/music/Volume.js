@@ -1,4 +1,5 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "volume"],
@@ -30,9 +31,9 @@ module.exports = {
 
     await player.setVolume(Number(value));
 
-    const embed = new EmbedBuilder()
-      .setDescription(`\`🔈\` | *Volume set to:* \`${value}%\``)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: `\`🔈\` | *Volume set to:* \`${value}%\``,
+    });
 
     return interaction.reply({ embeds: [embed] });
   },

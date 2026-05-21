@@ -1,11 +1,13 @@
-const { ActivityType } = require("discord.js");
+const { ActivityType, Events } = require("discord.js");
+const Logger = require("../../lib/logger");
+
+const logger = new Logger("READY");
 
 module.exports = async (client) => {
-  console.warn(
-    `[INFO] - ${client.user.username} (${client.user.id}) is Ready!`,
+  logger.success(
+    `${client.user.username} (${client.user.id}) is Ready!`,
   );
 
-  // Array of activities to cycle through
   const activities = [
     {
       name: `kplay <songs>`,
@@ -25,20 +27,17 @@ module.exports = async (client) => {
     },
   ];
 
-  // Set initial activity
   let currentActivity = 0;
   client.user.setPresence({
     activities: [activities[currentActivity]],
-    status: "online", // Changed from "dnd" to "online"
+    status: "online",
   });
 
-  // Rotate activities every 60 seconds
   setInterval(() => {
     currentActivity = (currentActivity + 1) % activities.length;
     client.user.setActivity(activities[currentActivity]);
   }, 60000); // 60 seconds
 
-  // Optional: Update activity when bot joins/leaves a server
   client.on("guildCreate", () => {
     activities[1].name = `${client.guilds.cache.size} servers`;
     activities[2].name = `${client.users.cache.size} users`;
@@ -49,3 +48,5 @@ module.exports = async (client) => {
     activities[2].name = `${client.users.cache.size} users`;
   });
 };
+
+module.exports.eventName = Events.ClientReady;

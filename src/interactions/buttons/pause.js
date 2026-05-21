@@ -24,15 +24,16 @@ module.exports = {
 
       const { player } = ctx;
 
-      // Toggle pause
       const wasPaused = player.paused;
       player.pause(!wasPaused);
       const isPausedNow = !wasPaused;
 
-      // Swap only the components on the original Now Playing message;
-      // do NOT regenerate the embed (avoids channel spam on repeat clicks).
       await swapNowPlayingComponents(interaction, [
-        buildMusicControlRow(isPausedNow),
+        buildMusicControlRow({
+          paused: isPausedNow,
+          queueLength: player.queue?.size ?? 0,
+          lyricsEnabled: !!player.lyricsEnabled,
+        }),
       ]);
 
       await interaction.editReply({
@@ -46,7 +47,7 @@ module.exports = {
       logger.error(`Pause Button Error: ${error.message}`);
       try {
         await interaction.editReply({ content: "❌ Failed to toggle pause." });
-      } catch (_) {}
+      } catch (_) { }
     }
   },
 };

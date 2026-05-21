@@ -1,10 +1,4 @@
-// modules/fixembed/resolvers/embedez.js
-// Platforms backed by the EmbedEZ proxy: Snapchat, Pinterest, IFunny, Imgur,
-// Weibo, and the various booru-style image boards.
-
 const { resolveEmbedEZ } = require("../fixembedResolverHelper");
-
-/** Tiny factory: every EmbedEZ-backed entry has identical resolve logic. */
 function embedEzEntry({ name, originalLabel = name, match }) {
   return {
     name,

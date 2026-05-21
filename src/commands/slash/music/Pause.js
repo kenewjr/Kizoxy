@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["pause"],
@@ -29,13 +29,12 @@ module.exports = {
     await player.pause(player.playing);
     const uni = player.paused ? `Paused` : `Resumed`;
 
-    const embed = new EmbedBuilder()
-      .setDescription(`\`⏯\` | *Song has been:* \`${uni}\``)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: `\`⏯\` | *Song has been:* \`${uni}\``,
+    });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
 
-    // Delete ephemeral reply after 5 seconds
     setTimeout(async () => {
       try {
         await interaction.deleteReply();

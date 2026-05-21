@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["filter", "karaoke"],
@@ -28,9 +28,9 @@ module.exports = {
 
     await player.shoukaku.setKaraoke(data);
 
-    const karaoked = new EmbedBuilder()
-      .setDescription(`\`💠\` | *Turned on:* \`karaoke\``)
-      .setColor(client.color);
+    const karaoked = Embeds.brand(client, {
+      description: "`💠` | *Turned on:* `karaoke`",
+    });
 
     await delay(5000);
     interaction.editReply({ content: " ", embeds: [karaoked] });

@@ -24,7 +24,6 @@ module.exports = {
 
     const targetUser = interaction.options.getUser("user") || interaction.user;
 
-    // Initialize storage if needed
     if (!client.levelStorage) {
       client.levelStorage = new LevelStorage();
     }
@@ -34,7 +33,6 @@ module.exports = {
       interaction.guildId,
     );
 
-    // Default values if user has no data
     const user = userData || {
       xp: 0,
       level: 0,
@@ -45,7 +43,6 @@ module.exports = {
     // Calculate required XP for next level
     const requiredXp = 5 * Math.pow(user.level, 2) + 50 * user.level + 100;
 
-    // Get rank position
     const rank =
       (await client.levelStorage.getRank(targetUser.id, interaction.guildId)) ||
       0;

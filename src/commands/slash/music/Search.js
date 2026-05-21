@@ -1,12 +1,12 @@
 const { convertTime } = require("../../../lib/ConvertTime");
 const {
-  EmbedBuilder,
   PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ApplicationCommandOptionType,
 } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["search"],
@@ -94,11 +94,9 @@ module.exports = {
 
       if (!player.playing && !player.paused) player.play();
 
-      const embed = new EmbedBuilder()
-        .setColor(client.color)
-        .setDescription(
-          `**Queued • [${res.playlistName}](${args})** \`${convertTime(player.queue.durationLength, true)}\` (${res.tracks.length} tracks) • ${res.tracks[0].requester}`,
-        );
+      const embed = Embeds.brand(client, {
+        description: `**Queued • [${res.playlistName}](${args})** \`${convertTime(player.queue.durationLength, true)}\` (${res.tracks.length} tracks) • ${res.tracks[0].requester}`,
+      });
 
       return interaction.editReply({ embeds: [embed] });
     } else {
@@ -111,14 +109,14 @@ module.exports = {
         )
         .join("\n");
 
-      const embed = new EmbedBuilder()
-        .setAuthor({
-          name: `Song Selection...`,
+      const embed = Embeds.brand(client, {
+        author: {
+          name: "Song Selection...",
           iconURL: interaction.guild.iconURL({ dynamic: true }),
-        })
-        .setColor(client.color)
-        .setDescription(results)
-        .setFooter({ text: `Please Respone in 30s` });
+        },
+        description: results,
+        footerText: "Please Respone in 30s",
+      });
 
       await msg.edit({ embeds: [embed], components: [row], content: " " });
       const collector = msg.createMessageComponentCollector({
@@ -128,7 +126,6 @@ module.exports = {
       });
 
       collector.on("collect", async (interaction) => {
-        //   if(!interaction.deferred) await interaction.deferUpdate();
         if (!player && !collector.ended) return collector.stop();
         const id = interaction.customId;
 
@@ -136,55 +133,45 @@ module.exports = {
           player.queue.add(res.tracks[0]);
           if (!player.playing && !player.paused) player.play();
 
-          const embed = new EmbedBuilder()
-            .setDescription(
-              `**Queued • [${res.tracks[0].title}](${res.tracks[0].uri})** \`${convertTime(res.tracks[0].length, true)}\` • ${res.tracks[0].requester}`,
-            )
-            .setColor(client.color);
+          const embed = Embeds.brand(client, {
+            description: `**Queued • [${res.tracks[0].title}](${res.tracks[0].uri})** \`${convertTime(res.tracks[0].length, true)}\` • ${res.tracks[0].requester}`,
+          });
 
           if (msg) msg.edit({ embeds: [embed], components: [], content: " " });
         } else if (id === "two") {
           player.queue.add(res.tracks[1]);
           if (!player.playing && !player.paused) player.play();
 
-          const embed = new EmbedBuilder()
-            .setDescription(
-              `**Queued • [${res.tracks[1].title}](${res.tracks[1].uri})** \`${convertTime(res.tracks[1].length, true)}\` • ${res.tracks[1].requester}`,
-            )
-            .setColor(client.color);
+          const embed = Embeds.brand(client, {
+            description: `**Queued • [${res.tracks[1].title}](${res.tracks[1].uri})** \`${convertTime(res.tracks[1].length, true)}\` • ${res.tracks[1].requester}`,
+          });
 
           if (msg) msg.edit({ embeds: [embed], components: [], content: " " });
         } else if (id === "three") {
           player.queue.add(res.tracks[2]);
           if (!player.playing && !player.paused) player.play();
 
-          const embed = new EmbedBuilder()
-            .setDescription(
-              `**Queued • [${res.tracks[2].title}](${res.tracks[2].uri})** \`${convertTime(res.tracks[2].length, true)}\` • ${res.tracks[2].requester}`,
-            )
-            .setColor(client.color);
+          const embed = Embeds.brand(client, {
+            description: `**Queued • [${res.tracks[2].title}](${res.tracks[2].uri})** \`${convertTime(res.tracks[2].length, true)}\` • ${res.tracks[2].requester}`,
+          });
 
           if (msg) msg.edit({ embeds: [embed], components: [], content: " " });
         } else if (id === "four") {
           player.queue.add(res.tracks[3]);
           if (!player.playing && !player.paused) player.play();
 
-          const embed = new EmbedBuilder()
-            .setDescription(
-              `**Queued • [${res.tracks[3].title}](${res.tracks[3].uri})** \`${convertTime(res.tracks[3].length, true)}\` • ${res.tracks[3].requester}`,
-            )
-            .setColor(client.color);
+          const embed = Embeds.brand(client, {
+            description: `**Queued • [${res.tracks[3].title}](${res.tracks[3].uri})** \`${convertTime(res.tracks[3].length, true)}\` • ${res.tracks[3].requester}`,
+          });
 
           if (msg) msg.edit({ embeds: [embed], components: [], content: " " });
         } else if (id === "five") {
           player.queue.add(res.tracks[4]);
           if (!player.playing && !player.paused) player.play();
 
-          const embed = new EmbedBuilder()
-            .setDescription(
-              `**Queued • [${res.tracks[4].title}](${res.tracks[4].uri})** \`${convertTime(res.tracks[4].length, true)}\` • ${res.tracks[4].requester}`,
-            )
-            .setColor(client.color);
+          const embed = Embeds.brand(client, {
+            description: `**Queued • [${res.tracks[4].title}](${res.tracks[4].uri})** \`${convertTime(res.tracks[4].length, true)}\` • ${res.tracks[4].requester}`,
+          });
 
           if (msg) msg.edit({ embeds: [embed], components: [], content: " " });
         }

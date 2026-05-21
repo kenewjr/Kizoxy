@@ -1,11 +1,12 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LOG-MSG-DELETE");
 
 module.exports = async (client, message) => {
   if (!message.guild || !message.author) return;
-  if (message.author.bot) return; // Ignore bots
+  if (message.author.bot) return;
 
   const logChannelId = client.logStorage.getChannel(message.guild.id);
   if (!logChannelId) return;
@@ -13,23 +14,22 @@ module.exports = async (client, message) => {
   const logChannel = message.guild.channels.cache.get(logChannelId);
   if (!logChannel) return;
 
-  const embed = new EmbedBuilder()
-    .setAuthor({
+  const embed = Embeds.withColor(client, COLORS.ERROR, {
+    author: {
       name: message.author.tag,
       iconURL: message.author.displayAvatarURL({ dynamic: true }),
-    })
-    .setTitle("Message Deleted")
-    .setDescription(`A message was deleted in ${message.channel}.`)
-    .addFields(
+    },
+    title: "Message Deleted",
+    description: `A message was deleted in ${message.channel}.`,
+    fields: [
       {
         name: "Content",
         value: message.content ? message.content : "`No text content`",
       },
       { name: "Message ID", value: message.id, inline: true },
       { name: "Author ID", value: message.author.id, inline: true },
-    )
-    .setColor("Red")
-    .setTimestamp();
+    ],
+  });
 
   if (message.attachments.size > 0) {
     embed.addFields({

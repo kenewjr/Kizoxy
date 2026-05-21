@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "leave"],
@@ -18,7 +18,7 @@ module.exports = {
     if (
       !channel ||
       interaction.member.voice.channel !==
-        interaction.guild.members.me.voice.channel
+      interaction.guild.members.me.voice.channel
     ) {
       await interaction.reply({
         content: "I'm not in the same voice channel as you!",
@@ -29,18 +29,16 @@ module.exports = {
 
     await player.destroy();
 
-    const embed = new EmbedBuilder()
-      .setDescription(`\`🚫\` | *Left:* | \`${channel.name}\``)
-      .setColor(client.color);
+    const embed = Embeds.brand(client, {
+      description: `\`🚫\` | *Left:* | \`${channel.name}\``,
+    });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
 
-    // Delete ephemeral reply after 5 seconds
     setTimeout(async () => {
       try {
         await interaction.deleteReply();
       } catch (_err) {
-        // Ignore error if already deleted
       }
     }, 5000);
   },

@@ -1,13 +1,13 @@
-const { EmbedBuilder } = require("discord.js");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LOG-MSG-UPDATE");
 
 module.exports = async (client, oldMessage, newMessage) => {
   if (!oldMessage.guild || !oldMessage.author) return;
-  if (oldMessage.author.bot) return; // Ignore bots
+  if (oldMessage.author.bot) return;
 
-  // Ignore if the content is the same (e.g. embed updates)
   if (oldMessage.content === newMessage.content) return;
 
   const logChannelId = client.logStorage.getChannel(oldMessage.guild.id);
@@ -16,16 +16,14 @@ module.exports = async (client, oldMessage, newMessage) => {
   const logChannel = oldMessage.guild.channels.cache.get(logChannelId);
   if (!logChannel) return;
 
-  const embed = new EmbedBuilder()
-    .setAuthor({
+  const embed = Embeds.withColor(client, COLORS.WARNING, {
+    author: {
       name: oldMessage.author.tag,
       iconURL: oldMessage.author.displayAvatarURL({ dynamic: true }),
-    })
-    .setTitle("Message Edited")
-    .setDescription(
-      `[Jump to Message](${newMessage.url}) in ${newMessage.channel}`,
-    )
-    .addFields(
+    },
+    title: "Message Edited",
+    description: `[Jump to Message](${newMessage.url}) in ${newMessage.channel}`,
+    fields: [
       {
         name: "Before",
         value: oldMessage.content ? oldMessage.content : "`No text content`",
@@ -34,12 +32,9 @@ module.exports = async (client, oldMessage, newMessage) => {
         name: "After",
         value: newMessage.content ? newMessage.content : "`No text content`",
       },
-    )
-    .setColor("Yellow")
-    .setFooter({
-      text: `Message ID: ${newMessage.id} | Author ID: ${newMessage.author.id}`,
-    })
-    .setTimestamp();
+    ],
+    footerText: `Message ID: ${newMessage.id} | Author ID: ${newMessage.author.id}`,
+  });
 
   try {
     await logChannel.send({ embeds: [embed] });

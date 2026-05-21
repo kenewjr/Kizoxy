@@ -1,4 +1,3 @@
-// modules/fixembed/resolvers/art.js
 // Art / illustration sites: Pixiv, DeviantArt, Newgrounds, Fur Affinity.
 
 module.exports = [

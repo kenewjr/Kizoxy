@@ -32,10 +32,8 @@ module.exports = {
     },
   ],
   run: async (client, interaction) => {
-    // Get the selected filter type from options
     const subcommand = interaction.options.getString("type");
 
-    // Map choice value to filename
     const fileMap = {
       reset: "Reset.js",
       "3d": "3d.js",
@@ -58,11 +56,9 @@ module.exports = {
       const cmd = require(
         path.join(__dirname, "../../../features/music/filters", fileName),
       );
-      // Execute the command logic
       await cmd.run(client, interaction);
     } catch (error) {
       console.error(`Error loading/executing filter ${subcommand}:`, error);
-      // Reply only if not already replied
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: "❌ Failed to execute filter.",

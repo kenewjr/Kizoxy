@@ -1,4 +1,3 @@
-// Define the functions first
 function convertTime(duration) {
   var _milliseconds = parseInt((duration % 1000) / 100),
     seconds = parseInt((duration / 1000) % 60),
@@ -65,7 +64,6 @@ function convertHmsToMs(hms) {
   }
 }
 
-// Export all functions
 module.exports = {
   convertTime,
   convertQueue,
