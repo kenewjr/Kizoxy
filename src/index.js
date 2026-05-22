@@ -1,7 +1,6 @@
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
-const KazagumoSpotify = require("kazagumo-spotify");
 const Logger = require("./lib/logger");
 const bootLogger = new Logger("BOOT");
 
@@ -34,19 +33,8 @@ const Nodes = client.config.NODES;
 
 client.manager = new Kazagumo(
   {
-    defaultSearchEngine: client.config.SEARCH_ENGINE, // 'youtube' | 'soundcloud' | 'youtube_music'
-    plugins: [
-      new Plugins.PlayerMoved(client),
-      new KazagumoSpotify({
-        clientId: client.config.spotifyClientID,
-        clientSecret: client.config.spotifySecret,
-        playlistPageLimit: 100, // Spotify API max page size (100 tracks)
-        albumPageLimit: 100, // Spotify API max page size (50 tracks)
-        searchLimit: 10, // optional ( track search limit. Max 50 )
-        searchMarket: "US", // optional || default: US ( Enter the country you live in. [ Can only be of 2 letters. For eg: US, IN, EN ] )//
-        lavalinkPluginTries: 0,
-      }),
-    ],
+    defaultSearchEngine: client.config.SEARCH_ENGINE,
+    plugins: [new Plugins.PlayerMoved(client)],
     send: (guildId, payload) => {
       const guild = client.guilds.cache.get(guildId);
       if (guild) guild.shard.send(payload);
@@ -55,8 +43,8 @@ client.manager = new Kazagumo(
   new Connectors.DiscordJS(client),
   Nodes,
   {
-    reconnectTries: Infinity, // keep trying forever
-    reconnectInterval: 15, // 15 second interval between attempts
+    reconnectTries: Infinity,
+    reconnectInterval: 15,
   },
 );
 
