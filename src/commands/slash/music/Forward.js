@@ -55,9 +55,9 @@ module.exports = {
       if (player.position + fastForwardNum * 1000 < song.length) {
         await player.seek(player.position + fastForwardNum * 1000);
 
-        const embed = new EmbedBuilder()
-          .setDescription(`\`⏭\` | *Forward to:* \`${CurrentDuration}\``)
-          .setColor(client.color);
+        const embed = Embeds.brand(client, {
+          description: `\`⏭\` | *Forward to:* \`${CurrentDuration}\``,
+        });
 
         interaction.reply({ content: " ", embeds: [embed] });
       } else {

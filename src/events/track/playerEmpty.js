@@ -10,6 +10,6 @@ module.exports = async (client, player) => {
     description: "`📛` | *Song has been:* `Ended`",
   });
 
-  channel.send({ embeds: [embed] });
+  channel.send({ embeds: [embed] }).catch(() => {});
   return player.destroy();
 };

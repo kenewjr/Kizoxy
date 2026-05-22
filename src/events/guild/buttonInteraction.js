@@ -30,7 +30,7 @@ module.exports = async (client, interaction) => {
       return;
     }
 
-    const PREFIXED_HANDLERS = ["fxs", "fixembed_delete", "alarm"];
+    const PREFIXED_HANDLERS = ["fxs", "fixembed_delete", "alarm", "tvc"];
     let button = client.buttons.get(interaction.customId);
 
     if (!button) {
@@ -57,7 +57,9 @@ module.exports = async (client, interaction) => {
       const isShowModalButton =
         interaction.customId === "alarm_new" ||
         interaction.customId.startsWith("alarm_edit_modal:");
-      const skipDefer = isShowModalButton || isModalSubmit;
+      // tvc owns its own defer lifecycle (mix of modal-open / toggle / select).
+      const isTvc = prefix === "tvc";
+      const skipDefer = isShowModalButton || isModalSubmit || isTvc;
       const useDeferUpdate =
         prefix === "fxs" || interaction.customId.startsWith("alarm_");
 

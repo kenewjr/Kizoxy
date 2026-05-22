@@ -1,5 +1,8 @@
 const Embeds = require("../../lib/embeds");
+const Logger = require("../../lib/logger");
 const LevelStorage = require("../../persistence/levelStorage");
+
+const logger = new Logger("LEVEL");
 
 const COOLDOWN_MS = 15_000;
 const COOLDOWN_AUTO_DELETE_MS = 15_000;
@@ -40,11 +43,11 @@ async function handleMessageXp(client, message) {
       sent
         .delete()
         .catch((err) =>
-          console.warn("Failed to delete level up message:", err.message),
+          logger.warning(`Failed to delete level-up message: ${err.message}`),
         );
     }, COOLDOWN_AUTO_DELETE_MS);
   } catch (error) {
-    console.error("Error adding text XP:", error);
+    logger.error(`Error adding text XP: ${error.message}`);
   }
 }
 

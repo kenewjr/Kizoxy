@@ -85,6 +85,7 @@ const LOADERS = [
   "loadPlayer",
   "loadTrack",
   "loadAlarm",
+  "loadTempVC",
 ];
 
 async function bootstrap() {

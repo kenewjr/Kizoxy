@@ -57,8 +57,16 @@ module.exports = async (client, message) => {
     await dispatchPrefixCommand(client, message, prefix);
   }
 
-  await Promise.all([
+  const results = await Promise.allSettled([
     handleMessageXp(client, message),
     handleFixembedMessage(message),
   ]);
+  for (const [idx, result] of results.entries()) {
+    if (result.status === "rejected") {
+      const handler = idx === 0 ? "handleMessageXp" : "handleFixembedMessage";
+      logger.error(
+        `${handler} failed: ${result.reason?.message ?? result.reason}`,
+      );
+    }
+  }
 };

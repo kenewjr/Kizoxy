@@ -1,5 +1,4 @@
 const {
-  EmbedBuilder,
   PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
@@ -11,7 +10,7 @@ const {
   totalPages,
   clampPage,
 } = require("../../../features/alarm/alarmFormatter");
-const { COLORS } = require("../../../lib/embeds");
+const Embeds = require("../../../lib/embeds");
 const Logger = require("../../../lib/logger");
 const logger = new Logger("ALARM");
 
@@ -43,21 +42,16 @@ async function buildAdminEmbed(client, guild, alarms, page, refreshed = false) {
   const start = safePage * ADMIN_PAGE_SIZE;
   const pageGroups = groups.slice(start, start + ADMIN_PAGE_SIZE);
 
-  const embed = new EmbedBuilder()
-    .setTitle(
-      `🔔 All Alarms in ${guild.name}${refreshed ? " (Refreshed)" : ""}`,
-    )
-    .setColor(COLORS.INFO)
-    .setFooter({
-      text:
-        `Total: ${alarms.length} alarm dari ${groups.length} member` +
-        ` • Halaman ${safePage + 1}/${total}` +
-        (refreshed
-          ? ` • Refreshed: ${new Date().toLocaleTimeString("en-US")}`
-          : ""),
-      iconURL: guild.iconURL(),
-    })
-    .setTimestamp();
+  const embed = Embeds.info(client, {
+    title: `🔔 All Alarms in ${guild.name}${refreshed ? " (Refreshed)" : ""}`,
+    footerText:
+      `Total: ${alarms.length} alarms across ${groups.length} member(s)` +
+      ` • Page ${safePage + 1}/${total}` +
+      (refreshed
+        ? ` • Refreshed: ${new Date().toLocaleTimeString("en-US")}`
+        : ""),
+    footerIcon: guild.iconURL(),
+  });
 
   for (const [userId, userAlarms] of pageGroups) {
     let userInfo;
@@ -84,7 +78,7 @@ async function buildAdminEmbed(client, guild, alarms, page, refreshed = false) {
 
     embed.addFields({
       name: `👤 ${userInfo} - ${userAlarms.length} alarm`,
-      value: alarmList || "_(kosong)_",
+      value: alarmList || "_(empty)_",
       inline: false,
     });
   }

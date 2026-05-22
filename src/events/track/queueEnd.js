@@ -36,6 +36,6 @@ module.exports = async (client, player) => {
     description: "`📛` | *Queue has been:* `Ended`",
   });
 
-  channel.send({ embeds: [embed] });
+  channel.send({ embeds: [embed] }).catch(() => {});
   return player.destroy();
 };
