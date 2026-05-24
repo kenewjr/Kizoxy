@@ -1,0 +1,70 @@
+version: 2
+updates:
+  # ---------------------------------------------------------------------------
+  # NPM dependencies (Kizoxy bot)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Jakarta"
+    open-pull-requests-limit: 5
+    versioning-strategy: "increase"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: "scope"
+    groups:
+      discord-stack:
+        patterns:
+          - "discord.js"
+          - "@discordjs/*"
+          - "kazagumo"
+          - "kazagumo-*"
+          - "shoukaku"
+      tooling:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "prettier"
+          - "jest"
+          - "jest-*"
+      utilities:
+        patterns:
+          - "axios"
+          - "dotenv"
+          - "node-cache"
+          - "node-schedule"
+          - "uuid"
+    ignore:
+      # Lavalink-bound clients: jangan auto-bump major, harus manual sync
+      # dengan versi server Lavalink di infra/
+      - dependency-name: "shoukaku"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "kazagumo"
+        update-types: ["version-update:semver-major"]
+      # Discord.js major bump = breaking, butuh review manual
+      - dependency-name: "discord.js"
+        update-types: ["version-update:semver-major"]
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions (workflow files)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "06:00"
+      timezone: "Asia/Jakarta"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

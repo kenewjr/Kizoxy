@@ -8,11 +8,12 @@ const logger = new Logger("HELP");
 
 const CATEGORY_META = {
   music: { title: "🎶 Music", order: 1 },
-  alarm: { title: "⏰ Alarm", order: 2 },
-  level: { title: "🏆 Level", order: 3 },
-  anime: { title: "🍙 Anime", order: 4 },
-  settings: { title: "⚙️ Settings", order: 5 },
-  misc: { title: "📑 Misc", order: 6 },
+  tempvoice: { title: "🔊 Temp Voice", order: 2 },
+  alarm: { title: "⏰ Alarm", order: 3 },
+  level: { title: "🏆 Level", order: 4 },
+  anime: { title: "🍙 Anime", order: 5 },
+  settings: { title: "⚙️ Settings", order: 6 },
+  misc: { title: "📑 Misc", order: 7 },
 };
 
 function collectCommands() {
