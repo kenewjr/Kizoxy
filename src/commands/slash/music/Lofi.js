@@ -46,7 +46,7 @@ module.exports = {
       }
     }
 
-    const query = "https://www.youtube.com/watch?v=jfKfPfyJRdk";
+    const query = "https://www.youtube.com/watch?v=EWrX250Zhko";
     const res = await client.manager.search(query, {
       requester: interaction.user,
     });
