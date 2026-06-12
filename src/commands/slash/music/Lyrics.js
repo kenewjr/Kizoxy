@@ -1,3 +1,4 @@
+// src/commands/slash/music/Lyrics.js
 const Logger = require("../../../lib/logger");
 const {
   searchLyrics,
@@ -8,9 +9,19 @@ const {
   EPHEMERAL_ERROR_TTL_MS,
   addLyricsToNowPlaying,
   removeLyricsFromNowPlaying,
+  buildMusicControlRow,
+  swapNowPlayingComponents,
 } = require("../../../features/music/musicHelper");
 
 const logger = new Logger("MUSIC-LYRICS");
+
+function nowPlayingControls(player, lyricsEnabled) {
+  return buildMusicControlRow({
+    paused: !!player.paused,
+    queueLength: player.queue?.size ?? 0,
+    lyricsEnabled,
+  });
+}
 
 module.exports = {
   name: ["music", "lyric"],
@@ -34,30 +45,33 @@ module.exports = {
       if (player.lyricsEnabled) {
         await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
-        const result = await searchLyrics(player, track, client.color);
+        const lyricsEmbed = await searchLyrics(track, player, client);
 
-        if (result.error) {
+        if (!lyricsEmbed) {
           player.lyricsEnabled = false;
           await interaction.editReply({
-            content: `⚠️ Lyrics not found for **${track.title}**.\n${result.error}`,
+            content: `⚠️ Lyrics not found for **${track.title}**.`,
           });
           return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        const updated = await addLyricsToNowPlaying(
-          client,
-          player,
-          result.embed,
-        );
+        const updated = await addLyricsToNowPlaying(client, player, lyricsEmbed);
         if (!updated) {
           logger.warning("addLyricsToNowPlaying returned false");
         }
+
+        await swapNowPlayingComponents(interaction, [
+          nowPlayingControls(player, true),
+        ]);
 
         await interaction.editReply({ content: "✅ Lyrics shown." });
         return scheduleAutoDelete(interaction);
       }
 
       await removeLyricsFromNowPlaying(client, player);
+      await swapNowPlayingComponents(interaction, [
+        nowPlayingControls(player, false),
+      ]);
       await interaction.editReply({ content: "✅ Lyrics hidden." });
       return scheduleAutoDelete(interaction);
     } catch (error) {

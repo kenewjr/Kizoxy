@@ -1,3 +1,4 @@
+// src/interactions/buttons/lyrics.js
 const Logger = require("../../lib/logger");
 const {
   searchLyrics,
@@ -12,6 +13,8 @@ const {
   swapNowPlayingComponents,
 } = require("../../features/music/musicHelper");
 
+const logger = new Logger("MUSIC-LYRICS");
+
 function nowPlayingControls(player, lyricsEnabled) {
   return buildMusicControlRow({
     paused: !!player.paused,
@@ -19,8 +22,6 @@ function nowPlayingControls(player, lyricsEnabled) {
     lyricsEnabled,
   });
 }
-
-const logger = new Logger("MUSIC-LYRICS");
 
 module.exports = {
   customId: "music-lyrics",
@@ -46,21 +47,17 @@ module.exports = {
       if (player.lyricsEnabled) {
         await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
-        const result = await searchLyrics(player, track, client.color);
+        const lyricsEmbed = await searchLyrics(track, player, client);
 
-        if (result.error) {
+        if (!lyricsEmbed) {
           player.lyricsEnabled = false;
           await interaction.editReply({
-            content: `⚠️ Lyrics not found for **${track.title}**.\n${result.error}`,
+            content: `⚠️ Lyrics not found for **${track.title}**.`,
           });
           return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        const updated = await addLyricsToNowPlaying(
-          client,
-          player,
-          result.embed,
-        );
+        const updated = await addLyricsToNowPlaying(client, player, lyricsEmbed);
         if (!updated) {
           logger.warning("addLyricsToNowPlaying returned false");
         }
