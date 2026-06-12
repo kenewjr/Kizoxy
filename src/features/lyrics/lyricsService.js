@@ -129,17 +129,10 @@ const _resolvers = [
   {
     name: "DirectLrclib",
     resolve: async (trackInfo) => {
-      const { cleanedTitle, cleanedAuthor, rawAuthor, duration } = trackInfo;
-
       for (let attempt = 0; attempt <= DIRECT_LRCLIB_RETRIES; attempt++) {
         try {
           const result = await Promise.race([
-            searchLRCLIB(
-              cleanedTitle,
-              cleanedAuthor || cleanAuthor(rawAuthor),
-              null,
-              duration,
-            ),
+            searchLRCLIB(trackInfo),
             new Promise((_, reject) =>
               setTimeout(
                 () => reject(Object.assign(new Error("LRCLIB timeout"), { code: "ETIMEDOUT" })),
@@ -222,6 +215,8 @@ async function searchLyrics(track, player, client) {
     cleanedTitle: trackTitle,
     cleanedAuthor: trackAuthor,
     duration: track.length ? Math.floor(track.length / 1000) : null,
+    queries,
+    labels,
   };
 
   let rawData = null;
