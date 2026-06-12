@@ -9,6 +9,7 @@ const { searchLRCLIB } = require("./lrclibClient");
 const {
   cleanTitle,
   cleanAuthor,
+  splitTitleSegments,
   buildQueryStrategies,
   buildCacheKey,
   buildEmbedFromData,
@@ -19,7 +20,7 @@ const logger = new Logger("LYRICS");
 const LAVALINK_URL = process.env.LAVALINK_URL || "http://localhost:2333";
 const LAVALINK_PASSWORD = process.env.LAVALINK_PASSWORD || "youshallnotpass";
 const TIMEOUT_MS = 15_000;
-const DIRECT_LRCLIB_TIMEOUT_MS = 20_000;
+const DIRECT_LRCLIB_TIMEOUT_MS = 60_000;
 const DIRECT_LRCLIB_RETRIES = 2;
 const DIRECT_LRCLIB_RETRY_DELAY_MS = 1_000;
 
@@ -217,6 +218,7 @@ async function searchLyrics(track, player, client) {
     duration: track.length ? Math.floor(track.length / 1000) : null,
     queries,
     labels,
+    segments: splitTitleSegments(rawTitle),
   };
 
   let rawData = null;

@@ -123,11 +123,35 @@ async function searchLRCLIB(trackInfo) {
     cleanedAuthor: artistName,
     duration: durationSec,
     queries = [],
+    segments = [],
   } = trackInfo;
 
   logger.info(`Searching: "${trackName}" by "${artistName}"`);
 
-  // Phase 1 — exact GET (most precise, short-circuits immediately)
+  // Phase 0 — segment-split GET: for "Artist - Title" YouTube format this is the fastest path.
+  // Each adjacent segment pair is tried as (title, artist) and (artist, title).
+  if (segments.length >= 2) {
+    const _cleanSeg = (s) =>
+      s.replace(/\([^)]*\)/g, "").replace(/\[[^\]]*\]/g, "").trim();
+    const seen0 = new Set();
+    for (let i = 0; i < segments.length - 1; i++) {
+      const a = _cleanSeg(segments[i]);
+      const b = _cleanSeg(segments[i + 1]);
+      for (const [title, artist] of [[b, a], [a, b]]) {
+        if (!title || !artist) continue;
+        const key = `${title}|${artist}`;
+        if (seen0.has(key)) continue;
+        seen0.add(key);
+        const hit = await _get(title, artist, durationSec);
+        if (hit) {
+          logger.success(`GET segment-split: "${hit.trackName}" by "${hit.artistName}" (tried title="${title}" artist="${artist}")`);
+          return _format(hit);
+        }
+      }
+    }
+  }
+
+  // Phase 1 — exact GET with cleaned title + author (most precise, short-circuits immediately)
   if (trackName && artistName) {
     const exact = await _get(trackName, artistName, durationSec);
     if (exact) {
