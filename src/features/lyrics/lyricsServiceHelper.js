@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require("discord.js");
+// src/features/lyrics/lyricsServiceHelper.js
+const Embeds = require("../../lib/embeds");
 
 const _BRAND_BLOCKLIST = new Set([
   "valorant",
@@ -95,7 +96,6 @@ function sourceLabel(source = "") {
   return map[source.toLowerCase()] ?? source;
 }
 
-// ── Query strategies ────────────────────────────────────────────────
 function splitTitleSegments(rawTitle) {
   return rawTitle
     .split(/\s[-–×x／/]\s|\s[-–×x／/]|[-–×x／/]\s/)
@@ -155,7 +155,6 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
   return { queries, labels, cleanedTitle, cleanedAuthor: author };
 }
 
-// ── Cache key + embed ───────────────────────────────────────────────
 function buildCacheKey(track) {
   return (
     track?.identifier ||
@@ -164,32 +163,30 @@ function buildCacheKey(track) {
   );
 }
 
-function buildEmbedFromData(firstData, color, rawTitle) {
-  const flag = firstData.is_japanese ? "🇯🇵 " : "";
-  const src = sourceLabel(firstData.source ?? "");
+function buildEmbedFromData(client, data) {
+  const flag = data.is_japanese ? "🇯🇵 " : "";
+  const src = sourceLabel(data.source ?? "");
 
   const footerParts = [
-    `${flag}${firstData.artist}`,
-    firstData.album ? `📀 ${firstData.album}` : null,
+    `${flag}${data.artist}`,
+    data.album ? `📀 ${data.album}` : null,
     `Powered by ${src}`,
   ].filter(Boolean);
 
-  let displayText = firstData.lyrics;
+  let displayText = data.lyrics;
   if (displayText.length > 4096) {
-    const suffix = firstData.url
-      ? `...\n[Read more](${firstData.url})`
+    const suffix = data.url
+      ? `...\n[Read more](${data.url})`
       : "...\n[Lyrics truncated]";
     displayText = displayText.slice(0, 4096 - suffix.length) + suffix;
   }
 
-  const embed = new EmbedBuilder()
-    .setColor(color ?? 0x9b59b6)
-    .setTitle(`🎵 ${firstData.title || rawTitle || "Unknown"}`)
-    .setDescription(displayText)
-    .setFooter({ text: footerParts.join("  ·  ") });
-
-  if (firstData.url) embed.setURL(firstData.url);
-  return embed;
+  return Embeds.music(client, {
+    title: `🎵 ${data.title || "Unknown"}`,
+    description: displayText,
+    footerText: footerParts.join("  ·  "),
+    url: data.url || undefined,
+  });
 }
 
 module.exports = {

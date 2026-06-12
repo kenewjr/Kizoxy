@@ -1,4 +1,8 @@
+// src/features/lyrics/lrclibClient.js
 const axios = require("axios");
+const Logger = require("../../lib/logger");
+
+const logger = new Logger("LRCLIB");
 
 const LRCLIB_API = "https://lrclib.net/api";
 const LRCLIB_HEADERS = {
@@ -12,9 +16,7 @@ async function searchLRCLIB(
   duration = null,
 ) {
   try {
-    console.warn(
-      `[LRCLIB Direct] Searching: "${trackName}" by "${artistName}"`,
-    );
+    logger.info(`Searching: "${trackName}" by "${artistName}"`);
 
     const params = {
       track_name: trackName,
@@ -28,23 +30,23 @@ async function searchLRCLIB(
     const getResponse = await axios.get(getUrl, {
       params,
       headers: LRCLIB_HEADERS,
-      timeout: 10000,
+      timeout: 20000,
       validateStatus: (s) => s < 500,
     });
 
     if (getResponse.status === 200 && getResponse.data) {
-      console.warn(`[LRCLIB Direct] ✅ Found via GET (exact match)`);
+      logger.success(`Found via GET (exact match)`);
       return formatLRCLIBResponse(getResponse.data);
     }
 
-    console.warn(`[LRCLIB Direct] GET failed, trying SEARCH...`);
+    logger.warning(`GET returned ${getResponse.status}, trying SEARCH...`);
     const searchUrl = `${LRCLIB_API}/search`;
     const searchResponse = await axios.get(searchUrl, {
       params: {
         q: `${trackName} ${artistName}`,
       },
       headers: LRCLIB_HEADERS,
-      timeout: 10000,
+      timeout: 20000,
       validateStatus: (s) => s < 500,
     });
 
@@ -52,22 +54,22 @@ async function searchLRCLIB(
       const results = searchResponse.data;
 
       if (results.length === 0) {
-        console.warn(`[LRCLIB Direct] ❌ No results found`);
+        logger.warning(`No results found`);
         return null;
       }
 
       const bestMatch = findBestMatch(results, trackName, artistName);
 
       if (bestMatch) {
-        console.warn(`[LRCLIB Direct] ✅ Found via SEARCH (fuzzy match)`);
+        logger.success(`Found via SEARCH (fuzzy match)`);
         return formatLRCLIBResponse(bestMatch);
       }
     }
 
-    console.warn(`[LRCLIB Direct] ❌ No lyrics found`);
+    logger.warning(`No lyrics found`);
     return null;
   } catch (error) {
-    console.error(`[LRCLIB Direct] Error:`, error.message);
+    logger.error(`searchLRCLIB failed: ${error.message}`);
     return null;
   }
 }
@@ -149,7 +151,7 @@ function parseSyncedLyrics(lrcText) {
         lines.push({
           line: text,
           timestamp: timestamp,
-          duration: 2000, // Default 2 seconds per line
+          duration: 2000,
         });
       }
     }
