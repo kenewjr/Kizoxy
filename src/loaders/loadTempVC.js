@@ -1,3 +1,4 @@
+// src/loaders/loadTempVC.js
 const { Events } = require("discord.js");
 const Logger = require("../lib/logger");
 const tempVcStorage = require("../persistence/tempVcStorage");
@@ -62,6 +63,10 @@ module.exports = (client) => {
     try {
       await tempVcStorage._ensureLoaded?.();
 
+      // Lazily require panelService here so it doesn't land in the require graph
+      // before tempVcStorage is ready. Module is cached after first load.
+      const panelService = require("../features/tempvc/panelService");
+
       const totals = { generators: 0, recovered: 0, cleaned: 0 };
       for (const [, guild] of client.guilds.cache) {
         try {
@@ -72,6 +77,16 @@ module.exports = (client) => {
         } catch (err) {
           logger.warning(
             `Reconcile failed for guild ${guild.id}: ${err.message}`,
+          );
+        }
+
+        // Panel self-heal: independent try/catch — panel failure must not abort
+        // TempVC reconciliation for this or other guilds.
+        try {
+          await panelService.healPanel(client, guild);
+        } catch (err) {
+          logger.warning(
+            `Panel heal failed for guild ${guild.id}: ${err.message}`,
           );
         }
       }

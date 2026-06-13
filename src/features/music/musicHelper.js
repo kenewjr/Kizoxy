@@ -1,3 +1,4 @@
+// src/features/music/musicHelper.js
 const {
   ActionRowBuilder,
   ButtonBuilder,
@@ -81,6 +82,8 @@ function buildNowPlayingEmbed(client, player, track) {
   const positionText = formatduration(position, true);
   const durationText = formatduration(duration, true);
 
+  // EmbedBuilder used directly here: musicHelper owns the Now Playing embed
+  // and is not a command surface, so the Embeds.* factory exception applies.
   const embed = new EmbedBuilder()
     .setAuthor({
       name: "Now Playing...",
@@ -169,21 +172,27 @@ function buildMusicControlRow(stateOrPaused = false) {
   );
 }
 
+// Returns the stored message object directly instead of re-fetching from Discord.
+// playerStart.js keeps player.data.nowPlayingMessage in sync on every track start.
 async function fetchNowPlayingMessage(client, player) {
-  if (!player?.nowPlayingMessageId) return null;
-  const channel = client.channels.cache.get(player.textId);
-  if (!channel) return null;
-  return channel.messages.fetch(player.nowPlayingMessageId).catch(() => null);
+  return player?.data?.nowPlayingMessage ?? null;
 }
 
 async function addLyricsToNowPlaying(client, player, lyricsEmbed) {
   try {
-    const message = await fetchNowPlayingMessage(client, player);
-    if (!message) return false;
+    const message = player?.data?.nowPlayingMessage;
+    const nowPlayingEmbed = player?.data?.nowPlayingEmbed;
+    if (!message || !nowPlayingEmbed) {
+      logger.warning(
+        "addLyricsToNowPlaying: nowPlayingMessage or nowPlayingEmbed not set on player.data",
+      );
+      return false;
+    }
     await message.edit({
-      embeds: [...message.embeds, lyricsEmbed],
+      embeds: [nowPlayingEmbed, lyricsEmbed],
       components: message.components,
     });
+    player.data.lyricsEmbed = lyricsEmbed;
     return true;
   } catch (err) {
     logger.error(`addLyricsToNowPlaying failed: ${err.message}`);
@@ -193,13 +202,19 @@ async function addLyricsToNowPlaying(client, player, lyricsEmbed) {
 
 async function removeLyricsFromNowPlaying(client, player) {
   try {
-    const message = await fetchNowPlayingMessage(client, player);
-    if (!message) return false;
-    const nowPlaying = message.embeds[0];
+    const message = player?.data?.nowPlayingMessage;
+    const nowPlayingEmbed = player?.data?.nowPlayingEmbed;
+    if (!message || !nowPlayingEmbed) {
+      logger.warning(
+        "removeLyricsFromNowPlaying: nowPlayingMessage or nowPlayingEmbed not set on player.data",
+      );
+      return false;
+    }
     await message.edit({
-      embeds: nowPlaying ? [nowPlaying] : [],
+      embeds: [nowPlayingEmbed],
       components: message.components,
     });
+    player.data.lyricsEmbed = null;
     return true;
   } catch (err) {
     logger.error(`removeLyricsFromNowPlaying failed: ${err.message}`);

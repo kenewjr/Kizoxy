@@ -20,7 +20,10 @@ const logger = new Logger("LYRICS");
 const LAVALINK_URL = process.env.LAVALINK_URL || "http://localhost:2333";
 const LAVALINK_PASSWORD = process.env.LAVALINK_PASSWORD || "youshallnotpass";
 const TIMEOUT_MS = 15_000;
-const DIRECT_LRCLIB_TIMEOUT_MS = 60_000;
+
+const LAVALINK_LYRICS_ENABLED = false;
+
+const DIRECT_LRCLIB_TIMEOUT_MS = 15_000;
 const DIRECT_LRCLIB_RETRIES = 2;
 const DIRECT_LRCLIB_RETRY_DELAY_MS = 1_000;
 
@@ -81,8 +84,17 @@ const _resolvers = [
   {
     name: "LavalinkLrclib",
     resolve: async (trackInfo, player) => {
+      if (!LAVALINK_LYRICS_ENABLED) {
+        logger.debug(
+          "LavalinkLrclib: disabled — Java TLS incompatible with lrclib.net",
+        );
+        return null;
+      }
+
       if (!player?.node?.sessionId || !player?.guildId) {
-        logger.warning("LavalinkLrclib: invalid player or missing session/guild ID");
+        logger.warning(
+          "LavalinkLrclib: invalid player or missing session/guild ID",
+        );
         return null;
       }
 
@@ -100,7 +112,9 @@ const _resolvers = [
         });
 
         if (response.status < 200 || response.status >= 300) {
-          logger.warning(`LavalinkLrclib: non-2xx status ${response.status} — treating as miss`);
+          logger.warning(
+            `LavalinkLrclib: non-2xx status ${response.status} — treating as miss`,
+          );
           return null;
         }
 
@@ -118,7 +132,8 @@ const _resolvers = [
           text: response.data.text,
           lines: response.data.lines || [],
           hasSyncedLyrics:
-            Array.isArray(response.data.lines) && response.data.lines.length > 0,
+            Array.isArray(response.data.lines) &&
+            response.data.lines.length > 0,
         };
       } catch (error) {
         logger.warning(`LavalinkLrclib: request failed — ${error.message}`);
@@ -135,10 +150,11 @@ const _resolvers = [
           const result = await Promise.race([
             searchLRCLIB(trackInfo),
             new Promise((_, reject) =>
-              setTimeout(
-                () => reject(Object.assign(new Error("LRCLIB timeout"), { code: "ETIMEDOUT" })),
-                DIRECT_LRCLIB_TIMEOUT_MS,
-              ),
+              setTimeout(() => {
+                const err = new Error("DirectLrclib: timed out after 15s");
+                err.code = "ETIMEDOUT";
+                reject(err);
+              }, DIRECT_LRCLIB_TIMEOUT_MS),
             ),
           ]);
 
@@ -150,6 +166,10 @@ const _resolvers = [
           logger.warning("DirectLrclib: no lyrics returned");
           return null;
         } catch (error) {
+          if (error.message === "DirectLrclib: timed out after 15s") {
+            logger.warning("DirectLrclib: timed out after 15s");
+            return null;
+          }
           if (_isRetryableError(error) && attempt < DIRECT_LRCLIB_RETRIES) {
             logger.warning(
               `DirectLrclib: attempt ${attempt + 1} failed (${error.message}), retrying...`,
@@ -157,7 +177,9 @@ const _resolvers = [
             await _sleep(DIRECT_LRCLIB_RETRY_DELAY_MS);
             continue;
           }
-          logger.warning(`DirectLrclib: all attempts exhausted — ${error.message}`);
+          logger.warning(
+            `DirectLrclib: all attempts exhausted — ${error.message}`,
+          );
           return null;
         }
       }
@@ -227,7 +249,9 @@ async function searchLyrics(track, player, client) {
     try {
       rawData = await resolver.resolve(trackInfo, player, client);
     } catch (error) {
-      logger.error(`Resolver ${resolver.name} threw unexpectedly: ${error.message}`);
+      logger.error(
+        `Resolver ${resolver.name} threw unexpectedly: ${error.message}`,
+      );
       rawData = null;
     }
     if (rawData) break;
@@ -263,7 +287,7 @@ async function searchLyrics(track, player, client) {
 
   logger.info(
     `source=${firstData.source} | is_jp=${firstData.is_japanese}` +
-      ` | artist="${firstData.artist}" | len=${displayLyrics.length}`,
+    ` | artist="${firstData.artist}" | len=${displayLyrics.length}`,
   );
 
   if (!displayLyrics?.trim()) {
@@ -271,6 +295,7 @@ async function searchLyrics(track, player, client) {
   }
 
   lyricsCache.set(cacheKey, firstData);
+  logger.debug(`Lyrics cached: key=${cacheKey} | ttl=24h`);
 
   return buildEmbedFromData(client, firstData);
 }

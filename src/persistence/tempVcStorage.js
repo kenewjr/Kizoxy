@@ -283,6 +283,31 @@ class TempVcStorage extends JSONStorage {
     const g = await this._guild(guildId);
     return Boolean(g.settings.isPremium);
   }
+
+  // ── Panel config ─────────────────────────────────────────────────
+  // Stores the persistent control panel channel + message IDs per guild.
+  // Returns an empty object when no panel has been configured yet.
+
+  async getPanelConfig(guildId) {
+    const g = await this._guild(guildId);
+    if (!g.panel) return {};
+    return {
+      panelChannelId: g.panel.panelChannelId ?? null,
+      panelMessageId: g.panel.panelMessageId ?? null,
+    };
+  }
+
+  async setPanelConfig(guildId, panelChannelId, panelMessageId) {
+    const g = await this._guild(guildId);
+    g.panel = { panelChannelId, panelMessageId };
+    this.scheduleSave();
+  }
+
+  async clearPanelConfig(guildId) {
+    const g = await this._guild(guildId);
+    delete g.panel;
+    this.scheduleSave();
+  }
 }
 
 module.exports = new TempVcStorage();

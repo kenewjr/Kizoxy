@@ -5,7 +5,6 @@ const Logger = require("../../lib/logger");
 const {
   buildMusicControlRow,
   buildNowPlayingEmbed,
-  swapNowPlayingComponents,
   fetchNowPlayingMessage,
 } = require("../../features/music/musicHelper");
 
@@ -14,6 +13,13 @@ const logger = new Logger("PLAYER-START");
 const QUEUE_POLL_INTERVAL_MS = 3000;
 
 module.exports = async (client, player, track) => {
+  // Clear stale references from the previous track before touching anything else.
+  // Prevents lyrics from the previous song bleeding into the new Now Playing message
+  // when addLyricsToNowPlaying reads player.data.nowPlayingEmbed.
+  player.data.nowPlayingEmbed = null;
+  player.data.lyricsEmbed = null;
+  player.data.nowPlayingMessage = null;
+
   const embed = buildNowPlayingEmbed(client, player, track);
   const buttons = buildMusicControlRow({
     paused: player.paused,
@@ -24,32 +30,21 @@ module.exports = async (client, player, track) => {
   const channel = client.channels.cache.get(player.textId);
 
   try {
-    if (player.nowPlayingMessageId) {
-      const oldMsg = await channel.messages
-        .fetch(player.nowPlayingMessageId)
-        .catch(() => null);
-      if (oldMsg) {
-        await oldMsg.edit({ embeds: [embed], components: [buttons] });
-        _startQueueWatcher(client, player, oldMsg);
-        if (player.lyricsEnabled) {
-          setImmediate(() => autoFetchLyrics(client, player, track, oldMsg));
-        }
-        return;
-      }
-    }
-
     const sentMsg = await channel.send({
       embeds: [embed],
       components: [buttons],
     });
-    player.nowPlayingMessageId = sentMsg.id;
+
+    player.data.nowPlayingMessage = sentMsg;
+    player.data.nowPlayingEmbed = embed;
+
     _startQueueWatcher(client, player, sentMsg);
 
     if (player.lyricsEnabled) {
       setImmediate(() => autoFetchLyrics(client, player, track, sentMsg));
     }
   } catch (err) {
-    logger.error(`Error sending/updating Now Playing embed: ${err.message}`);
+    logger.error(`Error sending Now Playing embed: ${err.message}`);
   }
 };
 
@@ -64,7 +59,10 @@ function _startQueueWatcher(client, player, message) {
   let lastKnownPaused = !!player.paused;
 
   player._queueWatcherInterval = setInterval(async () => {
-    if (player.nowPlayingMessageId !== watchedMessageId || !player.playing) {
+    if (
+      player.data.nowPlayingMessage?.id !== watchedMessageId ||
+      !player.playing
+    ) {
       clearInterval(player._queueWatcherInterval);
       player._queueWatcherInterval = null;
       return;
@@ -110,14 +108,17 @@ async function autoFetchLyrics(client, player, track, message) {
   const isStale = () => player._lyricsFetchToken !== token;
 
   try {
-    const currentEmbeds = message.embeds;
+    const nowPlayingEmbed = player.data.nowPlayingEmbed;
+    // Guard: if the track already changed before setImmediate fired, abort.
+    if (!nowPlayingEmbed) return;
+
     const loadingEmbed = Embeds.info(client, {
       description: "🔍 Searching lyrics...",
     });
 
     if (isStale()) return;
     await message.edit({
-      embeds: [...currentEmbeds, loadingEmbed],
+      embeds: [nowPlayingEmbed, loadingEmbed],
       components: message.components,
     });
 
@@ -127,7 +128,7 @@ async function autoFetchLyrics(client, player, track, message) {
 
     if (!lyricsEmbed) {
       await message.edit({
-        embeds: currentEmbeds,
+        embeds: [nowPlayingEmbed],
         components: message.components,
       });
       logger.warning("autoFetchLyrics: no lyrics found for this track");
@@ -135,17 +136,18 @@ async function autoFetchLyrics(client, player, track, message) {
     }
 
     await message.edit({
-      embeds: [...currentEmbeds, lyricsEmbed],
+      embeds: [nowPlayingEmbed, lyricsEmbed],
       components: message.components,
     });
+    player.data.lyricsEmbed = lyricsEmbed;
   } catch (err) {
     if (isStale()) return;
     logger.error(`Auto-fetch lyrics failed: ${err.message}`);
     try {
-      const currentEmbeds = message.embeds;
-      if (currentEmbeds.length > 1) {
+      const nowPlayingEmbed = player.data.nowPlayingEmbed;
+      if (nowPlayingEmbed) {
         await message.edit({
-          embeds: currentEmbeds.slice(0, -1),
+          embeds: [nowPlayingEmbed],
           components: message.components,
         });
       }
