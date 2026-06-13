@@ -103,6 +103,73 @@ function splitTitleSegments(rawTitle) {
     .filter(Boolean);
 }
 
+// Ordered list of parenthetical patterns that identify the original artist.
+// Each entry is [regex, captureGroupIndex]. We capture the artist name from
+// inside the parenthetical before we strip it, so the cover-aware query
+// strategies can search for the original recording.
+const _ORIGINAL_ARTIST_PATTERNS = [
+  // "Cover by X" / "Covered by X"
+  /\(\s*covers?\s+by\s+([^)]+?)\s*\)/i,
+  // "Cover of X"
+  /\(\s*covers?\s+of\s+([^)]+?)\s*\)/i,
+  // "Originally by X"
+  /\(\s*originally\s+by\s+([^)]+?)\s*\)/i,
+  // "Made famous by X"
+  /\(\s*made\s+famous\s+by\s+([^)]+?)\s*\)/i,
+  // "X cover" — e.g. "(Ed Sheeran cover)"
+  /\(\s*([^)]+?)\s+covers?\s*\)/i,
+];
+
+// Parenthetical / bracket content that flags the track as a cover/remix/live
+// variant but does NOT contain an artist name we want to capture.
+const _NOISE_PAREN_RE =
+  /\(\s*(?:covers?(?:\s+(?:version|by|of)\b[^)]*)?|remixed?(?:\s+(?:version|by)\b[^)]*)?|live(?:\s+(?:version|at|from)\b[^)]*)?|acoustic(?:\s+version)?|originally\s+by\s+[^)]+|made\s+famous\s+by\s+[^)]+|official(?:\s+(?:video|music\s+video|audio))?|music\s+video|mv|lyric(?:s)?\s+video|ft\.?\s+[^)]+|feat(?:uring)?\s+[^)]+)\s*\)/gi;
+
+const _NOISE_BRACKET_RE =
+  /\[\s*(?:covers?(?:\s+(?:version|by|of)\b[^]]*)?|remixed?(?:\s+(?:version|by)\b[^]]*)?|live(?:\s+(?:version|at|from)\b[^]]*)?|acoustic(?:\s+version)?|official(?:\s+(?:video|music\s+video|audio))?|music\s+video|mv|lyric(?:s)?\s+video)\s*\]/gi;
+
+// Dash-prefixed YouTube-style suffixes appended without parentheses.
+const _NOISE_DASH_SUFFIX_RE =
+  /\s*[-–]\s*(?:official\s+(?:video|music\s+video|audio|lyric(?:s)?\s+video)|music\s+video|lyric(?:s)?\s+video|cover|acoustic|live)\s*$/i;
+
+// Pipe-separated subtitle ("|" is sometimes used in YouTube titles).
+const _PIPE_SUFFIX_RE = /\s*\|[^|]+$/;
+
+/**
+ * Strips cover/remix/live noise from a track title and extracts the original
+ * artist name when it appears in a parenthetical.
+ *
+ * Returns { cleanTitle, originalArtist } where originalArtist is null when
+ * no original artist could be identified from the parentheticals.
+ */
+function extractOriginalMetadata(title, _author) {
+  let t = String(title || "");
+
+  // STEP A — capture original artist before stripping parentheticals.
+  let originalArtist = null;
+  for (const pattern of _ORIGINAL_ARTIST_PATTERNS) {
+    const m = t.match(pattern);
+    if (m && m[1]) {
+      originalArtist = m[1].trim();
+      break;
+    }
+  }
+
+  // STEP B — strip noise parentheticals, brackets, and dash suffixes.
+  t = t.replace(_NOISE_PAREN_RE, "");
+  t = t.replace(_NOISE_BRACKET_RE, "");
+  t = t.replace(_NOISE_DASH_SUFFIX_RE, "");
+  t = t.replace(_PIPE_SUFFIX_RE, "");
+
+  // STEP C — normalise.
+  t = t.replace(/×/g, "x");
+  t = t.replace(/\s+/g, " ").trim();
+
+  const cleanTitle = t || String(title || "");
+
+  return { cleanTitle, originalArtist };
+}
+
 function buildQueryStrategies(rawTitle, rawAuthor) {
   const cleanedTitle = cleanTitle(rawTitle);
   const cover = isCover(rawTitle);
@@ -136,6 +203,32 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
 
   const q4 = cleanedTitle;
 
+  // Cover-aware extras: strip noise from the raw title to get a clean base,
+  // then build three additional strategies targeting the original recording.
+  const { cleanTitle: coverClean, originalArtist } = extractOriginalMetadata(
+    rawTitle,
+    rawAuthor,
+  );
+  const coverCleanLower = coverClean.toLowerCase();
+  const cleanedTitleLower = cleanedTitle.toLowerCase();
+  const isCoverCleanDifferent = coverCleanLower !== cleanedTitleLower;
+
+  // [5] clean-title + original-artist (most precise cover fallback)
+  const q5 =
+    originalArtist && isCoverCleanDifferent
+      ? `${coverClean} ${originalArtist}`.trim()
+      : null;
+
+  // [6] clean-title + cover-uploader (the channel name; works when the uploader
+  // uses their real artist name for covers of their own originals)
+  const q6 =
+    isCoverCleanDifferent && author
+      ? `${coverClean} ${author}`.trim()
+      : null;
+
+  // [7] clean-title alone
+  const q7 = isCoverCleanDifferent ? coverClean : null;
+
   const seen = new Set();
   const queries = [];
   const labels = [];
@@ -144,9 +237,12 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
     [q2, "first-seg-as-author"],
     [q3, "last-seg-as-author"],
     [q4, "title-only"],
+    [q5, "cover:clean+original-artist"],
+    [q6, "cover:clean+uploader"],
+    [q7, "cover:clean-only"],
   ]) {
-    if (q && !seen.has(q)) {
-      seen.add(q);
+    if (q && !seen.has(q.toLowerCase())) {
+      seen.add(q.toLowerCase());
       queries.push(q);
       labels.push(label);
     }
@@ -193,6 +289,7 @@ module.exports = {
   cleanTitle,
   cleanAuthor,
   extractFtArtist,
+  extractOriginalMetadata,
   isCover,
   sourceLabel,
   splitTitleSegments,

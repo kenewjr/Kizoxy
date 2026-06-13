@@ -13,6 +13,7 @@ const {
   buildQueryStrategies,
   buildCacheKey,
   buildEmbedFromData,
+  extractOriginalMetadata,
 } = require("./lyricsServiceHelper");
 
 const logger = new Logger("LYRICS");
@@ -205,29 +206,28 @@ async function searchLyrics(track, player, client) {
     return buildEmbedFromData(client, cached);
   }
 
-  const { queries, labels, cleanedTitle, cleanedAuthor } = buildQueryStrategies(
-    rawTitle,
-    rawAuthor,
-  );
+  // Extract cover-clean title and original artist before building strategies.
+  // This is the single call site — result is passed into buildQueryStrategies
+  // so the helper does not duplicate the work internally.
+  const { cleanTitle: coverCleanTitle, originalArtist } =
+    extractOriginalMetadata(rawTitle, rawAuthor);
+
+  const { queries, labels, cleanedTitle, cleanedAuthor } =
+    buildQueryStrategies(rawTitle, rawAuthor);
 
   const trackAuthor = cleanedAuthor || cleanAuthor(rawAuthor);
-  let trackTitle = cleanedTitle;
-  if (
-    trackAuthor &&
-    cleanedTitle.toLowerCase().includes(trackAuthor.toLowerCase())
-  ) {
-    const parts = cleanedTitle.split(/\s[-–]\s/);
-    if (parts.length >= 2) {
-      const songPart = parts.find(
-        (p) => !p.toLowerCase().includes(trackAuthor.toLowerCase()),
-      );
-      if (songPart) trackTitle = songPart.trim();
-    }
-  }
+
+  // Use the cover-cleaned title as the ref title for the resolver. This
+  // replaces the old segment-split heuristic, which only handled "Artist × Title"
+  // patterns but not cover parentheticals.
+  const trackTitle = coverCleanTitle || cleanedTitle;
 
   logger.info(`Track    : "${rawTitle}"`);
   logger.info(`Author   : "${rawAuthor}"`);
   logger.info(`Ref title: "${trackTitle}" | ref author: "${trackAuthor}"`);
+  logger.debug(
+    `Cover-clean: "${coverCleanTitle}" | original artist: "${originalArtist ?? "none"}"`,
+  );
   logger.debug(
     `Strategies: ${queries.map((q, i) => `[${i + 1}] (${labels[i]}) "${q}"`).join(", ")}`,
   );
