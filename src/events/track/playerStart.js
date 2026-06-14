@@ -39,7 +39,7 @@ module.exports = async (client, player, track) => {
           components: [buttons],
         });
       } catch (_editErr) {
-        // Pesan lama mungkin sudah dihapus — fallback ke send baru
+        // Previous message may have been deleted — fall back to a fresh send.
         sentMsg = null;
       }
     }
@@ -53,7 +53,6 @@ module.exports = async (client, player, track) => {
 
     player.data.nowPlayingMessage = sentMsg;
     player.data.nowPlayingEmbed = embed;
-    // Simpan referensi untuk track berikutnya
     player.data._prevNowPlayingMessage = sentMsg;
 
     _startQueueWatcher(client, player, sentMsg);
@@ -66,46 +65,53 @@ module.exports = async (client, player, track) => {
   }
 };
 
+// Polls queue size + paused state. On change it REBUILDS the Now Playing embed
+// from live player state so the Queue count and Total Duration fields stay
+// accurate — editing only the components left those fields frozen at track start.
 function _startQueueWatcher(client, player, message) {
-  if (player._queueWatcherInterval) {
-    clearInterval(player._queueWatcherInterval);
-    player._queueWatcherInterval = null;
-  }
+  clearInterval(player.data?._watcherInterval);
 
   const watchedMessageId = message.id;
-  let lastKnownQueueSize = player.queue?.size ?? 0;
-  let lastKnownPaused = !!player.paused;
+  let lastQueueSize = player.queue?.size ?? 0;
+  let lastPaused = !!player.paused;
 
-  player._queueWatcherInterval = setInterval(async () => {
-    if (
-      player.data.nowPlayingMessage?.id !== watchedMessageId ||
-      !player.playing
-    ) {
-      clearInterval(player._queueWatcherInterval);
-      player._queueWatcherInterval = null;
-      return;
-    }
-
-    const currentQueueSize = player.queue?.size ?? 0;
-    const currentPaused = !!player.paused;
-
-    if (
-      currentQueueSize === lastKnownQueueSize &&
-      currentPaused === lastKnownPaused
-    ) {
-      return;
-    }
-
-    lastKnownQueueSize = currentQueueSize;
-    lastKnownPaused = currentPaused;
-
+  player.data._watcherInterval = setInterval(async () => {
     try {
-      const msg = await fetchNowPlayingMessage(client, player);
-      if (!msg || msg.id !== watchedMessageId) {
-        clearInterval(player._queueWatcherInterval);
-        player._queueWatcherInterval = null;
+      if (
+        player.data.nowPlayingMessage?.id !== watchedMessageId ||
+        !player.playing
+      ) {
+        clearInterval(player.data?._watcherInterval);
+        player.data._watcherInterval = null;
         return;
       }
+
+      const currentQueueSize = player.queue?.size ?? 0;
+      const currentPaused = !!player.paused;
+
+      if (currentQueueSize === lastQueueSize && currentPaused === lastPaused) {
+        return;
+      }
+
+      lastQueueSize = currentQueueSize;
+      lastPaused = currentPaused;
+
+      const msg = await fetchNowPlayingMessage(client, player);
+      if (!msg || msg.id !== watchedMessageId) {
+        clearInterval(player.data?._watcherInterval);
+        player.data._watcherInterval = null;
+        return;
+      }
+
+      const track = player.queue?.current;
+      if (!track) return;
+
+      const rebuiltEmbed = buildNowPlayingEmbed(client, player, track);
+      player.data.nowPlayingEmbed = rebuiltEmbed;
+
+      const embeds = player.data.lyricsEmbed
+        ? [rebuiltEmbed, player.data.lyricsEmbed]
+        : [rebuiltEmbed];
 
       const freshRow = buildMusicControlRow({
         paused: currentPaused,
@@ -113,7 +119,7 @@ function _startQueueWatcher(client, player, message) {
         lyricsEnabled: !!player.lyricsEnabled,
       });
 
-      await msg.edit({ components: [freshRow] });
+      await msg.edit({ embeds, components: [freshRow] });
     } catch (err) {
       logger.warning(`Queue watcher edit failed: ${err.message}`);
     }

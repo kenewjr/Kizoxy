@@ -30,6 +30,20 @@ function validateMusicContext(client, interaction) {
   return { player, voiceChannel };
 }
 
+// Message-based counterpart of validateMusicContext for prefix commands.
+function validateMusicContextMessage(client, message) {
+  const voiceChannel = message.member?.voice?.channel;
+  if (!voiceChannel) return { error: "❌ You must be in a voice channel." };
+
+  const player = client.manager?.players?.get(message.guild.id);
+  if (!player) return { error: "❌ Nothing is playing right now." };
+
+  if (player.voiceId !== voiceChannel.id)
+    return { error: "❌ You must be in the same voice channel as the bot." };
+
+  return { player, voiceChannel };
+}
+
 function scheduleAutoDelete(interaction, ttl = EPHEMERAL_TTL_MS) {
   setTimeout(() => {
     interaction.deleteReply().catch(() => {});
@@ -235,6 +249,7 @@ module.exports = {
   EPHEMERAL_TTL_MS,
   EPHEMERAL_ERROR_TTL_MS,
   validateMusicContext,
+  validateMusicContextMessage,
   scheduleAutoDelete,
   buildMusicControlRow,
   buildNowPlayingEmbed,

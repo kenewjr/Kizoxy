@@ -1,6 +1,8 @@
 const Embeds = require("../../lib/embeds");
 
 module.exports = async (client, player) => {
+  clearInterval(player.data?._watcherInterval);
+
   const channel = client.channels.cache.get(player.textId);
   if (!channel) return;
 

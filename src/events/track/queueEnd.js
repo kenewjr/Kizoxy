@@ -4,6 +4,8 @@ const Logger = require("../../lib/logger");
 const logger = new Logger("QUEUE_END");
 
 module.exports = async (client, player) => {
+  clearInterval(player.data?._watcherInterval);
+
   const channel = client.channels.cache.get(player.textId);
 
   if (player.data.get("lofi")) {

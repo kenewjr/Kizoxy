@@ -4,6 +4,8 @@ const Logger = require("../../lib/logger");
 const logger = new Logger("TRACK_END");
 
 module.exports = async (client, player, track, payload) => {
+  clearInterval(player.data?._watcherInterval);
+
   if (!player.data.get("lofi")) return;
 
   const reason = String(payload?.reason || "").toLowerCase();
