@@ -7,7 +7,6 @@ const {
 } = require("../fixembedResolverHelper");
 
 module.exports = [
-  // ── Twitter / X / Nitter ──────────────────────────────────────────
   {
     name: "Twitter",
     originalLabel: "Tweet",
@@ -29,7 +28,6 @@ module.exports = [
     },
   },
 
-  // ── Instagram ─────────────────────────────────────────────────────
   {
     name: "Instagram",
     originalLabel: "Instagram",
@@ -53,7 +51,6 @@ module.exports = [
     },
   },
 
-  // ── TikTok ────────────────────────────────────────────────────────
   {
     name: "TikTok",
     originalLabel: "TikTok",
@@ -87,7 +84,6 @@ module.exports = [
     },
   },
 
-  // ── Reddit ────────────────────────────────────────────────────────
   {
     name: "Reddit",
     originalLabel: "Reddit",
@@ -107,7 +103,6 @@ module.exports = [
     },
   },
 
-  // ── Threads ───────────────────────────────────────────────────────
   {
     name: "Threads",
     originalLabel: "Threads",
@@ -130,7 +125,6 @@ module.exports = [
     },
   },
 
-  // ── Bluesky ───────────────────────────────────────────────────────
   {
     name: "Bluesky",
     originalLabel: "Bluesky",
@@ -149,7 +143,6 @@ module.exports = [
     },
   },
 
-  // ── Facebook ──────────────────────────────────────────────────────
   {
     name: "Facebook",
     originalLabel: "Facebook",
@@ -164,7 +157,6 @@ module.exports = [
     },
   },
 
-  // ── Tumblr ────────────────────────────────────────────────────────
   {
     name: "Tumblr",
     originalLabel: "Tumblr",
@@ -183,7 +175,6 @@ module.exports = [
     },
   },
 
-  // ── Mastodon ──────────────────────────────────────────────────────
   {
     name: "Mastodon",
     originalLabel: "Mastodon",

@@ -1,4 +1,7 @@
 const Embeds = require("../../lib/embeds");
+const Logger = require("../../lib/logger");
+
+const logger = new Logger("TRACK_END");
 
 module.exports = async (client, player, track, payload) => {
   if (!player.data.get("lofi")) return;
@@ -22,7 +25,7 @@ module.exports = async (client, player, track, payload) => {
     });
 
     if (!res?.tracks?.length) {
-      console.error("Lofi auto-restart: no tracks returned for", lofiUrl);
+      logger.error(`Lofi auto-restart: no tracks returned for ${lofiUrl}`);
       return;
     }
 
@@ -32,6 +35,6 @@ module.exports = async (client, player, track, payload) => {
       await player.play();
     }
   } catch (e) {
-    console.error("Failed to auto-restart Lofi stream:", e);
+    logger.error(`Failed to auto-restart Lofi stream: ${e.message}`);
   }
 };

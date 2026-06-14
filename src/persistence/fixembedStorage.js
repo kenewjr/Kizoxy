@@ -1,5 +1,8 @@
 const fs = require("fs");
 const path = require("path");
+const Logger = require("../lib/logger");
+
+const logger = new Logger("FIXEMBED_STORAGE");
 
 const DATA_PATH = path.join(__dirname, "../../data/fixembed.json");
 
@@ -26,7 +29,7 @@ class FixEmbedStorage {
       }
       this.cache = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
     } catch (err) {
-      console.error("[FixEmbed] Error initializing storage:", err);
+      logger.error(`Error initializing storage: ${err.message}`);
       this.cache = {};
     }
   }
@@ -35,7 +38,7 @@ class FixEmbedStorage {
     try {
       fs.writeFileSync(DATA_PATH, JSON.stringify(this.cache, null, 2), "utf8");
     } catch (err) {
-      console.error("[FixEmbed] Error saving storage:", err);
+      logger.error(`Error saving storage: ${err.message}`);
     }
   }
 

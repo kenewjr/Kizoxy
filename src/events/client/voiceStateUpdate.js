@@ -1,12 +1,15 @@
 const Embeds = require("../../lib/embeds");
 const { COLORS } = Embeds;
 const LevelStorage = require("../../persistence/levelStorage");
+const Logger = require("../../lib/logger");
+
+const logger = new Logger("VOICE_STATE");
 
 const XP_PER_MINUTE = 10;
 const MIN_DURATION = 60000; // 1 minute
 
 module.exports = async (client, oldState, newState) => {
-  if (newState.member.user.bot) return;
+  if (newState.member?.user?.bot) return;
 
   if (!client.levelStorage) {
     client.levelStorage = new LevelStorage();
@@ -39,7 +42,7 @@ module.exports = async (client, oldState, newState) => {
               xpToAdd,
             );
           } catch (error) {
-            console.error("Error adding voice XP:", error);
+            logger.error(`Error adding voice XP: ${error.message}`);
           }
         }
       }
@@ -90,6 +93,6 @@ module.exports = async (client, oldState, newState) => {
   try {
     await logChannel.send({ embeds: [embed] });
   } catch (err) {
-    console.error(`Could not send voiceStateUpdate log:`, err);
+    logger.error(`Could not send voiceStateUpdate log: ${err.message}`);
   }
 };

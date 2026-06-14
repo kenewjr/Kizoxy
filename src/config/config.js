@@ -18,6 +18,5 @@ module.exports = {
     },
   ],
 
-  // ── Logging ───────────────────────────────────────
   LOG_FORMAT: process.env.LOG_FORMAT || "pretty", // "pretty" or "json"
 };

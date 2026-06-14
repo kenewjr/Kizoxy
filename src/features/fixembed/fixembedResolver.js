@@ -1,5 +1,8 @@
 const { URL_REGEX, isSpoiler } = require("./fixembedResolverHelper");
+const Logger = require("../../lib/logger");
 const RESOLVERS = require("./resolvers");
+
+const logger = new Logger("FIXEMBED");
 
 async function extractFixedLinks(content, viewMode = "normal") {
   const urls = [...(content.matchAll(URL_REGEX) || [])].map((m) => m[0]);
@@ -30,10 +33,7 @@ async function extractFixedLinks(content, viewMode = "normal") {
           });
         }
       } catch (err) {
-        console.error(
-          `[FixEmbed] Resolver error for ${resolver.name}:`,
-          err.message,
-        );
+        logger.error(`Resolver error for ${resolver.name}: ${err.message}`);
       }
       break;
     }

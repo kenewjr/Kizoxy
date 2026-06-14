@@ -1,5 +1,4 @@
 const {
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -10,6 +9,7 @@ const {
   RoleSelectMenuBuilder,
   ChannelType,
 } = require("discord.js");
+const Embeds = require("../../lib/embeds");
 
 const ACTION_LABELS = {
   nothing: "Nothing",
@@ -50,14 +50,13 @@ function fmt(arr, mentionFn) {
   return arr.length ? arr.map(mentionFn).join(", ") : "*None*";
 }
 
-// ── Embed builders ──────────────────────────────────────────────────
 function buildMainPage(s, guild, color, notice = "") {
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`🔗 FixEmbed — ${guild.name}`)
-    .setThumbnail(guild.iconURL({ dynamic: true }) ?? null)
-    .setDescription(notice || null)
-    .addFields(
+  return Embeds.withColor(null, color, {
+    title: `🔗 FixEmbed — ${guild.name}`,
+    thumbnail: guild.iconURL({ dynamic: true }) ?? undefined,
+    description: notice || undefined,
+    footerText: "📄 Page 1/3 — Status Overview",
+    fields: [
       {
         name: "Status",
         value: s.enabled ? "✅ Enabled" : "🚫 Disabled",
@@ -95,52 +94,48 @@ function buildMainPage(s, guild, color, notice = "") {
           : "*None*",
         inline: false,
       },
-    )
-    .setFooter({ text: "📄 Page 1/3 — Status Overview" })
-    .setTimestamp();
+    ],
+  });
 }
 
 function buildBehaviorPage(s, color, notice = "") {
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle("🔗 FixEmbed — Behavior Settings")
-    .setDescription(
+  return Embeds.withColor(null, color, {
+    title: "🔗 FixEmbed — Behavior Settings",
+    softCap: false,
+    description:
       (notice ? `> ${notice}\n\n` : "") +
-        "**Base Message Action** — what happens to the original message\n" +
-        "> `Nothing` — leave the original untouched\n" +
-        "> `Remove Embed` — suppress the original link preview *(default)*\n" +
-        "> `Delete Message` — delete the original message entirely\n\n" +
-        "**View Mode** — which embed style to use *(where supported: Twitter, Bluesky, TikTok, Instagram)*\n" +
-        "> `Normal` — standard embed *(default)*\n" +
-        "> `Direct` — direct video/image file\n" +
-        "> `Gallery` — gallery view (multiple images)\n" +
-        "> `Text` — text-only view (no media)",
-    )
-    .addFields(
+      "**Base Message Action** — what happens to the original message\n" +
+      "> `Nothing` — leave the original untouched\n" +
+      "> `Remove Embed` — suppress the original link preview *(default)*\n" +
+      "> `Delete Message` — delete the original message entirely\n\n" +
+      "**View Mode** — which embed style to use *(where supported: Twitter, Bluesky, TikTok, Instagram)*\n" +
+      "> `Normal` — standard embed *(default)*\n" +
+      "> `Direct` — direct video/image file\n" +
+      "> `Gallery` — gallery view (multiple images)\n" +
+      "> `Text` — text-only view (no media)",
+    footerText: "📄 Page 2/3 — Behavior | Use dropdowns to change values",
+    fields: [
       {
         name: "Current: Base Action",
         value: `\`${s.baseMessageAction}\``,
         inline: true,
       },
       { name: "Current: View Mode", value: `\`${s.viewMode}\``, inline: true },
-    )
-    .setFooter({
-      text: "📄 Page 2/3 — Behavior | Use dropdowns to change values",
-    })
-    .setTimestamp();
+    ],
+  });
 }
 
 function buildIgnorePage(s, color, notice = "") {
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle("🔗 FixEmbed — Ignore Lists")
-    .setDescription(
+  return Embeds.withColor(null, color, {
+    title: "🔗 FixEmbed — Ignore Lists",
+    softCap: false,
+    description:
       (notice ? `> ${notice}\n\n` : "") +
-        "**➕ Add** — use a select menu below to pick a channel/user/role to ignore.\n" +
-        "**➖ Remove** — select the same item again, or press a **Clear** button below.\n" +
-        "**Keywords** — use `/fixembed ignore-keyword <word>` to add/remove keywords.",
-    )
-    .addFields(
+      "**➕ Add** — use a select menu below to pick a channel/user/role to ignore.\n" +
+      "**➖ Remove** — select the same item again, or press a **Clear** button below.\n" +
+      "**Keywords** — use `/fixembed ignore-keyword <word>` to add/remove keywords.",
+    footerText: "📄 Page 3/3 — Ignore Lists",
+    fields: [
       {
         name: "🔇 Ignored Channels",
         value: fmt(s.disabledChannels, (id) => `<#${id}>`),
@@ -163,12 +158,10 @@ function buildIgnorePage(s, color, notice = "") {
           : "*None*",
         inline: false,
       },
-    )
-    .setFooter({ text: "📄 Page 3/3 — Ignore Lists" })
-    .setTimestamp();
+    ],
+  });
 }
 
-// ── Component rows ──────────────────────────────────────────────────
 function navRow(guildId, userId, currentPage) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -271,7 +264,6 @@ function clearAllRow(guildId, userId) {
   );
 }
 
-// ── Page assemblers ─────────────────────────────────────────────────
 function ignorePage(s, color, notice, guildId, userId) {
   return {
     embeds: [buildIgnorePage(s, color, notice)],

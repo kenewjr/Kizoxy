@@ -1,8 +1,6 @@
 const { PermissionsBitField } = require("discord.js");
 const { v4: uuidv4 } = require("uuid");
 
-// ── Validation ──────────────────────────────────────────
-
 const WAKTU_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const TANGGAL_REGEX = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/;
 const TIME_REGEX = WAKTU_REGEX;
@@ -103,8 +101,6 @@ function checkChannelPermissions(channel, guild) {
 
   return null;
 }
-
-// ── CRUD Operations ─────────────────────────────────────
 
 async function createAlarm(
   scheduler,

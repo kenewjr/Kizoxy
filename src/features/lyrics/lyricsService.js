@@ -1,4 +1,3 @@
-// src/features/lyrics/lyricsService.js
 const axios = require("axios");
 const NodeCache = require("node-cache");
 const http = require("http");
@@ -212,8 +211,10 @@ async function searchLyrics(track, player, client) {
   const { cleanTitle: coverCleanTitle, originalArtist } =
     extractOriginalMetadata(rawTitle, rawAuthor);
 
-  const { queries, labels, cleanedTitle, cleanedAuthor } =
-    buildQueryStrategies(rawTitle, rawAuthor);
+  const { queries, labels, cleanedTitle, cleanedAuthor } = buildQueryStrategies(
+    rawTitle,
+    rawAuthor,
+  );
 
   const trackAuthor = cleanedAuthor || cleanAuthor(rawAuthor);
 
@@ -287,7 +288,7 @@ async function searchLyrics(track, player, client) {
 
   logger.info(
     `source=${firstData.source} | is_jp=${firstData.is_japanese}` +
-    ` | artist="${firstData.artist}" | len=${displayLyrics.length}`,
+      ` | artist="${firstData.artist}" | len=${displayLyrics.length}`,
   );
 
   if (!displayLyrics?.trim()) {

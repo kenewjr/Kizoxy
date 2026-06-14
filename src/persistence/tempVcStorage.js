@@ -48,8 +48,6 @@ class TempVcStorage extends JSONStorage {
     return g;
   }
 
-  // ── Generators ──────────────────────────────────────────────────
-
   async getGenerator(guildId, channelId) {
     const g = await this._guild(guildId);
     return g.generators[channelId] || null;
@@ -104,8 +102,6 @@ class TempVcStorage extends JSONStorage {
     return true;
   }
 
-  // ── Temp channels ───────────────────────────────────────────────
-
   async getTempChannel(guildId, channelId) {
     const g = await this._guild(guildId);
     return g.tempChannels[channelId] || null;
@@ -145,6 +141,7 @@ class TempVcStorage extends JSONStorage {
         : [],
       interfaceMessageId: channelData.interfaceMessageId ?? null,
       interfaceChannelId: channelData.interfaceChannelId ?? null,
+      pinnedInfoMessageId: channelData.pinnedInfoMessageId ?? null,
       templateId: channelData.templateId ?? null,
       createdAt: channelData.createdAt ?? Date.now(),
     };
@@ -174,8 +171,6 @@ class TempVcStorage extends JSONStorage {
     this.scheduleSave();
     return true;
   }
-
-  // ── Templates ───────────────────────────────────────────────────
 
   async getTemplate(guildId, templateId) {
     const g = await this._guild(guildId);
@@ -225,8 +220,6 @@ class TempVcStorage extends JSONStorage {
     return true;
   }
 
-  // ── Voice roles ─────────────────────────────────────────────────
-
   async getVoiceRoles(guildId) {
     const g = await this._guild(guildId);
     return [...g.voiceRoles];
@@ -265,8 +258,6 @@ class TempVcStorage extends JSONStorage {
     return true;
   }
 
-  // ── Settings ────────────────────────────────────────────────────
-
   async getSettings(guildId) {
     const g = await this._guild(guildId);
     return { ...g.settings };
@@ -282,31 +273,6 @@ class TempVcStorage extends JSONStorage {
   async isPremium(guildId) {
     const g = await this._guild(guildId);
     return Boolean(g.settings.isPremium);
-  }
-
-  // ── Panel config ─────────────────────────────────────────────────
-  // Stores the persistent control panel channel + message IDs per guild.
-  // Returns an empty object when no panel has been configured yet.
-
-  async getPanelConfig(guildId) {
-    const g = await this._guild(guildId);
-    if (!g.panel) return {};
-    return {
-      panelChannelId: g.panel.panelChannelId ?? null,
-      panelMessageId: g.panel.panelMessageId ?? null,
-    };
-  }
-
-  async setPanelConfig(guildId, panelChannelId, panelMessageId) {
-    const g = await this._guild(guildId);
-    g.panel = { panelChannelId, panelMessageId };
-    this.scheduleSave();
-  }
-
-  async clearPanelConfig(guildId) {
-    const g = await this._guild(guildId);
-    delete g.panel;
-    this.scheduleSave();
   }
 }
 

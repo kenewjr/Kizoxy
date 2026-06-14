@@ -4,6 +4,9 @@ const {
   StringSelectMenuBuilder,
 } = require("discord.js");
 const Embeds = require("./embeds");
+const Logger = require("./logger");
+
+const logger = new Logger("INTERACTIONS");
 
 async function replySuccess(interaction, description, options = {}) {
   const embed = Embeds.success(interaction.client, {
@@ -23,7 +26,7 @@ async function replyError(interaction, errorOrMessage, options = {}) {
       ? errorOrMessage
       : Embeds.formatError(errorOrMessage);
   const title =
-    options.title === null ? undefined : options.title || "Terjadi kesalahan";
+    options.title === null ? undefined : options.title || "An error occurred";
   const embed = Embeds.error(interaction.client, {
     title,
     description,
@@ -66,7 +69,7 @@ async function safeReply(interaction, payload) {
     }
     return await interaction.reply(payload);
   } catch (err) {
-    console.error("[safeReply] Failed to respond:", err.message);
+    logger.error(`safeReply failed to respond: ${err.message}`);
     return null;
   }
 }
@@ -130,10 +133,10 @@ function createCollector(message, options = {}) {
 
 async function confirmAction(interaction, options = {}) {
   const {
-    title = "Konfirmasi",
-    description = "Yakin ingin melanjutkan?",
-    confirmLabel = "Konfirmasi",
-    cancelLabel = "Batalkan",
+    title = "Confirm",
+    description = "Are you sure you want to continue?",
+    confirmLabel = "Confirm",
+    cancelLabel = "Cancel",
     timeoutMs = DEFAULT_TIMEOUT_MS,
     ephemeral = true,
   } = options;

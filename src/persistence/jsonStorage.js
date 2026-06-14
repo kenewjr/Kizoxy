@@ -166,8 +166,6 @@ class JSONStorage {
     return JSON.stringify(data, null, 2);
   }
 
-  // ── Reads ───────────────────────────────────────────────────────
-
   async getAll() {
     await this._ensureLoaded();
     return Object.values(this.data).flat();
@@ -225,8 +223,6 @@ class JSONStorage {
       return [];
     }
   }
-
-  // ── Writes ──────────────────────────────────────────────────────
 
   async create(item) {
     await this._ensureLoaded();

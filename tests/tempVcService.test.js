@@ -144,3 +144,62 @@ describe("tempVcService.isGenerator / isTempChannel", () => {
     expect(await tempVcService.isTempChannel("g", null)).toBe(false);
   });
 });
+
+describe("[NEW] tempVcService.transferOwnership", () => {
+  // The storage-throws test intentionally drives logger.error (console.error).
+  let _errSpy;
+  beforeAll(() => {
+    _errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterAll(() => {
+    _errSpy.mockRestore();
+  });
+
+  beforeEach(() => {
+    tempVcStorage.__reset();
+    jest.clearAllMocks();
+  });
+
+  // covers: missing args short-circuit to null before touching storage
+  test("returns null when any argument is missing", async () => {
+    expect(await tempVcService.transferOwnership(null, "c", "u")).toBeNull();
+    expect(await tempVcService.transferOwnership("g", null, "u")).toBeNull();
+    expect(await tempVcService.transferOwnership("g", "c", null)).toBeNull();
+    expect(tempVcStorage.updateTempChannel).not.toHaveBeenCalled();
+  });
+
+  // covers: unknown channel returns null and never writes
+  test("returns null when the temp channel record does not exist", async () => {
+    const result = await tempVcService.transferOwnership("g1", "ghost", "u2");
+    expect(result).toBeNull();
+    expect(tempVcStorage.updateTempChannel).not.toHaveBeenCalled();
+  });
+
+  // covers: existing channel updates ownerId in storage and returns the record
+  test("updates ownerId and returns the updated record", async () => {
+    tempVcStorage.__seedTempChannel("tc-1", "old-owner");
+    const result = await tempVcService.transferOwnership(
+      "g1",
+      "tc-1",
+      "new-owner",
+    );
+    expect(result).not.toBeNull();
+    expect(tempVcStorage.updateTempChannel).toHaveBeenCalledWith("g1", "tc-1", {
+      ownerId: "new-owner",
+    });
+  });
+
+  // covers: a storage write rejection is swallowed and surfaced as null
+  test("returns null when the storage update throws", async () => {
+    tempVcStorage.__seedTempChannel("tc-2", "old-owner");
+    tempVcStorage.updateTempChannel.mockRejectedValueOnce(
+      new Error("disk full"),
+    );
+    const result = await tempVcService.transferOwnership(
+      "g1",
+      "tc-2",
+      "new-owner",
+    );
+    expect(result).toBeNull();
+  });
+});

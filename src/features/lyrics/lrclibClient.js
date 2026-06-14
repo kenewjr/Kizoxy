@@ -1,4 +1,3 @@
-// src/features/lyrics/lrclibClient.js
 const axios = require("axios");
 const Logger = require("../../lib/logger");
 
@@ -67,14 +66,19 @@ function _pickBest(results, trackName, artistName, durationSec) {
 
   const scored = results
     .filter((r) => r.plainLyrics || r.syncedLyrics)
-    .map((r) => ({ result: r, score: _scoreResult(r, trackName, artistName, durationSec) }));
+    .map((r) => ({
+      result: r,
+      score: _scoreResult(r, trackName, artistName, durationSec),
+    }));
 
   if (scored.length === 0) return null;
   scored.sort((a, b) => b.score - a.score);
 
   const best = scored[0];
   if (best.score >= MIN_SCORE_ACCEPT) {
-    logger.debug(`Best match score=${best.score} "${best.result.trackName}" by "${best.result.artistName}"`);
+    logger.debug(
+      `Best match score=${best.score} "${best.result.trackName}" by "${best.result.artistName}"`,
+    );
     return best.result;
   }
   return null;
@@ -93,7 +97,11 @@ async function _get(trackName, artistName, durationSec) {
       validateStatus: (s) => s < 500,
     });
 
-    if (res.status === 200 && res.data && (res.data.plainLyrics || res.data.syncedLyrics)) {
+    if (
+      res.status === 200 &&
+      res.data &&
+      (res.data.plainLyrics || res.data.syncedLyrics)
+    ) {
       return res.data;
     }
     return null;
@@ -132,19 +140,27 @@ async function searchLRCLIB(trackInfo) {
   // Each adjacent segment pair is tried as (title, artist) and (artist, title).
   if (segments.length >= 2) {
     const _cleanSeg = (s) =>
-      s.replace(/\([^)]*\)/g, "").replace(/\[[^\]]*\]/g, "").trim();
+      s
+        .replace(/\([^)]*\)/g, "")
+        .replace(/\[[^\]]*\]/g, "")
+        .trim();
     const seen0 = new Set();
     for (let i = 0; i < segments.length - 1; i++) {
       const a = _cleanSeg(segments[i]);
       const b = _cleanSeg(segments[i + 1]);
-      for (const [title, artist] of [[b, a], [a, b]]) {
+      for (const [title, artist] of [
+        [b, a],
+        [a, b],
+      ]) {
         if (!title || !artist) continue;
         const key = `${title}|${artist}`;
         if (seen0.has(key)) continue;
         seen0.add(key);
         const hit = await _get(title, artist, durationSec);
         if (hit) {
-          logger.success(`GET segment-split: "${hit.trackName}" by "${hit.artistName}" (tried title="${title}" artist="${artist}")`);
+          logger.success(
+            `GET segment-split: "${hit.trackName}" by "${hit.artistName}" (tried title="${title}" artist="${artist}")`,
+          );
           return _format(hit);
         }
       }
@@ -155,7 +171,9 @@ async function searchLRCLIB(trackInfo) {
   if (trackName && artistName) {
     const exact = await _get(trackName, artistName, durationSec);
     if (exact) {
-      logger.success(`GET exact match: "${exact.trackName}" by "${exact.artistName}"`);
+      logger.success(
+        `GET exact match: "${exact.trackName}" by "${exact.artistName}"`,
+      );
       return _format(exact);
     }
   }
@@ -168,20 +186,43 @@ async function searchLRCLIB(trackInfo) {
     : [];
   for (const r of structuredResults) if (r.id) accumulated.set(r.id, r);
 
-  const best2 = _pickBest([...accumulated.values()], trackName, artistName, durationSec);
-  if (best2 && _scoreResult(best2, trackName, artistName, durationSec) >= MIN_SCORE_CONFIDENT) {
-    logger.success(`SEARCH structured high-confidence match: "${best2.trackName}" by "${best2.artistName}"`);
+  const best2 = _pickBest(
+    [...accumulated.values()],
+    trackName,
+    artistName,
+    durationSec,
+  );
+  if (
+    best2 &&
+    _scoreResult(best2, trackName, artistName, durationSec) >=
+      MIN_SCORE_CONFIDENT
+  ) {
+    logger.success(
+      `SEARCH structured high-confidence match: "${best2.trackName}" by "${best2.artistName}"`,
+    );
     return _format(best2);
   }
 
   // Phase 3 — freetext query strategies from buildQueryStrategies
   for (const q of queries) {
     const rows = await _search({ q });
-    for (const r of rows) if (r.id && !accumulated.has(r.id)) accumulated.set(r.id, r);
+    for (const r of rows)
+      if (r.id && !accumulated.has(r.id)) accumulated.set(r.id, r);
 
-    const candidate = _pickBest([...accumulated.values()], trackName, artistName, durationSec);
-    if (candidate && _scoreResult(candidate, trackName, artistName, durationSec) >= MIN_SCORE_CONFIDENT) {
-      logger.success(`SEARCH freetext high-confidence match after query "${q}"`);
+    const candidate = _pickBest(
+      [...accumulated.values()],
+      trackName,
+      artistName,
+      durationSec,
+    );
+    if (
+      candidate &&
+      _scoreResult(candidate, trackName, artistName, durationSec) >=
+        MIN_SCORE_CONFIDENT
+    ) {
+      logger.success(
+        `SEARCH freetext high-confidence match after query "${q}"`,
+      );
       return _format(candidate);
     }
   }
@@ -189,13 +230,21 @@ async function searchLRCLIB(trackInfo) {
   // Phase 4 — title-only search (catches tracks with no/wrong artist metadata)
   if (artistName) {
     const titleRows = await _search({ q: trackName });
-    for (const r of titleRows) if (r.id && !accumulated.has(r.id)) accumulated.set(r.id, r);
+    for (const r of titleRows)
+      if (r.id && !accumulated.has(r.id)) accumulated.set(r.id, r);
   }
 
   // Phase 5 — best from all accumulated candidates above minimum threshold
-  const finalBest = _pickBest([...accumulated.values()], trackName, artistName, durationSec);
+  const finalBest = _pickBest(
+    [...accumulated.values()],
+    trackName,
+    artistName,
+    durationSec,
+  );
   if (finalBest) {
-    logger.success(`SEARCH best-of-all match (score=${_scoreResult(finalBest, trackName, artistName, durationSec)}): "${finalBest.trackName}" by "${finalBest.artistName}"`);
+    logger.success(
+      `SEARCH best-of-all match (score=${_scoreResult(finalBest, trackName, artistName, durationSec)}): "${finalBest.trackName}" by "${finalBest.artistName}"`,
+    );
     return _format(finalBest);
   }
 
@@ -231,7 +280,12 @@ function _parseLrc(lrcText) {
     if (!m) continue;
 
     const text = m[4].trim();
-    if (!text || text.startsWith("[") || text.toLowerCase().includes("instrumental")) continue;
+    if (
+      !text ||
+      text.startsWith("[") ||
+      text.toLowerCase().includes("instrumental")
+    )
+      continue;
 
     const timestamp =
       parseInt(m[1]) * 60_000 +

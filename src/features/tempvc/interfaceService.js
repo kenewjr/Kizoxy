@@ -4,32 +4,42 @@ const Logger = require("../../lib/logger");
 const Embeds = require("../../lib/embeds");
 const tempVcStorage = require("../../persistence/tempVcStorage");
 
-const logger = new Logger("TempVC:Panel");
-
-function statusLabel(tempChannel) {
-  if (tempChannel.isHidden) return "👁 Hidden";
-  if (tempChannel.isLocked) return "🔒 Locked";
-  return "🔓 Open";
-}
+const logger = new Logger("TempVC:Interface");
 
 function buildInterfaceEmbed(tempChannel, guild, client) {
+  const ownerMember = tempChannel.ownerId
+    ? guild?.members?.cache?.get(tempChannel.ownerId)
+    : null;
   const ownerLabel = tempChannel.ownerId ? `<@${tempChannel.ownerId}>` : "—";
-  const channel = guild?.channels?.cache?.get(tempChannel.id) || null;
-  const memberCount = channel?.members?.size ?? 0;
-  const limitDisplay = !tempChannel.limit
-    ? "Unlimited"
-    : String(tempChannel.limit);
+  const avatarUrl = ownerMember?.displayAvatarURL() ?? null;
 
-  return Embeds.info(client || guild?.client, {
-    title: tempChannel.name || channel?.name || "Temporary Channel",
+  const voiceChannel = guild?.channels?.cache?.get(tempChannel.id) ?? null;
+  const memberCount = voiceChannel?.members?.size ?? 0;
+
+  const locked = Boolean(tempChannel.isLocked);
+  const hidden = Boolean(tempChannel.isHidden);
+  const limitDisplay =
+    !tempChannel.limit || tempChannel.limit === 0
+      ? "Unlimited"
+      : String(tempChannel.limit);
+
+  const statusParts = [];
+  statusParts.push(locked ? "🔒 Locked" : "🔓 Open");
+  statusParts.push(hidden ? "🙈 Hidden" : "👁 Visible");
+
+  const embed = Embeds.brand(client || guild?.client, {
+    title: tempChannel.name || voiceChannel?.name || "Temporary Channel",
     fields: [
       { name: "Owner", value: ownerLabel, inline: true },
       { name: "Members", value: String(memberCount), inline: true },
-      { name: "Status", value: statusLabel(tempChannel), inline: true },
-      { name: "Limit", value: limitDisplay, inline: true },
+      { name: "Status", value: statusParts.join(" · "), inline: true },
+      { name: "User Limit", value: limitDisplay, inline: true },
     ],
-    footerText: "Temporary Voice Channel",
+    footerText: "Only the channel owner can use these controls.",
+    thumbnailUrl: avatarUrl ?? undefined,
   });
+
+  return embed;
 }
 
 function btn(action, channelId, label, emoji, style, disabled = false) {
@@ -46,28 +56,39 @@ function buildInterfaceButtons(tempChannel) {
   const locked = Boolean(tempChannel.isLocked);
   const hidden = Boolean(tempChannel.isHidden);
 
+  // Row 1 — Privacy controls
   const row1 = new ActionRowBuilder().addComponents(
     btn("lock", id, "Lock", "🔒", ButtonStyle.Secondary, locked),
     btn("unlock", id, "Unlock", "🔓", ButtonStyle.Secondary, !locked),
-    btn("hide", id, "Hide", "👁", ButtonStyle.Secondary, hidden),
-    btn("show", id, "Show", "👀", ButtonStyle.Secondary, !hidden),
-    btn("rename", id, "Rename", "✏️", ButtonStyle.Primary),
+    btn("hide", id, "Hide", "🙈", ButtonStyle.Secondary, hidden),
+    btn("show", id, "Show", "👁", ButtonStyle.Secondary, !hidden),
+    btn("reset", id, "Reset", "🔄", ButtonStyle.Secondary),
   );
 
+  // Row 2 — Member management
   const row2 = new ActionRowBuilder().addComponents(
-    btn("limit", id, "Limit", "👤", ButtonStyle.Primary),
     btn("allow", id, "Allow", "➕", ButtonStyle.Success),
-    btn("kick", id, "Kick", "➖", ButtonStyle.Secondary),
     btn("ban", id, "Ban", "🚫", ButtonStyle.Danger),
+    btn("kick", id, "Kick", "🦵", ButtonStyle.Secondary),
     btn("transfer", id, "Transfer", "👑", ButtonStyle.Primary),
+    btn("claim", id, "Claim", "📋", ButtonStyle.Secondary),
   );
 
-  return [row1, row2];
+  // Row 3 — Channel settings
+  const row3 = new ActionRowBuilder().addComponents(
+    btn("rename", id, "Rename", "✏️", ButtonStyle.Primary),
+    btn("limit", id, "Limit", "🔢", ButtonStyle.Primary),
+    btn("muteall", id, "Mute All", "🔇", ButtonStyle.Secondary),
+    btn("unbanall", id, "Unban All", "👂", ButtonStyle.Secondary),
+    btn("pininfo", id, "Pin Info", "📌", ButtonStyle.Secondary),
+  );
+
+  return [row1, row2, row3];
 }
 
 async function sendInterface(channel, tempChannel, guild) {
-  if (!channel || !channel.isTextBased?.()) {
-    logger.warning(`sendInterface called on non-text channel ${channel?.id}`);
+  if (!channel) {
+    logger.warning(`sendInterface called with null channel`);
     return null;
   }
   try {
@@ -100,7 +121,7 @@ async function _fetchInterfaceMessage(guild, tempChannel) {
     (await guild.channels
       .fetch(tempChannel.interfaceChannelId)
       .catch(() => null));
-  if (!ifaceChannel?.isTextBased?.()) return null;
+  if (!ifaceChannel) return null;
   return ifaceChannel.messages
     .fetch(tempChannel.interfaceMessageId)
     .catch(() => null);
@@ -124,8 +145,7 @@ async function updateInterface(guild, tempChannelId) {
     const existing = await _fetchInterfaceMessage(guild, tempChannel);
     if (existing) {
       try {
-        const edited = await existing.edit({ embeds: [embed], components });
-        return edited;
+        return await existing.edit({ embeds: [embed], components });
       } catch (editErr) {
         logger.warning(
           `Edit interface failed for ${tempChannelId}: ${editErr.message}`,
@@ -134,13 +154,12 @@ async function updateInterface(guild, tempChannelId) {
     }
 
     // Message missing or edit failed → repost into the TempVC itself.
+    // GuildVoice channels always support send() via text-in-vc in DJS v14.
     const voiceChannel =
       guild.channels.cache.get(tempChannelId) ||
       (await guild.channels.fetch(tempChannelId).catch(() => null));
-    if (!voiceChannel?.isTextBased?.()) {
-      logger.debug(
-        `updateInterface: voice channel ${tempChannelId} cannot host text`,
-      );
+    if (!voiceChannel) {
+      logger.debug(`updateInterface: voice channel ${tempChannelId} not found`);
       return null;
     }
     return sendInterface(voiceChannel, tempChannel, guild);

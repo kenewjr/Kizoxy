@@ -4,7 +4,6 @@ const axios = require("axios");
 const { resolveEmbedEZ } = require("../fixembedResolverHelper");
 
 module.exports = [
-  // ── YouTube ───────────────────────────────────────────────────────
   {
     name: "YouTube",
     originalLabel: "YouTube",
@@ -58,7 +57,6 @@ module.exports = [
     },
   },
 
-  // ── Twitch Clips ──────────────────────────────────────────────────
   {
     name: "Twitch",
     originalLabel: "Clip",
@@ -75,7 +73,6 @@ module.exports = [
     },
   },
 
-  // ── BiliBili ──────────────────────────────────────────────────────
   {
     name: "BiliBili",
     originalLabel: "BiliBili",
@@ -89,7 +86,6 @@ module.exports = [
     }),
   },
 
-  // ── Spotify ───────────────────────────────────────────────────────
   {
     name: "Spotify",
     originalLabel: "Spotify",

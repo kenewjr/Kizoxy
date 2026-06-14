@@ -1,59 +1,57 @@
-const { EmbedBuilder } = require("discord.js");
-const { COLORS } = require("../../lib/embeds");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
+
+const SYNOPSIS_MAX_LENGTH = 200;
 
 function formatAnimeEmbed(anime) {
-  const embed = new EmbedBuilder()
-    .setTitle(anime.title)
-    .setURL(anime.url)
-    .setColor(COLORS.ANIME)
-    .setImage(anime.images?.jpg?.image_url)
-    .addFields(
-      {
-        name: "⏱️ Time",
-        value: anime.broadcast?.time || "Unknown",
-        inline: true,
-      },
-      {
-        name: "⭐ Score",
-        value: anime.score?.toString() || "N/A",
-        inline: true,
-      },
-      { name: "📺 Type", value: anime.type || "TV", inline: true },
-      {
-        name: "💿 Episodes",
-        value: anime.episodes?.toString() || "?",
-        inline: true,
-      },
-      { name: "⏳ Duration", value: anime.duration || "Unknown", inline: true },
-      {
-        name: "📅 Year",
-        value: anime.year?.toString() || "Unknown",
-        inline: true,
-      },
-    );
+  const fields = [
+    {
+      name: "⏱️ Time",
+      value: anime.broadcast?.time || "Unknown",
+      inline: true,
+    },
+    { name: "⭐ Score", value: anime.score?.toString() || "N/A", inline: true },
+    { name: "📺 Type", value: anime.type || "TV", inline: true },
+    {
+      name: "💿 Episodes",
+      value: anime.episodes?.toString() || "?",
+      inline: true,
+    },
+    { name: "⏳ Duration", value: anime.duration || "Unknown", inline: true },
+    {
+      name: "📅 Year",
+      value: anime.year?.toString() || "Unknown",
+      inline: true,
+    },
+  ];
 
-  // Synopsis (truncated to avoid limits)
+  if (anime.genres?.length > 0) {
+    fields.push({
+      name: "🎭 Genres",
+      value: anime.genres.map((g) => g.name).join(", "),
+      inline: false,
+    });
+  }
+
+  const options = {
+    title: anime.title,
+    url: anime.url,
+    image: anime.images?.jpg?.image_url,
+    fields,
+  };
+
   if (anime.synopsis) {
-    const synopsis =
-      anime.synopsis.length > 200
-        ? anime.synopsis.substring(0, 197) + "..."
+    options.description =
+      anime.synopsis.length > SYNOPSIS_MAX_LENGTH
+        ? anime.synopsis.substring(0, SYNOPSIS_MAX_LENGTH - 3) + "..."
         : anime.synopsis;
-    embed.setDescription(synopsis);
   }
 
-  // Genres
-  if (anime.genres && anime.genres.length > 0) {
-    const genres = anime.genres.map((g) => g.name).join(", ");
-    embed.addFields({ name: "🎭 Genres", value: genres, inline: false });
+  if (anime.studios?.length > 0) {
+    options.footerText = `Studios: ${anime.studios.map((s) => s.name).join(", ")}`;
   }
 
-  // Studios
-  if (anime.studios && anime.studios.length > 0) {
-    const studios = anime.studios.map((s) => s.name).join(", ");
-    embed.setFooter({ text: `Studios: ${studios}` });
-  }
-
-  return embed;
+  return Embeds.withColor(null, COLORS.ANIME, options);
 }
 
 function chunkArray(array, size) {

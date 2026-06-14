@@ -1,4 +1,7 @@
 const Embeds = require("../../lib/embeds");
+const Logger = require("../../lib/logger");
+
+const logger = new Logger("QUEUE_END");
 
 module.exports = async (client, player) => {
   const channel = client.channels.cache.get(player.textId);
@@ -18,7 +21,7 @@ module.exports = async (client, player) => {
         return;
       }
     } catch (e) {
-      console.error("Lofi queueEnd auto-restart failed:", e);
+      logger.error(`Lofi queueEnd auto-restart failed: ${e.message}`);
     }
   }
 
@@ -29,13 +32,22 @@ module.exports = async (client, player) => {
       description: "`📛` | *Queue has been:* `Ended` (24/7 Active)",
     });
 
-    return channel.send({ embeds: [embed] });
+    return channel
+      .send({ embeds: [embed] })
+      .catch((e) =>
+        logger.error(`Failed to send 24/7 queue-end notice: ${e.message}`),
+      );
   }
 
   const embed = Embeds.brand(client, {
     description: "`📛` | *Queue has been:* `Ended`",
   });
 
-  channel.send({ embeds: [embed] }).catch(() => {});
-  return player.destroy();
+  channel
+    .send({ embeds: [embed] })
+    .catch((e) =>
+      logger.error(`Failed to send queue-end notice: ${e.message}`),
+    );
+  player.data._prevNowPlayingMessage = null;
+  return player?.destroy();
 };

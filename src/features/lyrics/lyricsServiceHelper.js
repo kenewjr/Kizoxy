@@ -1,4 +1,3 @@
-// src/features/lyrics/lyricsServiceHelper.js
 const Embeds = require("../../lib/embeds");
 
 const _BRAND_BLOCKLIST = new Set([
@@ -130,7 +129,7 @@ const _NOISE_BRACKET_RE =
 
 // Dash-prefixed YouTube-style suffixes appended without parentheses.
 const _NOISE_DASH_SUFFIX_RE =
-  /\s*[-–]\s*(?:official\s+(?:video|music\s+video|audio|lyric(?:s)?\s+video)|music\s+video|lyric(?:s)?\s+video|cover|acoustic|live)\s*$/i;
+  /\s*[-–]\s*(?:official\s+(?:video|music\s+video|audio|lyric(?:s)?\s+video)|music\s+video|lyric(?:s)?\s+video|cover|acoustic(?:\s+version)?|live)\s*$/i;
 
 // Pipe-separated subtitle ("|" is sometimes used in YouTube titles).
 const _PIPE_SUFFIX_RE = /\s*\|[^|]+$/;
@@ -222,9 +221,7 @@ function buildQueryStrategies(rawTitle, rawAuthor) {
   // [6] clean-title + cover-uploader (the channel name; works when the uploader
   // uses their real artist name for covers of their own originals)
   const q6 =
-    isCoverCleanDifferent && author
-      ? `${coverClean} ${author}`.trim()
-      : null;
+    isCoverCleanDifferent && author ? `${coverClean} ${author}`.trim() : null;
 
   // [7] clean-title alone
   const q7 = isCoverCleanDifferent ? coverClean : null;

@@ -1,4 +1,3 @@
-// src/interactions/buttons/lyrics.js
 const Logger = require("../../lib/logger");
 const {
   searchLyrics,
@@ -57,7 +56,11 @@ module.exports = {
           return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        const updated = await addLyricsToNowPlaying(client, player, lyricsEmbed);
+        const updated = await addLyricsToNowPlaying(
+          client,
+          player,
+          lyricsEmbed,
+        );
         if (!updated) {
           logger.warning("addLyricsToNowPlaying returned false");
         }

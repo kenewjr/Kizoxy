@@ -1,6 +1,9 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const fixembedStorage = require("../../persistence/fixembedStorage");
+const Logger = require("../../lib/logger");
 const { extractFixedLinks } = require("./fixembedResolver");
+
+const logger = new Logger("FIXEMBED");
 
 function formatLine(link) {
   let line = `[${link.originalLabel}](<${link.original}>)`;
@@ -92,7 +95,7 @@ async function handleFixembedMessage(message) {
       });
     }
   } catch (err) {
-    console.error("[FixEmbed] Failed to send fixed link reply:", err);
+    logger.error(`Failed to send fixed link reply: ${err.message}`);
   }
 }
 

@@ -2,6 +2,9 @@ const Kuroshiro = require("kuroshiro").default || require("kuroshiro");
 const KuromojiAnalyzer =
   require("kuroshiro-analyzer-kuromoji").default ||
   require("kuroshiro-analyzer-kuromoji");
+const Logger = require("../../lib/logger");
+
+const logger = new Logger("ROMAJI");
 let kuroshiroInstance = null;
 let isInitialized = false;
 let initializationPromise = null;
@@ -17,14 +20,14 @@ async function initializeKuroshiro() {
 
   initializationPromise = (async () => {
     try {
-      console.warn("[RomajiConverter] Initializing Kuroshiro...");
+      logger.warning("Initializing Kuroshiro...");
       kuroshiroInstance = new Kuroshiro();
       await kuroshiroInstance.init(new KuromojiAnalyzer());
       isInitialized = true;
-      console.warn("[RomajiConverter] ✅ Kuroshiro initialized successfully");
+      logger.success("Kuroshiro initialized successfully");
       return kuroshiroInstance;
     } catch (error) {
-      console.error("[RomajiConverter] ❌ Failed to initialize:", error);
+      logger.error(`Failed to initialize: ${error.message}`);
       isInitialized = false;
       kuroshiroInstance = null;
       initializationPromise = null;
@@ -62,7 +65,7 @@ async function convertToRomaji(text) {
 
     return romaji;
   } catch (error) {
-    console.error("[RomajiConverter] Conversion error:", error.message);
+    logger.error(`Conversion error: ${error.message}`);
     // Return original text if conversion fails
     return text;
   }
@@ -101,7 +104,7 @@ async function convertLyricsToRomaji(lyricsText) {
 
     return romajiParagraphs.join("\n\n");
   } catch (error) {
-    console.error("[RomajiConverter] Lyrics conversion error:", error.message);
+    logger.error(`Lyrics conversion error: ${error.message}`);
     return lyricsText;
   }
 }
@@ -128,12 +131,9 @@ function isJapaneseTrack(title, author) {
 async function preInitialize() {
   try {
     await initializeKuroshiro();
-    console.warn("[RomajiConverter] Pre-initialization complete");
+    logger.info("Pre-initialization complete");
   } catch (error) {
-    console.error(
-      "[RomajiConverter] Pre-initialization failed:",
-      error.message,
-    );
+    logger.error(`Pre-initialization failed: ${error.message}`);
   }
 }
 

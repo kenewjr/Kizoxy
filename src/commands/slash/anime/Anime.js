@@ -1,5 +1,6 @@
 const { ApplicationCommandOptionType, ChannelType } = require("discord.js");
 const Embeds = require("../../../lib/embeds");
+const Logger = require("../../../lib/logger");
 const {
   getTodaySchedule,
   formatAnimeEmbed,
@@ -8,7 +9,10 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const logger = new Logger("ANIME");
+
 const DATA_PATH = path.join(__dirname, "../../../../data/jikan-schedule.json");
+const SCHEDULE_SEND_DELAY_MS = 500;
 
 module.exports = {
   name: ["anime"],
@@ -56,7 +60,7 @@ module.exports = {
             data = JSON.parse(fs.readFileSync(DATA_PATH));
           }
         } catch (err) {
-          console.error("Error reading schedule data:", err);
+          logger.error(`Error reading schedule data: ${err.message}`);
         }
 
         data[interaction.guildId] = {
@@ -78,7 +82,7 @@ module.exports = {
 
           return interaction.reply({ embeds: [embed] });
         } catch (err) {
-          console.error("Error writing schedule data:", err);
+          logger.error(`Error writing schedule data: ${err.message}`);
           return interaction.reply({
             content: "❌ Failed to save configuration.",
             ephemeral: true,
@@ -116,11 +120,17 @@ module.exports = {
           });
 
           for (const chunk of embedChunks) {
-            await interaction.channel.send({ embeds: chunk });
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            await interaction.channel
+              .send({ embeds: chunk })
+              .catch((e) =>
+                logger.error(`Failed to send schedule chunk: ${e.message}`),
+              );
+            await new Promise((resolve) =>
+              setTimeout(resolve, SCHEDULE_SEND_DELAY_MS),
+            );
           }
         } catch (err) {
-          console.error("Error fetching schedule:", err);
+          logger.error(`Error fetching schedule: ${err.message}`);
           return interaction.editReply({
             content: "❌ Failed to fetch schedule.",
           });

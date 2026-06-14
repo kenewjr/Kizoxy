@@ -101,6 +101,6 @@ module.exports = async (client, interaction) => {
       }
     }
   } catch (error) {
-    console.error("Unexpected error in buttonInteraction:", error);
+    logger.error(`Unexpected error in buttonInteraction: ${error.message}`);
   }
 };

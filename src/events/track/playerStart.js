@@ -1,4 +1,3 @@
-// src/events/track/playerStart.js
 const Embeds = require("../../lib/embeds");
 const { searchLyrics } = require("../../features/lyrics/lyricsService");
 const Logger = require("../../lib/logger");
@@ -30,13 +29,32 @@ module.exports = async (client, player, track) => {
   const channel = client.channels.cache.get(player.textId);
 
   try {
-    const sentMsg = await channel.send({
-      embeds: [embed],
-      components: [buttons],
-    });
+    let sentMsg = null;
+    const existingMsg = channel && player.data._prevNowPlayingMessage;
+
+    if (existingMsg) {
+      try {
+        sentMsg = await existingMsg.edit({
+          embeds: [embed],
+          components: [buttons],
+        });
+      } catch (_editErr) {
+        // Pesan lama mungkin sudah dihapus — fallback ke send baru
+        sentMsg = null;
+      }
+    }
+
+    if (!sentMsg) {
+      sentMsg = await channel.send({
+        embeds: [embed],
+        components: [buttons],
+      });
+    }
 
     player.data.nowPlayingMessage = sentMsg;
     player.data.nowPlayingEmbed = embed;
+    // Simpan referensi untuk track berikutnya
+    player.data._prevNowPlayingMessage = sentMsg;
 
     _startQueueWatcher(client, player, sentMsg);
 

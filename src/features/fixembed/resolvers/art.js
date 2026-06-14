@@ -1,7 +1,6 @@
 // Art / illustration sites: Pixiv, DeviantArt, Newgrounds, Fur Affinity.
 
 module.exports = [
-  // ── Pixiv ─────────────────────────────────────────────────────────
   {
     name: "Pixiv",
     originalLabel: "Pixiv",
@@ -16,7 +15,6 @@ module.exports = [
     }),
   },
 
-  // ── DeviantArt ────────────────────────────────────────────────────
   {
     name: "DeviantArt",
     originalLabel: "DeviantArt",
@@ -36,7 +34,6 @@ module.exports = [
     },
   },
 
-  // ── Newgrounds ────────────────────────────────────────────────────
   {
     name: "Newgrounds",
     originalLabel: "Newgrounds",
@@ -56,7 +53,6 @@ module.exports = [
     },
   },
 
-  // ── Fur Affinity ──────────────────────────────────────────────────
   {
     name: "Fur Affinity",
     originalLabel: "Fur Affinity",

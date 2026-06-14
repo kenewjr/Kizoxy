@@ -37,13 +37,14 @@ async function safeReplyEphemeral(interaction, payload) {
   return interaction.reply({ ...payload, ephemeral: true }).catch(() => {});
 }
 
+// Validates channel exists, is a TempVC, and caller is the owner.
+// Returns { tempRecord, channel } or null (already replied with error).
 async function loadContext(interaction, channelId) {
   const guild = interaction.guild;
   const channel =
     guild.channels.cache.get(channelId) ||
     (await guild.channels.fetch(channelId).catch(() => null));
   if (!channel) {
-    // Channel was deleted manually outside our flow → drop ghost record.
     await tempVcStorage.removeTempChannel(interaction.guildId, channelId);
     await safeReplyEphemeral(interaction, {
       embeds: [
@@ -76,6 +77,37 @@ async function loadContext(interaction, channelId) {
         errEmbed(
           interaction.client,
           `Only the channel owner (<@${tempRecord.ownerId}>) can use these controls.`,
+        ),
+      ],
+    });
+    return null;
+  }
+  return { tempRecord, channel };
+}
+
+// Like loadContext but skips the ownership check (used for claim).
+async function loadChannelRecord(interaction, channelId) {
+  const guild = interaction.guild;
+  const channel =
+    guild.channels.cache.get(channelId) ||
+    (await guild.channels.fetch(channelId).catch(() => null));
+  if (!channel) {
+    await tempVcStorage.removeTempChannel(interaction.guildId, channelId);
+    await safeReplyEphemeral(interaction, {
+      embeds: [errEmbed(interaction.client, "This channel no longer exists.")],
+    });
+    return null;
+  }
+  const tempRecord = await tempVcStorage.getTempChannel(
+    interaction.guildId,
+    channelId,
+  );
+  if (!tempRecord) {
+    await safeReplyEphemeral(interaction, {
+      embeds: [
+        errEmbed(
+          interaction.client,
+          "This channel is no longer a Temporary Voice Channel.",
         ),
       ],
     });
@@ -164,6 +196,276 @@ async function actionHide(interaction, ctx, hidden) {
       ephemeral: true,
     })
     .catch(() => {});
+}
+
+async function actionReset(interaction, ctx) {
+  await ensureDeferred(interaction, "update");
+  const { tempRecord, channel } = ctx;
+
+  // Load the generator to get original defaults.
+  const generator = tempRecord.generatorId
+    ? await tempVcStorage.getGenerator(
+        interaction.guildId,
+        tempRecord.generatorId,
+      )
+    : null;
+
+  const defaultName = generator?.defaultName ?? "{username}'s Channel";
+  const defaultLimit = generator?.defaultLimit ?? 0;
+  const renderedName = tempVcService.renderChannelName(
+    defaultName,
+    interaction.member,
+    1,
+  );
+
+  // Reset channel name and limit.
+  await channel
+    .edit({ name: renderedName, userLimit: defaultLimit })
+    .catch((err) =>
+      logger.warning(`reset channel edit failed ${channel.id}: ${err.message}`),
+    );
+
+  // Remove all per-user overwrites; keep @everyone and bot/role overwrites.
+  const userOverwrites = channel.permissionOverwrites.cache.filter(
+    (ow) => ow.type === 1,
+  );
+  for (const ow of userOverwrites.values()) {
+    await ow.delete("TempVC reset").catch(() => {});
+  }
+
+  // Restore @everyone base (unlocked + visible).
+  await helper.applyLockState(interaction.guild, channel, false);
+  await helper.applyHideState(interaction.guild, channel, false);
+
+  // Re-grant owner permissions in case they were cleared.
+  await channel.permissionOverwrites
+    .edit(interaction.user.id, {
+      Connect: true,
+      Speak: true,
+      ManageChannels: true,
+      MoveMembers: true,
+    })
+    .catch(() => {});
+
+  await tempVcStorage.updateTempChannel(interaction.guildId, channel.id, {
+    name: renderedName,
+    limit: defaultLimit,
+    isLocked: false,
+    isHidden: false,
+    allowedUsers: [],
+    bannedUsers: [],
+  });
+
+  await refreshPanel(interaction.guild, channel.id);
+  await interaction
+    .followUp({
+      embeds: [
+        okEmbed(interaction.client, "Channel reset to defaults.", "Reset"),
+      ],
+      ephemeral: true,
+    })
+    .catch(() => {});
+}
+
+async function actionMuteAll(interaction, ctx) {
+  await ensureDeferred(interaction, "update");
+  const { channel } = ctx;
+  const ownerId = ctx.tempRecord.ownerId;
+
+  const nonOwnerMembers = channel.members.filter(
+    (m) => !m.user.bot && m.id !== ownerId,
+  );
+
+  if (nonOwnerMembers.size === 0) {
+    return interaction
+      .followUp({
+        embeds: [
+          Embeds.info(interaction.client, {
+            description: "No other members are in the channel.",
+          }),
+        ],
+        ephemeral: true,
+      })
+      .catch(() => {});
+  }
+
+  // Toggle: if ALL non-owner members are already server-muted, unmute all.
+  const allMuted = nonOwnerMembers.every((m) => m.voice?.serverMute === true);
+  const targetMute = !allMuted;
+
+  for (const m of nonOwnerMembers.values()) {
+    await m.voice
+      .setMute(targetMute, `TempVC muteall by ${interaction.user.id}`)
+      .catch(() => {});
+  }
+
+  await interaction
+    .followUp({
+      embeds: [
+        okEmbed(
+          interaction.client,
+          targetMute ? "All members muted." : "All members unmuted.",
+          targetMute ? "Muted" : "Unmuted",
+        ),
+      ],
+      ephemeral: true,
+    })
+    .catch(() => {});
+}
+
+async function actionUnbanAll(interaction, ctx) {
+  await ensureDeferred(interaction, "update");
+  const { channel } = ctx;
+
+  // Collect all user-specific (type 1) overwrites that have Connect: false (ban overwrites).
+  const banOverwrites = channel.permissionOverwrites.cache.filter(
+    (ow) => ow.type === 1 && ow.deny.has("Connect"),
+  );
+
+  for (const ow of banOverwrites.values()) {
+    await ow.delete("TempVC unbanAll").catch(() => {});
+  }
+
+  // Clear storage ban list.
+  await tempVcStorage.updateTempChannel(interaction.guildId, channel.id, {
+    bannedUsers: [],
+  });
+
+  await refreshPanel(interaction.guild, channel.id);
+  await interaction
+    .followUp({
+      embeds: [
+        okEmbed(interaction.client, "All user bans removed.", "Unbanned All"),
+      ],
+      ephemeral: true,
+    })
+    .catch(() => {});
+}
+
+async function actionPinInfo(interaction, ctx) {
+  const { tempRecord, channel } = ctx;
+  const guild = interaction.guild;
+
+  const ownerMember = tempRecord.ownerId
+    ? guild.members.cache.get(tempRecord.ownerId)
+    : null;
+  const avatarUrl = ownerMember?.displayAvatarURL() ?? null;
+
+  const locked = Boolean(tempRecord.isLocked);
+  const hidden = Boolean(tempRecord.isHidden);
+  const limitDisplay =
+    !tempRecord.limit || tempRecord.limit === 0
+      ? "Unlimited"
+      : String(tempRecord.limit);
+
+  const infoEmbed = Embeds.info(interaction.client, {
+    title: tempRecord.name || channel.name || "Channel Info",
+    fields: [
+      {
+        name: "Owner",
+        value: tempRecord.ownerId ? `<@${tempRecord.ownerId}>` : "—",
+        inline: true,
+      },
+      { name: "Limit", value: limitDisplay, inline: true },
+      { name: "Locked", value: locked ? "Yes" : "No", inline: true },
+      { name: "Hidden", value: hidden ? "Yes" : "No", inline: true },
+    ],
+    thumbnailUrl: avatarUrl ?? undefined,
+    footerText: "Channel Info",
+  });
+
+  let pinnedMsg = null;
+  if (tempRecord.pinnedInfoMessageId) {
+    pinnedMsg = await channel.messages
+      .fetch(tempRecord.pinnedInfoMessageId)
+      .catch(() => null);
+  }
+
+  if (pinnedMsg) {
+    await pinnedMsg
+      .edit({ embeds: [infoEmbed] })
+      .catch((err) =>
+        logger.warning(`pininfo edit failed for ${channel.id}: ${err.message}`),
+      );
+  } else {
+    const newMsg = await channel.send({ embeds: [infoEmbed] }).catch((err) => {
+      logger.warning(`pininfo send failed for ${channel.id}: ${err.message}`);
+      return null;
+    });
+    if (newMsg) {
+      await newMsg.pin("TempVC pinned info").catch(() => {});
+      await tempVcStorage.updateTempChannel(interaction.guildId, channel.id, {
+        pinnedInfoMessageId: newMsg.id,
+      });
+    }
+  }
+
+  await safeReplyEphemeral(interaction, {
+    embeds: [okEmbed(interaction.client, "Channel info pinned.", "Pinned")],
+  });
+}
+
+async function actionClaim(interaction, ctx) {
+  const { tempRecord, channel } = ctx;
+  const userId = interaction.user.id;
+
+  // Must be inside the channel to claim.
+  const voiceChanId = interaction.member?.voice?.channelId;
+  if (voiceChanId !== channel.id) {
+    return safeReplyEphemeral(interaction, {
+      embeds: [
+        errEmbed(
+          interaction.client,
+          "You must be inside this voice channel to claim it.",
+        ),
+      ],
+    });
+  }
+
+  // Cannot claim your own channel.
+  if (tempRecord.ownerId === userId) {
+    return safeReplyEphemeral(interaction, {
+      embeds: [errEmbed(interaction.client, "You already own this channel.")],
+    });
+  }
+
+  // Owner must have left.
+  const ownerInChannel = channel.members?.has(tempRecord.ownerId);
+  if (ownerInChannel) {
+    return safeReplyEphemeral(interaction, {
+      embeds: [
+        errEmbed(
+          interaction.client,
+          `The current owner (<@${tempRecord.ownerId}>) is still in the channel.`,
+        ),
+      ],
+    });
+  }
+
+  await tempVcService.transferOwnership(
+    interaction.guildId,
+    channel.id,
+    userId,
+  );
+  await channel.permissionOverwrites
+    .edit(userId, {
+      Connect: true,
+      Speak: true,
+      ManageChannels: true,
+      MoveMembers: true,
+    })
+    .catch(() => {});
+
+  await refreshPanel(interaction.guild, channel.id);
+  return safeReplyEphemeral(interaction, {
+    embeds: [
+      okEmbed(
+        interaction.client,
+        "You are now the owner of this channel.",
+        "Claimed",
+      ),
+    ],
+  });
 }
 
 async function actionShowRenameModal(interaction, channelId) {
@@ -481,8 +783,8 @@ async function execute(interaction) {
     const { action, channelId } = parsed;
     if (!channelId) return;
 
-    // Buttons that open a modal MUST not defer first.
     if (interaction.isButton?.()) {
+      // Modal-triggering buttons must NOT defer before showModal.
       if (action === "rename") {
         const ctx = await loadContext(interaction, channelId);
         if (!ctx) return;
@@ -508,13 +810,31 @@ async function execute(interaction) {
         if (!ctx) return;
         return actionShowMemberSelect(interaction, ctx, action);
       }
-      // Toggle actions: defer-update first then mutate + refresh.
+
+      // Claim does not require ownership — uses loadChannelRecord.
+      if (action === "claim") {
+        const ctx = await loadChannelRecord(interaction, channelId);
+        if (!ctx) return;
+        return actionClaim(interaction, ctx);
+      }
+
+      // Pin info does not pre-defer — it needs to reply after async work.
+      if (action === "pininfo") {
+        const ctx = await loadContext(interaction, channelId);
+        if (!ctx) return;
+        return actionPinInfo(interaction, ctx);
+      }
+
+      // Toggle / state-change buttons: deferUpdate first, then mutate.
       const ctx = await loadContext(interaction, channelId);
       if (!ctx) return;
       if (action === "lock") return actionLock(interaction, ctx, true);
       if (action === "unlock") return actionLock(interaction, ctx, false);
       if (action === "hide") return actionHide(interaction, ctx, true);
       if (action === "show") return actionHide(interaction, ctx, false);
+      if (action === "reset") return actionReset(interaction, ctx);
+      if (action === "muteall") return actionMuteAll(interaction, ctx);
+      if (action === "unbanall") return actionUnbanAll(interaction, ctx);
       return;
     }
 

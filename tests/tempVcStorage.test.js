@@ -1,5 +1,11 @@
 const fs = require("fs");
 const path = require("path");
+
+// JSONStorage emits init/recovery diagnostics via Logger (console.warn). The
+// tempVcStorage module instantiates a singleton at load time, so the spy must
+// be installed BEFORE the require below — not in beforeAll.
+const _warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
 const { TempVcStorage } = require("../src/persistence/tempVcStorage");
 
 const TEST_FILENAME = `tempvc.test.${process.pid}.${Date.now()}.json`;
@@ -22,6 +28,7 @@ describe("tempVcStorage", () => {
         if (fs.existsSync(p)) fs.unlinkSync(p);
       } catch {}
     }
+    console.warn.mockRestore();
   });
 
   describe("generators", () => {

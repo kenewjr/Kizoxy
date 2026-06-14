@@ -1,5 +1,5 @@
-const { EmbedBuilder } = require("discord.js");
-const { COLORS } = require("../../lib/embeds");
+const Embeds = require("../../lib/embeds");
+const { COLORS } = Embeds;
 
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
@@ -73,17 +73,17 @@ function buildScheduledEmbed({
       ? `⏳ Countdown to next trigger: ${discordTimestamp}`
       : `⏳ Countdown: ${discordTimestamp}`;
 
-  return new EmbedBuilder()
-    .setDescription(
+  return Embeds.withColor(null, COLORS.SUCCESS, {
+    softCap: false,
+    description:
       `✅ Alarm "${alarmMessage}" has been set!\n` +
-        `⏰ Time: ${formattedTime}\n` +
-        `🔔 Will trigger in: <#${channelId}>\n` +
-        `👥 Role to mention: <@&${roleId}>\n` +
-        `🔄 Type: ${recurringText(recurring)}\n` +
-        `${countdownText}\n` +
-        `🗑️ The alarm message will be auto-deleted after 2 hours`,
-    )
-    .setColor(COLORS.SUCCESS);
+      `⏰ Time: ${formattedTime}\n` +
+      `🔔 Will trigger in: <#${channelId}>\n` +
+      `👥 Role to mention: <@&${roleId}>\n` +
+      `🔄 Type: ${recurringText(recurring)}\n` +
+      `${countdownText}\n` +
+      `🗑️ The alarm message will be auto-deleted after 2 hours`,
+  });
 }
 
 module.exports = {

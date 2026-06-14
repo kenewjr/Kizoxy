@@ -1,4 +1,3 @@
-// src/loaders/loadTempVC.js
 const { Events } = require("discord.js");
 const Logger = require("../lib/logger");
 const tempVcStorage = require("../persistence/tempVcStorage");
@@ -51,6 +50,16 @@ async function reconcileGuild(guild) {
       await tempVcStorage.removeTempChannel(guild.id, tc.id);
       stats.cleaned++;
     } else {
+      // Channel survived with members — heal the interface panel so controls
+      // are available again without requiring another action to trigger a resend.
+      try {
+        const interfaceService = require("../features/tempvc/interfaceService");
+        await interfaceService.updateInterface(guild, tc.id);
+      } catch (err) {
+        logger.warning(
+          `Interface heal failed for ${tc.id} in ${guild.id}: ${err.message}`,
+        );
+      }
       stats.recovered++;
     }
   }
@@ -63,10 +72,6 @@ module.exports = (client) => {
     try {
       await tempVcStorage._ensureLoaded?.();
 
-      // Lazily require panelService here so it doesn't land in the require graph
-      // before tempVcStorage is ready. Module is cached after first load.
-      const panelService = require("../features/tempvc/panelService");
-
       const totals = { generators: 0, recovered: 0, cleaned: 0 };
       for (const [, guild] of client.guilds.cache) {
         try {
@@ -77,16 +82,6 @@ module.exports = (client) => {
         } catch (err) {
           logger.warning(
             `Reconcile failed for guild ${guild.id}: ${err.message}`,
-          );
-        }
-
-        // Panel self-heal: independent try/catch — panel failure must not abort
-        // TempVC reconciliation for this or other guilds.
-        try {
-          await panelService.healPanel(client, guild);
-        } catch (err) {
-          logger.warning(
-            `Panel heal failed for guild ${guild.id}: ${err.message}`,
           );
         }
       }

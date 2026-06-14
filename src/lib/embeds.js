@@ -33,9 +33,7 @@ function truncateDescription(text, options = {}) {
   if (text.length <= max) return text;
 
   const moreUrl = options.readMoreUrl;
-  const suffix = moreUrl
-    ? `…\n[Lihat lebih lanjut](${moreUrl})`
-    : "…\n*(dipotong)*";
+  const suffix = moreUrl ? `…\n[Read more](${moreUrl})` : "…\n*(truncated)*";
   return text.slice(0, max - suffix.length) + suffix;
 }
 
@@ -132,7 +130,7 @@ const Embeds = {
   },
 
   formatError(err) {
-    if (!err) return "Terjadi kesalahan tak diketahui.";
+    if (!err) return "An unknown error occurred.";
     if (typeof err === "string") return err;
     const message = err.message || String(err);
     return message
