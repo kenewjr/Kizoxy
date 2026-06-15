@@ -1,6 +1,61 @@
 const Logger = require("../../lib/logger");
+const { Constants } = require("shoukaku");
 
 const logger = new Logger("PLAY");
+
+const NODE_READY_TIMEOUT_MS = 10000;
+const SEARCH_RETRY_DELAY_MS = 600;
+
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Resolves once at least one Lavalink node reports CONNECTED, or false on timeout.
+// On a fresh boot the node WebSocket may still be connecting, which previously
+// made the very first search return zero tracks ("No results found").
+async function waitForNodeReady(client, timeoutMs = NODE_READY_TIMEOUT_MS) {
+  const nodesReady = () => {
+    const nodes = client.manager?.shoukaku?.nodes;
+    if (!nodes) return false;
+    for (const node of nodes.values()) {
+      if (node.state === Constants.State.CONNECTED) return true;
+    }
+    return false;
+  };
+
+  if (nodesReady()) return true;
+
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const iv = setInterval(() => {
+      if (nodesReady()) {
+        clearInterval(iv);
+        resolve(true);
+      } else if (Date.now() - start >= timeoutMs) {
+        clearInterval(iv);
+        resolve(false);
+      }
+    }, 200);
+  });
+}
+
+// Awaits player.play() so failures surface instead of being swallowed. Retries
+// once after a short delay to absorb the voice-connection race that previously
+// required users to issue /play twice before audio started.
+async function startPlayback(player) {
+  if (player.playing || player.paused) return;
+  try {
+    await player.play();
+  } catch (err) {
+    logger.warning(`Initial play() failed, retrying once: ${err.message || err}`);
+    await delay(500);
+    if (player.playing || player.paused) return;
+    try {
+      await player.play();
+    } catch (err2) {
+      logger.error(`Retry play() failed: ${err2.message || err2}`);
+      throw err2;
+    }
+  }
+}
 
 module.exports = async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();
@@ -35,6 +90,26 @@ module.exports = async function playLogic(client, ctx, args) {
         true,
       );
 
+    // Make sure a Lavalink node is actually connected before searching.
+    const ready = await waitForNodeReady(client);
+    if (!ready)
+      return reply(
+        "❌ | Music server is still connecting. Please try again in a moment.",
+        true,
+      );
+
+    const requester = isSlash ? ctx.user : ctx.author;
+
+    // Search BEFORE creating the player: a failed lookup should not leave an
+    // idle voice connection behind. Retry once to absorb a node that just
+    // finished connecting.
+    let result = await client.manager.search(query, { requester });
+    if (!result?.tracks?.length) {
+      await delay(SEARCH_RETRY_DELAY_MS);
+      result = await client.manager.search(query, { requester });
+    }
+    if (!result?.tracks?.length) return reply("❌ | No results found.", true);
+
     let player = client.manager.players.get(ctx.guild.id);
     if (!player) {
       player = await client.manager.createPlayer({
@@ -48,12 +123,6 @@ module.exports = async function playLogic(client, ctx, args) {
       player.voiceId = userVoice.id;
     }
 
-    const requester = isSlash ? ctx.user : ctx.author;
-
-    const result = await client.manager.search(query, { requester });
-
-    if (!result?.tracks?.length) return reply("❌ | No results found.", true);
-
     const isPlaylist =
       (result.type && String(result.type).toUpperCase().includes("PLAYLIST")) ||
       !!result.playlistName ||
@@ -65,13 +134,7 @@ module.exports = async function playLogic(client, ctx, args) {
         player.queue.add(t);
         added++;
       }
-      if (!player.playing && !player.paused) {
-        try {
-          player.play();
-        } catch (_) {
-          /* ignore */
-        }
-      }
+      await startPlayback(player);
       const name = result.playlistName || result.playlist?.name || "Playlist";
       return reply(
         `📃 Added playlist **${name}** with **${added}** track(s) to the queue.`,
@@ -80,13 +143,7 @@ module.exports = async function playLogic(client, ctx, args) {
     } else {
       const track = result.tracks[0];
       player.queue.add(track);
-      if (!player.playing && !player.paused) {
-        try {
-          player.play();
-        } catch (_) {
-          /* ignore */
-        }
-      }
+      await startPlayback(player);
       return reply(`🎵 Added **${track.title}** to the queue.`, true);
     }
   } catch (err) {
