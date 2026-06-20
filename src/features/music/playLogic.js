@@ -5,6 +5,7 @@ const logger = new Logger("PLAY");
 
 const NODE_READY_TIMEOUT_MS = 10000;
 const SEARCH_RETRY_DELAY_MS = 600;
+const NODE_POLL_INTERVAL_MS = 200;
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -33,7 +34,7 @@ async function waitForNodeReady(client, timeoutMs = NODE_READY_TIMEOUT_MS) {
         clearInterval(iv);
         resolve(false);
       }
-    }, 200);
+    }, NODE_POLL_INTERVAL_MS);
   });
 }
 
@@ -57,7 +58,7 @@ async function startPlayback(player) {
   }
 }
 
-module.exports = async function playLogic(client, ctx, args) {
+async function playLogic(client, ctx, args) {
   const isSlash = !!ctx.isChatInputCommand?.();
 
   const reply = async (msg, edit = false) => {
@@ -90,13 +91,16 @@ module.exports = async function playLogic(client, ctx, args) {
         true,
       );
 
-    // Make sure a Lavalink node is actually connected before searching.
-    const ready = await waitForNodeReady(client);
-    if (!ready)
-      return reply(
-        "❌ | Music server is still connecting. Please try again in a moment.",
-        true,
-      );
+    // Skip the readiness gate for warm guilds (player already exists).
+    const existingPlayer = client.manager.players.get(ctx.guild.id);
+    if (!existingPlayer) {
+      const ready = await waitForNodeReady(client);
+      if (!ready)
+        return reply(
+          "❌ | Music server is still connecting. Please try again in a moment.",
+          true,
+        );
+    }
 
     const requester = isSlash ? ctx.user : ctx.author;
 
@@ -105,12 +109,18 @@ module.exports = async function playLogic(client, ctx, args) {
     // finished connecting.
     let result = await client.manager.search(query, { requester });
     if (!result?.tracks?.length) {
+      logger.debug("Search returned empty, retrying once...");
       await delay(SEARCH_RETRY_DELAY_MS);
       result = await client.manager.search(query, { requester });
     }
-    if (!result?.tracks?.length) return reply("❌ | No results found.", true);
+    if (!result?.tracks?.length) {
+      logger.warning(
+        `Search retry also empty for query "${query}" — genuine no results`,
+      );
+      return reply("❌ | No results found.", true);
+    }
 
-    let player = client.manager.players.get(ctx.guild.id);
+    let player = existingPlayer;
     if (!player) {
       player = await client.manager.createPlayer({
         guildId: ctx.guild.id,
@@ -160,4 +170,12 @@ module.exports = async function playLogic(client, ctx, args) {
       logger.error(`[PLAY ERROR] failed to reply: ${replyErr.message}`);
     }
   }
-};
+}
+
+module.exports = playLogic;
+module.exports.playLogic = playLogic;
+module.exports.waitForNodeReady = waitForNodeReady;
+module.exports.startPlayback = startPlayback;
+module.exports._NODE_READY_TIMEOUT_MS = NODE_READY_TIMEOUT_MS;
+module.exports._SEARCH_RETRY_DELAY_MS = SEARCH_RETRY_DELAY_MS;
+module.exports._NODE_POLL_INTERVAL_MS = NODE_POLL_INTERVAL_MS;
