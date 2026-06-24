@@ -51,7 +51,7 @@ async function handleCreate(client, interaction) {
       embeds: [
         Embeds.error(client, {
           title: "Limit reached",
-          description: `Free tier allows ${settings.maxTemplates} templates. Delete one or upgrade.`,
+          description: `Configure voice channel permission templates.`,
         }),
       ],
     });

@@ -2,7 +2,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["pause"],
-  description: "Pause the music!",
+  description: "Pause music playback.",
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);
     if (!player) {

@@ -2,7 +2,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "leave"],
-  description: "Disconnect the bot from your voice channel",
+  description: "Disconnect the bot from the voice channel and clear queue.",
   category: "Music",
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);

@@ -16,7 +16,7 @@ const SCHEDULE_SEND_DELAY_MS = 500;
 
 module.exports = {
   name: ["anime"],
-  description: "Anime related commands",
+  description: "Show the current season anime schedule and info.",
   category: "Anime",
   options: [
     {

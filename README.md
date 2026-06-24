@@ -56,6 +56,7 @@
 
 - Alarm system with auto-update countdown
 - Social media embed fixer (Twitter, IG, TikTok)
+- YouTube & TikTok notification alerts for new uploads
 - Per-guild log channels
 
 #### 🛠️ Developer Experience
@@ -135,9 +136,8 @@ NODE_AUTH=youshallnotpass
 LAVALINK_URL=http://localhost:2333
 LAVALINK_PASSWORD=youshallnotpass
 
-# ── Spotify (optional) ──────────────────────────
-SPOTIFY_CLIENT_ID=
-SPOTIFY_CLIENT_SECRET=
+# ── YouTube (optional) ──────────────────────────
+YOUTUBE_API_KEY=
 ```
 
 </details>
@@ -198,6 +198,39 @@ Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · 
 | :------------ | :------------------------------------------------------------------------------------------------------- |
 | `/alarm`      | Open the alarm panel — view, create (modal), edit (modal), cancel, toggle, change channel/role/recurring |
 | `/alarmadmin` | _(Admin)_ View all server alarms                                                                         |
+
+</details>
+
+<details>
+<summary><b>📺 YouTube Notifications</b></summary>
+
+| Command                   | Description                                    |
+| :------------------------ | :--------------------------------------------- |
+| `/youtube add <url> <ch>` | Subscribe a YouTube channel to announce here   |
+| `/youtube remove <url>`   | Unsubscribe from a YouTube channel             |
+| `/youtube list`           | List this server's YouTube subscriptions       |
+
+</details>
+
+<details>
+<summary><b>📱 TikTok Notifications</b></summary>
+
+| Command                  | Description                                    |
+| :----------------------- | :--------------------------------------------- |
+| `/tiktok add <url> <ch>`  | Subscribe a TikTok account to announce here    |
+| `/tiktok remove <url>`    | Unsubscribe from a TikTok account              |
+| `/tiktok list`            | List this server's TikTok subscriptions        |
+| `/tiktok status <url>`    | Show current monitoring status for an account  |
+| `/tiktok test`            | Send a test TikTok notification to this server |
+
+</details>
+
+<details>
+<summary><b>👑 Owner</b></summary>
+
+| Command                               | Description                                                                  |
+| :------------------------------------ | :--------------------------------------------------------------------------- |
+| `/owner sendmsg <guild> <ch> <msg>`   | Send a message to a specific channel in a specific server (Owner only)       |
 
 </details>
 

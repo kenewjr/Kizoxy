@@ -9,7 +9,7 @@ if (Font?.loadDefault) Font.loadDefault();
 
 module.exports = {
   name: ["rank"],
-  description: "View your current level and XP",
+  description: "Show your rank card and level progress.",
   category: "Level",
   options: [
     {

@@ -3,7 +3,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "loop"],
-  description: "Loops the current song!",
+  description: "Cycle loop mode (off, track, queue).",
   category: "Music",
   options: [
     {

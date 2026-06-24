@@ -101,7 +101,7 @@ function buildAdminControlRow() {
 
 module.exports = {
   name: ["alarmadmin"],
-  description: "View all alarms in the server (Admin only)",
+  description: "Show all server alarms.",
   category: "Alarm",
   run: async (client, interaction) => {
     await interaction.deferReply({ ephemeral: true });

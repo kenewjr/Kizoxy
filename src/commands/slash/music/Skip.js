@@ -5,7 +5,7 @@ const EPHEMERAL_TTL_MS = 3000;
 
 module.exports = {
   name: ["skip"],
-  description: "Skips the current song or skip to a specific position.",
+  description: "Skip the current song and play the next one.",
   category: "Music",
   options: [
     {

@@ -2,7 +2,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "resume"],
-  description: "Resume the music!",
+  description: "Resume paused music playback.",
   category: "Music",
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);

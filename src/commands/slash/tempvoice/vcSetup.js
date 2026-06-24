@@ -19,7 +19,7 @@ async function handleAdd(client, interaction) {
       embeds: [
         Embeds.error(client, {
           title: "Invalid channel",
-          description: "Generator must be a voice channel.",
+          description: "Set up a temporary voice channel generator.",
         }),
       ],
     });

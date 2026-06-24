@@ -5,7 +5,7 @@ const formatDuration = require("../../../lib/FormatDuration");
 
 module.exports = {
   name: ["queue"],
-  description: "Show the queue of songs.",
+  description: "Show the list of upcoming songs.",
   category: "Music",
   options: [
     {

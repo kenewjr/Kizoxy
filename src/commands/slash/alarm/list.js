@@ -8,7 +8,7 @@ const logger = new Logger("ALARM");
 
 module.exports = {
   name: ["alarm"],
-  description: "Open the alarm panel (view, create, edit, cancel, toggle)",
+  description: "Show this server's alarm control panel.",
   category: "Alarm",
   run: async (client, interaction) => {
     await interaction.deferReply({ ephemeral: false });

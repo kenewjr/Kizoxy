@@ -4,7 +4,7 @@ const LevelStorage = require("../../../persistence/levelStorage");
 
 module.exports = {
   name: ["leaderboard"],
-  description: "View the server leaderboard",
+  description: "Show the server leveling leaderboard.",
   category: "Level",
   run: async (client, interaction) => {
     await interaction.deferReply();
@@ -45,17 +45,25 @@ module.exports = {
 
       let description = "";
 
+      const userPromises = currentItems.map(async (item) => {
+        const cached = client.users.cache.get(item.userId);
+        if (cached) return { userId: item.userId, tag: cached.tag };
+
+        try {
+          const user = await client.users.fetch(item.userId);
+          return { userId: item.userId, tag: user.tag };
+        } catch (_e) {
+          return { userId: item.userId, tag: `User (${item.userId})` };
+        }
+      });
+
+      const resolvedUsers = await Promise.all(userPromises);
+      const userTagMap = new Map(resolvedUsers.map((u) => [u.userId, u.tag]));
+
       for (let i = 0; i < currentItems.length; i++) {
         const item = currentItems[i];
         const position = start + i + 1;
-
-        let userTag = "Unknown User";
-        try {
-          const user = await client.users.fetch(item.userId);
-          userTag = user.tag;
-        } catch (_e) {
-          userTag = `User (${item.userId})`;
-        }
+        const userTag = userTagMap.get(item.userId) || "Unknown User";
 
         let prefix = `#${position}`;
         if (position === 1) prefix = "🥇";

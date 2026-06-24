@@ -3,7 +3,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "volume"],
-  description: "Adjusts the volume of the bot.",
+  description: "Set the bot voice volume.",
   category: "Music",
   options: [
     {

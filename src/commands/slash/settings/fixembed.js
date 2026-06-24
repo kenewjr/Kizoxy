@@ -103,7 +103,7 @@ function navRow(guildId, userId, currentPage) {
 
 module.exports = {
   name: ["fixembed"],
-  description: "Configure the social media embed fixer for this server.",
+  description: "Configure social-media embed fixing settings.",
   category: "Settings",
   options: [
     {
@@ -131,6 +131,17 @@ module.exports = {
     user: [PermissionsBitField.Flags.ManageGuild],
   },
   run: async (client, interaction) => {
+    if (
+      !interaction.memberPermissions?.has?.(
+        PermissionsBitField.Flags.ManageGuild,
+      )
+    ) {
+      return interaction.reply({
+        content: "❌ You need the **Manage Server** permission to run this command.",
+        ephemeral: true,
+      });
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;
     const userId = interaction.user.id;

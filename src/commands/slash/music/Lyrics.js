@@ -24,7 +24,7 @@ function nowPlayingControls(player, lyricsEnabled) {
 
 module.exports = {
   name: ["music", "lyric"],
-  description: "Toggle lyrics display (show/hide) for the current song.",
+  description: "Search and display lyrics for a song (converts JPN to romaji).",
   category: "Music",
 
   run: async (client, interaction) => {

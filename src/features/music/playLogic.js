@@ -46,7 +46,9 @@ async function startPlayback(player) {
   try {
     await player.play();
   } catch (err) {
-    logger.warning(`Initial play() failed, retrying once: ${err.message || err}`);
+    logger.warning(
+      `Initial play() failed, retrying once: ${err.message || err}`,
+    );
     await delay(500);
     if (player.playing || player.paused) return;
     try {

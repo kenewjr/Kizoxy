@@ -73,6 +73,72 @@ module.exports = async (client, interaction) => {
     const Random =
       SEARCH_DEFAULT[Math.floor(Math.random() * SEARCH_DEFAULT.length)];
 
+    if (interaction.commandName === "youtube") {
+      try {
+        const youtubeStorage = require("../../persistence/youtubeStorage");
+        const focused = (interaction.options.getFocused() || "")
+          .toString()
+          .toLowerCase();
+        const subs = await youtubeStorage.listSubscriptions(
+          interaction.guild.id,
+        );
+        const choices = subs
+          .filter((s) =>
+            (s.youtubeChannelTitle || s.youtubeChannelId)
+              .toLowerCase()
+              .includes(focused),
+          )
+          .slice(0, 25)
+          .map((s) => ({
+            name: truncateChoice(s.youtubeChannelTitle || s.youtubeChannelId),
+            value: s.id,
+          }));
+        await interaction.respond(choices);
+        logger.debug(`Autocomplete results sent for youtube command`);
+      } catch (error) {
+        logger.warning(
+          `Autocomplete failed for youtube command: ${error.message}`,
+        );
+        try {
+          await interaction.respond([]);
+        } catch (__) {
+          /* ignore */
+        }
+      }
+      return;
+    }
+
+    if (interaction.commandName === "tiktok") {
+      try {
+        const tiktokStorage = require("../../persistence/tiktokStorage");
+        const focused = (interaction.options.getFocused() || "")
+          .toString()
+          .toLowerCase();
+        const subs = await tiktokStorage.listSubscriptions(
+          interaction.guild.id,
+        );
+        const choices = subs
+          .filter((s) => s.username.toLowerCase().includes(focused))
+          .slice(0, 25)
+          .map((s) => ({
+            name: truncateChoice(`@${s.username}`),
+            value: s.id,
+          }));
+        await interaction.respond(choices);
+        logger.debug(`Autocomplete results sent for tiktok command`);
+      } catch (error) {
+        logger.warning(
+          `Autocomplete failed for tiktok command: ${error.message}`,
+        );
+        try {
+          await interaction.respond([]);
+        } catch (__) {
+          /* ignore */
+        }
+      }
+      return;
+    }
+
     if (interaction.commandName === "play") {
       try {
         const raw = interaction.options.getString("search") || Random;

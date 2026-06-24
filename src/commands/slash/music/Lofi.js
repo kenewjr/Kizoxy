@@ -2,7 +2,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["lofi"],
-  description: "Play 24/7 Lofi Radio",
+  description: "Stream a continuous 24/7 Lofi radio station.",
   category: "Music",
   run: async (client, interaction) => {
     const member = interaction.member;

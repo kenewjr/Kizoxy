@@ -1,5 +1,5 @@
 // deploySlash.js - Version with cleanup
-const { REST, Routes, ApplicationCommandOptionType } = require("discord.js");
+const { REST, Routes, ApplicationCommandOptionType, PermissionsBitField } = require("discord.js");
 const { TOKEN } = require("../src/config/config");
 const fs = require("fs");
 const path = require("path");
@@ -243,6 +243,20 @@ async function loadAndValidateCommands() {
   return discordCommands;
 }
 
+function resolveCommandPermission(cmd) {
+  if (cmd.defaultMemberPermissions !== undefined) {
+    return cmd.defaultMemberPermissions;
+  }
+  if (cmd.permissions?.user) {
+    try {
+      return PermissionsBitField.resolve(cmd.permissions.user);
+    } catch {
+      // ignore
+    }
+  }
+  return undefined;
+}
+
 function buildCommand(mainName, commands) {
   // Find command types
   const mainCommands = commands.filter((cmd) => cmd.name.length === 1);
@@ -256,23 +270,35 @@ function buildCommand(mainName, commands) {
     groupCommands.length === 0
   ) {
     const cmd = mainCommands[0];
+    const perm = resolveCommandPermission(cmd);
     return {
       type: cmd.type || 1,
       name: cmd.name[0],
       description: cmd.description,
       options: cleanOptions(cmd.options || []),
       default_permission: cmd.defaultPermission !== false,
+      default_member_permissions: perm !== undefined ? String(perm) : undefined,
     };
   }
 
   // Case 2: Command with subcommands (e.g., ["music", "play"], ["music", "pause"])
   if (subCommands.length > 0 || groupCommands.length > 0) {
+    let groupPerm;
+    for (const cmd of commands) {
+      const p = resolveCommandPermission(cmd);
+      if (p !== undefined) {
+        groupPerm = p;
+        break;
+      }
+    }
+
     const commandData = {
       type: 1,
       name: mainName,
       description: `${mainName} commands`,
       options: [],
       default_permission: true,
+      default_member_permissions: groupPerm !== undefined ? String(groupPerm) : undefined,
     };
 
     // Add subcommands

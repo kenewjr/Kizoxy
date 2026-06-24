@@ -17,11 +17,9 @@ jest.mock("../src/lib/logger", () => {
 });
 
 const playLogic = require("../src/features/music/playLogic");
-const { waitForNodeReady } = playLogic;
 
 const CONNECTED = Constants.State.CONNECTED;
 const CONNECTING = Constants.State.CONNECTING;
-const DISCONNECTED = Constants.State.DISCONNECTED;
 
 const mockNode = (state) => ({ state });
 
@@ -220,7 +218,9 @@ describe("playLogicReadiness", () => {
     mgr.search.mockResolvedValue(playlistResult);
     const client = { manager: mgr };
     const ctx = makeCtx();
-    const args = ["https://youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"];
+    const args = [
+      "https://youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+    ];
 
     const promise = playLogic(client, ctx, args);
     await jest.advanceTimersByTimeAsync(100);
@@ -230,9 +230,7 @@ describe("playLogicReadiness", () => {
     expect(ctx.channel.send).toHaveBeenCalledWith(
       expect.stringContaining("Test Playlist"),
     );
-    expect(ctx.channel.send).toHaveBeenCalledWith(
-      expect.stringContaining("3"),
-    );
+    expect(ctx.channel.send).toHaveBeenCalledWith(expect.stringContaining("3"));
   });
 
   // covers: Spotify link (routed through ytsearch per KI #44 — Spotify support

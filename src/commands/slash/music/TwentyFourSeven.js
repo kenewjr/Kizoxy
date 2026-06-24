@@ -2,7 +2,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "twentyfourseven"],
-  description: "24/7 in voice channel",
+  description: "Keep the bot in the voice channel permanently, even if empty.",
   category: "Music",
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);

@@ -4,8 +4,9 @@ const LevelStorage = require("../../../persistence/levelStorage");
 
 module.exports = {
   name: ["level"],
-  description: "Level system commands",
+  description: "Add XP points to a server member.",
   category: "Level",
+  defaultMemberPermissions: 0n,
   options: [
     {
       name: "add",

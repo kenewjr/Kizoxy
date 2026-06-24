@@ -3,7 +3,7 @@ const path = require("path");
 
 module.exports = {
   name: ["filter"],
-  description: "Apply various audio filters",
+  description: "Apply an audio filter/preset.",
   category: "Music",
   options: [
     {

@@ -10,7 +10,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["search"],
-  description: "Search for a song!",
+  description: "Search for a song and provide a selection menu to play it.",
   category: "Music",
   options: [
     {

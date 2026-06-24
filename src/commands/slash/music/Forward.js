@@ -6,7 +6,7 @@ const fastForwardNum = 10;
 
 module.exports = {
   name: ["music", "forward"],
-  description: "forward the currently playing song.",
+  description: "Fast-forward the current track by a specific amount of time.",
   category: "Music",
   options: [
     {

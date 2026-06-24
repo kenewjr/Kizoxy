@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
+require("./lib/patchInteractions");
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
 const Logger = require("./lib/logger");
@@ -74,6 +75,8 @@ const LOADERS = [
   "loadTrack",
   "loadAlarm",
   "loadTempVC",
+  "loadYoutube",
+  "loadTiktok",
 ];
 
 async function bootstrap() {
@@ -184,6 +187,10 @@ async function gracefulShutdown(signal) {
     client.alarmStorage,
     client.levelStorage,
     client.fixembedStorage,
+    client.youtubeStorage,
+    client.youtubeStateStorage,
+    client.tiktokStorage,
+    client.tiktokStateStorage,
   ];
   await Promise.all(
     storages
@@ -197,6 +204,12 @@ async function gracefulShutdown(signal) {
       if (job && typeof job.clear === "function") job.clear();
       else clearTimeout(job);
     }
+  }
+  if (client.youtubeScheduler) {
+    client.youtubeScheduler.stop();
+  }
+  if (client.tiktokScheduler) {
+    client.tiktokScheduler.stop();
   }
   try {
     const { clearAlarmIntervals } = require("./loaders/loadAlarm");

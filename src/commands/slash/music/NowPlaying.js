@@ -5,7 +5,7 @@ const { replyError, safeReply } = require("../../../lib/interactions");
 
 module.exports = {
   name: ["nowplaying"],
-  description: "Show the currently playing track.",
+  description: "Show progress bar and info for the current song.",
   category: "Music",
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);

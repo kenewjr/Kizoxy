@@ -10,6 +10,12 @@ module.exports = {
   SEARCH_DEFAULT: ["yoasobi", "zutomayo", "kotoha", "lisa"],
   SEARCH_ENGINE: process.env.SEARCH_ENGINE || "youtube", // default -- 'youtube' | 'soundcloud' | 'youtube_music'
   LEAVE_EMPTY: process.env.LEAVE_EMPTY || "120000",
+  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
+  // Configurable TikTok data provider. No official free feed exists, so the
+  // client is provider-agnostic: point this at any HTTP endpoint that returns
+  // the documented JSON contract (RSSHub instance, third-party API, etc.).
+  TIKTOK_API_BASE: process.env.TIKTOK_API_BASE,
+  TIKTOK_API_KEY: process.env.TIKTOK_API_KEY,
   NODES: [
     {
       name: process.env.NODE_NAME || "NanoSpace",

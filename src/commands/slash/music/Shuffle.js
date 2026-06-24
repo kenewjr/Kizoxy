@@ -2,7 +2,7 @@ const Embeds = require("../../../lib/embeds");
 
 module.exports = {
   name: ["music", "shuffle"],
-  description: "Shuffle song in queue!",
+  description: "Shuffle the order of tracks in the queue.",
   category: "Music",
   run: async (client, interaction) => {
     const player = client.manager.players.get(interaction.guild.id);

@@ -82,7 +82,7 @@ function buildCategoryFieldValue(commands, prefix) {
 
 module.exports = {
   name: ["help"],
-  description: "Show the list of available commands.",
+  description: "Show the bot help menu index.",
   category: "Misc",
   run: async (client, interaction) => {
     try {

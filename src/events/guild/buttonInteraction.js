@@ -30,7 +30,14 @@ module.exports = async (client, interaction) => {
       return;
     }
 
-    const PREFIXED_HANDLERS = ["fxs", "fixembed_delete", "alarm", "tvc"];
+    const PREFIXED_HANDLERS = [
+      "fxs",
+      "fixembed_delete",
+      "alarm",
+      "tvc",
+      "youtube_list_page",
+      "tiktok_list_page",
+    ];
     let button = client.buttons.get(interaction.customId);
 
     if (!button) {
@@ -61,7 +68,10 @@ module.exports = async (client, interaction) => {
       const isTvc = prefix === "tvc";
       const skipDefer = isShowModalButton || isModalSubmit || isTvc;
       const useDeferUpdate =
-        prefix === "fxs" || interaction.customId.startsWith("alarm_");
+        prefix === "fxs" ||
+        interaction.customId.startsWith("alarm_") ||
+        prefix === "youtube_list_page" ||
+        prefix === "tiktok_list_page";
 
       if (skipDefer) {
         logger.debug(`Skipping defer (modal) for: ${interaction.customId}`);

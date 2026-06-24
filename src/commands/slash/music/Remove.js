@@ -12,7 +12,7 @@ function scheduleAutoDelete(interaction) {
 
 module.exports = {
   name: ["music", "remove"],
-  description: "Remove or clear songs from the queue",
+  description: "Remove a song at a specific index from the queue.",
   category: "Music",
   options: [
     {

@@ -31,7 +31,7 @@ const USR = ApplicationCommandOptionType.User;
 
 module.exports = {
   name: ["vc"],
-  description: "Control your Temporary Voice Channel",
+  description: "Control temporary voice channel settings.",
   category: "Voice",
   options: [
     {

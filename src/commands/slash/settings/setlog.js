@@ -7,7 +7,7 @@ const { replySuccess, replyError } = require("../../../lib/interactions");
 
 module.exports = {
   name: ["setlog"],
-  description: "Set the channel for server logs (member join/leave, etc.).",
+  description: "Set the server moderation log channel.",
   category: "Settings",
   options: [
     {
@@ -23,6 +23,17 @@ module.exports = {
     user: [PermissionsBitField.Flags.ManageGuild],
   },
   run: async (client, interaction) => {
+    if (
+      !interaction.memberPermissions?.has?.(
+        PermissionsBitField.Flags.ManageGuild,
+      )
+    ) {
+      return replyError(
+        interaction,
+        "You need the **Manage Server** permission to run this command.",
+      );
+    }
+
     const channel = interaction.options.getChannel("channel");
 
     if (!channel?.isTextBased?.()) {

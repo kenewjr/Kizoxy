@@ -18,7 +18,7 @@ async function handleAdd(client, interaction) {
       embeds: [
         Embeds.error(client, {
           title: "Invalid channel",
-          description: "Voice roles can only be attached to voice channels.",
+          description: "Configure voice roles for temporary voice channels.",
         }),
       ],
     });
