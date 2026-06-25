@@ -238,6 +238,18 @@ module.exports = async (client, interaction) => {
       return;
     }
 
+    if (command.category === "Owner" || command.ownerOnly) {
+      if (interaction.user.id !== client.config.OWNER_ID) {
+        logger.warning(
+          `Unauthorized user ${interaction.user.tag} (${interaction.user.id}) attempted to run owner command: ${command.name.join(" ")}`,
+        );
+        return interaction.reply({
+          content: `❌ You do not have permission to use this command.`,
+          ephemeral: true,
+        });
+      }
+    }
+
     try {
       logger.debug(
         `Executing command: ${command.name.join(" ")} by ${interaction.user.tag}`,

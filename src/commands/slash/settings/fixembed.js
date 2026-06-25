@@ -137,7 +137,8 @@ module.exports = {
       )
     ) {
       return interaction.reply({
-        content: "❌ You need the **Manage Server** permission to run this command.",
+        content:
+          "❌ You need the **Manage Server** permission to run this command.",
         ephemeral: true,
       });
     }

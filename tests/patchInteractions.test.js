@@ -46,7 +46,11 @@ describe("patchInteractions", () => {
   test("should NOT schedule deletion if components are present", async () => {
     jest.useFakeTimers();
 
-    await mockInteraction.reply({ content: "test", ephemeral: true, components: [{ type: 1 }] });
+    await mockInteraction.reply({
+      content: "test",
+      ephemeral: true,
+      components: [{ type: 1 }],
+    });
 
     jest.advanceTimersByTime(15000);
 

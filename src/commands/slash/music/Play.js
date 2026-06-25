@@ -3,7 +3,8 @@ const playLogic = require("../../../features/music/playLogic");
 
 module.exports = {
   name: ["play"],
-  description: "Play a track or playlist from YouTube, Spotify, SoundCloud, or Deezer.",
+  description:
+    "Play a track or playlist from YouTube, Spotify, SoundCloud, or Deezer.",
   category: "Music",
   options: [
     {

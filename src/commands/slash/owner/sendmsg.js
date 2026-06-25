@@ -1,6 +1,4 @@
-const {
-  ApplicationCommandOptionType,
-} = require("discord.js");
+const { ApplicationCommandOptionType } = require("discord.js");
 const { replySuccess, replyError } = require("../../../lib/interactions");
 const Logger = require("../../../lib/logger");
 
@@ -8,7 +6,8 @@ const logger = new Logger("OWNER");
 
 module.exports = {
   name: ["owner", "sendmsg"],
-  description: "Send a message to a specific channel in a specific server (Owner only).",
+  description:
+    "Send a message to a specific channel in a specific server (Owner only).",
   category: "Owner",
   // Disables the command for everyone by default.
   defaultMemberPermissions: 0n,
@@ -37,7 +36,7 @@ module.exports = {
     if (interaction.user.id !== client.config.OWNER_ID) {
       return replyError(
         interaction,
-        "You do not have permission to use this command."
+        "You do not have permission to use this command.",
       );
     }
 
@@ -52,7 +51,7 @@ module.exports = {
       if (!guild) {
         return replyError(
           interaction,
-          `Could not find server with ID \`${guildId}\`. Make sure the bot is in that server.`
+          `Could not find server with ID \`${guildId}\`. Make sure the bot is in that server.`,
         );
       }
 
@@ -60,33 +59,30 @@ module.exports = {
       if (!channel) {
         return replyError(
           interaction,
-          `Could not find channel with ID \`${channelId}\` in server **${guild.name}**.`
+          `Could not find channel with ID \`${channelId}\` in server **${guild.name}**.`,
         );
       }
 
       if (!channel.isTextBased()) {
         return replyError(
           interaction,
-          `Channel <#${channelId}> is not a text channel.`
+          `Channel <#${channelId}> is not a text channel.`,
         );
       }
 
       await channel.send(messageContent);
-      
+
       logger.info(
-        `Owner ${interaction.user.tag} sent message to guild ${guild.name} (${guildId}), channel #${channel.name} (${channelId})`
+        `Owner ${interaction.user.tag} sent message to guild ${guild.name} (${guildId}), channel #${channel.name} (${channelId})`,
       );
-      
+
       return replySuccess(
         interaction,
-        `Message successfully sent to channel <#${channelId}> in server **${guild.name}**.`
+        `Message successfully sent to channel <#${channelId}> in server **${guild.name}**.`,
       );
     } catch (err) {
       logger.error(`Failed to send message: ${err.message}`);
-      return replyError(
-        interaction,
-        `Failed to send message: ${err.message}`
-      );
+      return replyError(interaction, `Failed to send message: ${err.message}`);
     }
   },
 };

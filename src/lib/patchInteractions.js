@@ -98,4 +98,3 @@ for (const target of targets) {
 }
 
 module.exports = { patchInteraction };
-

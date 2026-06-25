@@ -41,11 +41,11 @@ describe("owner sendmsg command", () => {
       },
       replied: false,
       deferred: false,
-      reply: jest.fn().mockImplementation(function() {
+      reply: jest.fn().mockImplementation(function () {
         this.replied = true;
         return Promise.resolve();
       }),
-      deferReply: jest.fn().mockImplementation(function() {
+      deferReply: jest.fn().mockImplementation(function () {
         this.deferred = true;
         return Promise.resolve();
       }),

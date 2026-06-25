@@ -204,11 +204,11 @@ Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · 
 <details>
 <summary><b>📺 YouTube Notifications</b></summary>
 
-| Command                   | Description                                    |
-| :------------------------ | :--------------------------------------------- |
-| `/youtube add <url> <ch>` | Subscribe a YouTube channel to announce here   |
-| `/youtube remove <url>`   | Unsubscribe from a YouTube channel             |
-| `/youtube list`           | List this server's YouTube subscriptions       |
+| Command                   | Description                                  |
+| :------------------------ | :------------------------------------------- |
+| `/youtube add <url> <ch>` | Subscribe a YouTube channel to announce here |
+| `/youtube remove <url>`   | Unsubscribe from a YouTube channel           |
+| `/youtube list`           | List this server's YouTube subscriptions     |
 
 </details>
 
@@ -217,20 +217,20 @@ Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · 
 
 | Command                  | Description                                    |
 | :----------------------- | :--------------------------------------------- |
-| `/tiktok add <url> <ch>`  | Subscribe a TikTok account to announce here    |
-| `/tiktok remove <url>`    | Unsubscribe from a TikTok account              |
-| `/tiktok list`            | List this server's TikTok subscriptions        |
-| `/tiktok status <url>`    | Show current monitoring status for an account  |
-| `/tiktok test`            | Send a test TikTok notification to this server |
+| `/tiktok add <url> <ch>` | Subscribe a TikTok account to announce here    |
+| `/tiktok remove <url>`   | Unsubscribe from a TikTok account              |
+| `/tiktok list`           | List this server's TikTok subscriptions        |
+| `/tiktok status <url>`   | Show current monitoring status for an account  |
+| `/tiktok test`           | Send a test TikTok notification to this server |
 
 </details>
 
 <details>
 <summary><b>👑 Owner</b></summary>
 
-| Command                               | Description                                                                  |
-| :------------------------------------ | :--------------------------------------------------------------------------- |
-| `/owner sendmsg <guild> <ch> <msg>`   | Send a message to a specific channel in a specific server (Owner only)       |
+| Command                             | Description                                                            |
+| :---------------------------------- | :--------------------------------------------------------------------- |
+| `/owner sendmsg <guild> <ch> <msg>` | Send a message to a specific channel in a specific server (Owner only) |
 
 </details>
 

@@ -1,5 +1,10 @@
 // deploySlash.js - Version with cleanup
-const { REST, Routes, ApplicationCommandOptionType, PermissionsBitField } = require("discord.js");
+const {
+  REST,
+  Routes,
+  ApplicationCommandOptionType,
+  PermissionsBitField,
+} = require("discord.js");
 const { TOKEN } = require("../src/config/config");
 const fs = require("fs");
 const path = require("path");
@@ -298,7 +303,8 @@ function buildCommand(mainName, commands) {
       description: `${mainName} commands`,
       options: [],
       default_permission: true,
-      default_member_permissions: groupPerm !== undefined ? String(groupPerm) : undefined,
+      default_member_permissions:
+        groupPerm !== undefined ? String(groupPerm) : undefined,
     };
 
     // Add subcommands
