@@ -1,4 +1,9 @@
-const { PermissionsBitField } = require("discord.js");
+const {
+  PermissionsBitField,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const { replyError } = require("../../../lib/interactions");
 const {
   LIST_PAGE_SIZE,
@@ -32,7 +37,7 @@ function buildListEmbed(client, subscriptions, page) {
     title: "YouTube Subscriptions",
     description: subscriptions.length
       ? `This server follows **${subscriptions.length}** channel(s).`
-      : "No YouTube subscriptions yet. Use `/youtube add` to create one.",
+      : "No YouTube subscriptions yet. Click **Add Channel** or use `/youtube add` to create one.",
     fields: slice.map(subscriptionField),
     footerText: total > 1 ? `Page ${page + 1} / ${total}` : undefined,
   });
@@ -61,8 +66,25 @@ module.exports = {
       const page = 0;
       const embed = buildListEmbed(client, subscriptions, page);
       const total = totalPages(subscriptions, LIST_PAGE_SIZE);
-      const components =
-        total > 1 ? [buildPaginationRow("youtube_list_page", page, total)] : [];
+
+      const controlRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("youtube_panel:add")
+          .setLabel("Add Channel")
+          .setStyle(ButtonStyle.Success)
+          .setEmoji("➕"),
+        new ButtonBuilder()
+          .setCustomId("youtube_panel:remove")
+          .setLabel("Remove Channel")
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji("❌"),
+      );
+
+      const components = [];
+      if (total > 1) {
+        components.push(buildPaginationRow("youtube_list_page", page, total));
+      }
+      components.push(controlRow);
 
       await interaction.editReply({ embeds: [embed], components });
     } catch (error) {

@@ -37,6 +37,9 @@ module.exports = async (client, interaction) => {
       "tvc",
       "youtube_list_page",
       "tiktok_list_page",
+      "youtube_panel",
+      "tiktok_panel",
+      "help_category",
     ];
     let button = client.buttons.get(interaction.customId);
 
@@ -63,7 +66,9 @@ module.exports = async (client, interaction) => {
       const prefix = interaction.customId.split(":")[0];
       const isShowModalButton =
         interaction.customId === "alarm_new" ||
-        interaction.customId.startsWith("alarm_edit_modal:");
+        interaction.customId.startsWith("alarm_edit_modal:") ||
+        interaction.customId === "youtube_panel:add" ||
+        interaction.customId === "tiktok_panel:add";
       // tvc owns its own defer lifecycle (mix of modal-open / toggle / select).
       const isTvc = prefix === "tvc";
       const skipDefer = isShowModalButton || isModalSubmit || isTvc;
@@ -71,7 +76,12 @@ module.exports = async (client, interaction) => {
         prefix === "fxs" ||
         interaction.customId.startsWith("alarm_") ||
         prefix === "youtube_list_page" ||
-        prefix === "tiktok_list_page";
+        prefix === "tiktok_list_page" ||
+        prefix === "help_category" ||
+        (prefix === "youtube_panel" &&
+          interaction.customId !== "youtube_panel:add") ||
+        (prefix === "tiktok_panel" &&
+          interaction.customId !== "tiktok_panel:add");
 
       if (skipDefer) {
         logger.debug(`Skipping defer (modal) for: ${interaction.customId}`);

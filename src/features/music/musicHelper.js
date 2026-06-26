@@ -7,6 +7,7 @@ const {
 const formatduration = require("../../lib/FormatDuration");
 const { COLORS } = require("../../lib/embeds");
 const Logger = require("../../lib/logger");
+const { stats } = require("../../lib/ephemeralStats");
 
 const logger = new Logger("MUSIC-HELPERS");
 
@@ -45,8 +46,29 @@ function validateMusicContextMessage(client, message) {
 }
 
 function scheduleAutoDelete(interaction, ttl = EPHEMERAL_TTL_MS) {
-  setTimeout(() => {
-    interaction.deleteReply().catch(() => {});
+  if (interaction._kizoxyAutoDeleteScheduled) {
+    return;
+  }
+  interaction._kizoxyAutoDeleteScheduled = true;
+  stats.scheduled++;
+
+  setTimeout(async () => {
+    try {
+      await interaction.deleteReply();
+    } catch (err) {
+      if (err.code === 10008) {
+        logger.debug(
+          `Auto-delete skipped: Message already deleted (code 10008) for interaction ${interaction.id}`,
+        );
+        stats.swallowed++;
+      } else {
+        logger.error(
+          `Error deleting reply on interaction ${interaction.id}: ${err.message}`,
+        );
+      }
+    } finally {
+      stats.fired++;
+    }
   }, ttl);
 }
 

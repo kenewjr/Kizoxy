@@ -1,14 +1,7 @@
 const { ApplicationCommandOptionType } = require("discord.js");
 const Embeds = require("../../../lib/embeds");
 const { convertTime } = require("../../../lib/ConvertTime");
-
-const EPHEMERAL_TTL_MS = 3000;
-
-function scheduleAutoDelete(interaction) {
-  setTimeout(() => {
-    interaction.deleteReply().catch(() => {});
-  }, EPHEMERAL_TTL_MS);
-}
+const { scheduleAutoDelete } = require("../../../features/music/musicHelper");
 
 module.exports = {
   name: ["music", "remove"],

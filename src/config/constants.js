@@ -17,4 +17,7 @@ module.exports = {
   // account is deleted or the provider is down.
   TIKTOK_BACKOFF_BASE_MS: 60000,
   TIKTOK_BACKOFF_MAX_MS: 1800000,
+
+  // Ephemeral auto-delete settings (Rule Q1).
+  EPHEMERAL_AUTO_DELETE_MS: 15000,
 };

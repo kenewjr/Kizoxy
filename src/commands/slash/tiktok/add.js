@@ -21,14 +21,14 @@ module.exports = {
       name: "tiktok_url",
       description: "TikTok profile URL or @username.",
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: false,
     },
     {
       name: "channel",
       description: "Where notifications will be posted.",
       type: ApplicationCommandOptionType.Channel,
       channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
-      required: true,
+      required: false,
     },
     {
       name: "mention_role",
@@ -57,10 +57,60 @@ module.exports = {
       );
     }
 
-    await interaction.deferReply({ ephemeral: true });
-
     const input = interaction.options.getString("tiktok_url");
     const channel = interaction.options.getChannel("channel");
+
+    if (!input || !channel) {
+      const {
+        ModalBuilder,
+        TextInputBuilder,
+        TextInputStyle,
+        ActionRowBuilder,
+      } = require("discord.js");
+      const modal = new ModalBuilder()
+        .setCustomId("tiktok_panel:add_modal")
+        .setTitle("Add TikTok Subscription");
+
+      const tiktokInput = new TextInputBuilder()
+        .setCustomId("tiktok_url")
+        .setLabel("TikTok Profile / URL / @Username")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("e.g. @therock or https://www.tiktok.com/@therock")
+        .setRequired(true);
+
+      const announceInput = new TextInputBuilder()
+        .setCustomId("announce_channel")
+        .setLabel("Discord Channel Name or ID")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("e.g. #tiktok or 123456789012345678")
+        .setRequired(true);
+
+      const mentionInput = new TextInputBuilder()
+        .setCustomId("mention_role")
+        .setLabel("Role Name or ID to Ping (Optional)")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("e.g. @PingRole or 987654321098765432")
+        .setRequired(false);
+
+      const configInput = new TextInputBuilder()
+        .setCustomId("notifications")
+        .setLabel("Notify Videos, Live (Y/N)")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("e.g. Y, Y (default all Yes)")
+        .setRequired(false);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(tiktokInput),
+        new ActionRowBuilder().addComponents(announceInput),
+        new ActionRowBuilder().addComponents(mentionInput),
+        new ActionRowBuilder().addComponents(configInput),
+      );
+
+      return await interaction.showModal(modal);
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
     const mentionRole = interaction.options.getRole("mention_role");
     const notifyVideos = interaction.options.getBoolean("notify_videos");
     const notifyLive = interaction.options.getBoolean("notify_live");

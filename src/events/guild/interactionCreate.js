@@ -53,7 +53,9 @@ module.exports = async (client, interaction) => {
   if (
     interaction.isModalSubmit?.() &&
     (interaction.customId.startsWith("alarm_") ||
-      interaction.customId.startsWith("tvc:"))
+      interaction.customId.startsWith("tvc:") ||
+      interaction.customId.startsWith("youtube_panel:") ||
+      interaction.customId.startsWith("tiktok_panel:"))
   ) {
     logger.debug(
       `Modal submit: customId=${interaction.customId} by ${interaction.user?.tag || interaction.user?.id}`,

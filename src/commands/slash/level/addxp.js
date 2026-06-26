@@ -6,6 +6,7 @@ module.exports = {
   name: ["level"],
   description: "Add XP points to a server member.",
   category: "Level",
+  ownerOnly: true,
   defaultMemberPermissions: 0n,
   options: [
     {

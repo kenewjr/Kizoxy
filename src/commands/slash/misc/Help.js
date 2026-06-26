@@ -1,5 +1,11 @@
 const { readdirSync } = require("fs");
 const path = require("path");
+const {
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require("discord.js");
 const Embeds = require("../../../lib/embeds");
 const { replyError, safeReply } = require("../../../lib/interactions");
 const Logger = require("../../../lib/logger");
@@ -13,7 +19,9 @@ const CATEGORY_META = {
   level: { title: "🏆 Level", order: 4 },
   anime: { title: "🍙 Anime", order: 5 },
   settings: { title: "⚙️ Settings", order: 6 },
-  misc: { title: "📑 Misc", order: 7 },
+  youtube: { title: "📢 YouTube", order: 7 },
+  tiktok: { title: "🎵 TikTok", order: 8 },
+  misc: { title: "📑 Misc", order: 9 },
 };
 
 function collectCommands() {
@@ -33,6 +41,8 @@ function collectCommands() {
     }
 
     for (const category of categories) {
+      if (category.toLowerCase() === "owner") continue;
+
       const categoryPath = path.join(typePath, category);
       let commandFiles;
       try {
@@ -48,6 +58,8 @@ function collectCommands() {
         try {
           const cmd = require(path.join(categoryPath, file));
           if (!cmd.name || !cmd.description) continue;
+          if (cmd.ownerOnly) continue;
+
           allCommands.get(category).push({
             name: Array.isArray(cmd.name) ? cmd.name.join(" ") : cmd.name,
             description: cmd.description,
@@ -57,33 +69,122 @@ function collectCommands() {
           logger.error(`Error loading command ${file}: ${err.message}`);
         }
       }
+
+      if (allCommands.get(category).length === 0) {
+        allCommands.delete(category);
+      }
     }
   }
   return allCommands;
 }
 
-function buildCategoryFieldValue(commands, prefix) {
-  const slash = commands
-    .filter((c) => c.type === "Slash")
-    .map((c) => `\`/${c.name}\``);
-  const pref = commands
-    .filter((c) => c.type === "Prefix")
-    .map((c) => `\`${prefix}${c.name}\``);
-  const shared = commands
-    .filter((c) => c.type === "Shared")
-    .map((c) => `\`/${c.name}\``);
+function getSortedCategories(allCommands) {
+  return [...allCommands.keys()].sort((a, b) => {
+    const oa = CATEGORY_META[a]?.order ?? 99;
+    const ob = CATEGORY_META[b]?.order ?? 99;
+    if (oa !== ob) return oa - ob;
+    return a.localeCompare(b);
+  });
+}
+
+function buildHomeEmbed(client, guild, totalCommands, totalCategories) {
+  const prefix = client.prefix || client.config?.PREFIX || "k";
+  return Embeds.brand(client, {
+    author: {
+      name: `Help — ${guild.members.me.displayName}`,
+      iconURL: guild.iconURL({ dynamic: true }),
+    },
+    thumbnail: client.user.displayAvatarURL({ dynamic: true, size: 2048 }),
+    description: [
+      `The bot supports **slash commands** (\`/\`) and **prefix commands** (\`${prefix}\`).`,
+      `Total commands: **${totalCommands}** across **${totalCategories}** categories.`,
+      "",
+      "### ✨ Feature Highlights",
+      "🎶 **/play**: Play any song or playlist in a voice channel.",
+      "🔊 **/vcsetup**: Initialize temporary voice channel generator.",
+      "⏰ **/alarm**: Manage recurring alarms and reminders.",
+      "🏆 **/rank**: View your current XP level and leaderboard ranking.",
+      "📢 **/youtube list**: Manage YouTube notification subscriptions.",
+      "🎵 **/tiktok list**: Manage TikTok notification subscriptions.",
+      "",
+      "Use the dropdown select menu below to view all commands for a specific category.",
+    ].join("\n"),
+  });
+}
+
+function buildCategoryEmbed(client, category, commands) {
+  const prefix = client.prefix || client.config?.PREFIX || "k";
+  const meta = CATEGORY_META[category] || { title: category };
+
+  const slashCmds = commands.filter((c) => c.type !== "Prefix");
+  const prefixCmds = commands.filter((c) => c.type === "Prefix");
 
   const lines = [];
-  if (slash.length) lines.push(`**Slash:** ${slash.join(", ")}`);
-  if (pref.length) lines.push(`**Prefix:** ${pref.join(", ")}`);
-  if (shared.length) lines.push(`**Shared:** ${shared.join(", ")}`);
-  return lines.join("\n");
+  if (slashCmds.length) {
+    lines.push("### 💻 Slash Commands");
+    lines.push(
+      slashCmds.map((c) => `\`/${c.name}\` — ${c.description}`).join("\n"),
+    );
+  }
+  if (prefixCmds.length) {
+    if (lines.length) {
+      lines.push("", "---", "");
+    }
+    lines.push(`### ⌨️ Prefix Commands (Prefix: \`${prefix}\`)`);
+    lines.push(
+      prefixCmds
+        .map((c) => `\`${prefix}${c.name}\` — ${c.description}`)
+        .join("\n"),
+    );
+  }
+
+  return Embeds.brand(client, {
+    title: `${meta.title} Commands`,
+    description: lines.join("\n") || "No commands found in this category.",
+    footerText: `Category: ${meta.title} • Kizoxy Help`,
+  });
+}
+
+function buildHelpComponents(sortedCategories, activeCategory = null) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId("help_category:select")
+    .setPlaceholder("Select a category to view commands...")
+    .addOptions(
+      sortedCategories.map((cat) => {
+        const meta = CATEGORY_META[cat] || { title: cat };
+        return {
+          label: meta.title,
+          value: cat,
+          default: cat === activeCategory,
+        };
+      }),
+    );
+
+  const menuRow = new ActionRowBuilder().addComponents(menu);
+
+  if (activeCategory) {
+    const buttonRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("help_category:home")
+        .setLabel("Home")
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji("🏠"),
+    );
+    return [menuRow, buttonRow];
+  }
+
+  return [menuRow];
 }
 
 module.exports = {
   name: ["help"],
   description: "Show the bot help menu index.",
   category: "Misc",
+  collectCommands,
+  getSortedCategories,
+  buildHomeEmbed,
+  buildCategoryEmbed,
+  buildHelpComponents,
   run: async (client, interaction) => {
     try {
       const allCommands = collectCommands();
@@ -91,47 +192,18 @@ module.exports = {
         (acc, arr) => acc + arr.length,
         0,
       );
+      const sortedCategories = getSortedCategories(allCommands);
 
-      const sortedCategories = [...allCommands.keys()].sort((a, b) => {
-        const oa = CATEGORY_META[a]?.order ?? 99;
-        const ob = CATEGORY_META[b]?.order ?? 99;
-        if (oa !== ob) return oa - ob;
-        return a.localeCompare(b);
-      });
+      const embed = buildHomeEmbed(
+        client,
+        interaction.guild,
+        totalCommands,
+        allCommands.size,
+      );
+      const components = buildHelpComponents(sortedCategories);
 
-      const fields = [];
-      for (const category of sortedCategories) {
-        const commands = allCommands.get(category);
-        if (!commands.length) continue;
-
-        const value = buildCategoryFieldValue(commands, client.prefix);
-        if (!value) continue;
-
-        const meta = CATEGORY_META[category] || { title: category };
-        fields.push({
-          name: `${meta.title} · ${commands.length}`,
-          value,
-          inline: false,
-        });
-      }
-
-      const embed = Embeds.brand(client, {
-        author: {
-          name: `Help — ${interaction.guild.members.me.displayName}`,
-          iconURL: interaction.guild.iconURL({ dynamic: true }),
-        },
-        thumbnail: client.user.displayAvatarURL({ dynamic: true, size: 2048 }),
-        description: [
-          `The bot supports **slash commands** (\`/\`) and **prefix commands** (\`${client.prefix}\`).`,
-          `Total commands: **${totalCommands}** across **${allCommands.size}** categories.`,
-          "",
-          "Tip: type `/play <title>` to get autocomplete song suggestions.",
-        ].join("\n"),
-        fields,
-      });
-
-      logger.success(`Help command executed by ${interaction.user.tag}`);
-      return safeReply(interaction, { embeds: [embed] });
+      logger.success(`Help command index executed by ${interaction.user.tag}`);
+      return safeReply(interaction, { embeds: [embed], components });
     } catch (error) {
       logger.error(`Error in help command: ${error.message}`);
       return replyError(

@@ -1,4 +1,9 @@
 const djs = require("discord.js");
+const { EPHEMERAL_AUTO_DELETE_MS } = require("../config/constants");
+const { stats } = require("./ephemeralStats");
+const Logger = require("./logger");
+
+const logger = new Logger("INTERACTION-PATCH");
 
 function patchInteraction(prototype) {
   const originalReply = prototype.reply;
@@ -6,6 +11,10 @@ function patchInteraction(prototype) {
   const originalEditReply = prototype.editReply;
 
   const scheduleDeletion = (interaction, response, payload) => {
+    if (interaction._kizoxyAutoDeleteScheduled) {
+      return;
+    }
+
     if (!interaction._ephemeralTimeouts) {
       interaction._ephemeralTimeouts = new Map();
     }
@@ -26,19 +35,37 @@ function patchInteraction(prototype) {
     }
 
     if (isEphemeral && !hasComponents) {
+      interaction._kizoxyAutoDeleteScheduled = true;
+      stats.scheduled++;
+
+      const ttl =
+        payload && typeof payload.ttl === "number"
+          ? payload.ttl
+          : EPHEMERAL_AUTO_DELETE_MS;
+
       const timeout = setTimeout(async () => {
         try {
           if (response && response.id) {
-            await interaction.deleteReply(response.id).catch(() => {});
+            await interaction.deleteReply(response.id);
           } else {
-            await interaction.deleteReply().catch(() => {});
+            await interaction.deleteReply();
           }
-        } catch {
-          // Ignore
+        } catch (err) {
+          if (err.code === 10008) {
+            logger.debug(
+              `Auto-delete skipped: Message already deleted (code 10008) for interaction ${interaction.id}`,
+            );
+            stats.swallowed++;
+          } else {
+            logger.error(
+              `Error deleting reply on interaction ${interaction.id}: ${err.message}`,
+            );
+          }
         } finally {
+          stats.fired++;
           interaction._ephemeralTimeouts.delete(msgId);
         }
-      }, 15000);
+      }, ttl);
       interaction._ephemeralTimeouts.set(msgId, timeout);
     }
   };

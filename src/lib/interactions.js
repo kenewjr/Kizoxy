@@ -17,6 +17,7 @@ async function replySuccess(interaction, description, options = {}) {
   return safeReply(interaction, {
     embeds: [embed],
     ephemeral: !!options.ephemeral,
+    ttl: options.ttl,
   });
 }
 
@@ -32,7 +33,11 @@ async function replyError(interaction, errorOrMessage, options = {}) {
     description,
   });
   const ephemeral = options.ephemeral !== false;
-  return safeReply(interaction, { embeds: [embed], ephemeral });
+  return safeReply(interaction, {
+    embeds: [embed],
+    ephemeral,
+    ttl: options.ttl,
+  });
 }
 
 async function replyWarning(interaction, description, options = {}) {
@@ -43,6 +48,7 @@ async function replyWarning(interaction, description, options = {}) {
   return safeReply(interaction, {
     embeds: [embed],
     ephemeral: options.ephemeral !== false,
+    ttl: options.ttl,
   });
 }
 
@@ -55,6 +61,7 @@ async function replyInfo(interaction, description, options = {}) {
   return safeReply(interaction, {
     embeds: [embed],
     ephemeral: !!options.ephemeral,
+    ttl: options.ttl,
   });
 }
 
@@ -180,6 +187,8 @@ async function confirmAction(interaction, options = {}) {
   }
 }
 
+const { getEphemeralStats } = require("./ephemeralStats");
+
 module.exports = {
   replySuccess,
   replyError,
@@ -190,4 +199,5 @@ module.exports = {
   createCollector,
   confirmAction,
   DEFAULT_TIMEOUT_MS,
+  getEphemeralStats,
 };

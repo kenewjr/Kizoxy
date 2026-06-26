@@ -9,6 +9,9 @@ module.exports = {
   name: ["setlog"],
   description: "Set the server moderation log channel.",
   category: "Settings",
+  defaultMemberPermissions:
+    PermissionsBitField.Flags.ManageGuild |
+    PermissionsBitField.Flags.Administrator,
   options: [
     {
       name: "channel",
@@ -20,17 +23,23 @@ module.exports = {
   ],
   permissions: {
     bot: [PermissionsBitField.Flags.SendMessages],
-    user: [PermissionsBitField.Flags.ManageGuild],
+    user: [
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.Administrator,
+    ],
   },
   run: async (client, interaction) => {
-    if (
-      !interaction.memberPermissions?.has?.(
-        PermissionsBitField.Flags.ManageGuild,
-      )
-    ) {
+    const hasManageGuild = interaction.memberPermissions?.has?.(
+      PermissionsBitField.Flags.ManageGuild,
+    );
+    const hasAdmin = interaction.memberPermissions?.has?.(
+      PermissionsBitField.Flags.Administrator,
+    );
+
+    if (!hasManageGuild && !hasAdmin) {
       return replyError(
         interaction,
-        "You need the **Manage Server** permission to run this command.",
+        "You lack the required permissions to run this command. You need either **Manage Server** or **Administrator** permission.",
       );
     }
 

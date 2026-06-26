@@ -11,6 +11,7 @@ const HANDLE_RE = /(?:youtube\.com\/)?@([\w.-]+)/i;
 const USER_RE = /\/user\/([\w-]+)/i;
 const CUSTOM_RE = /\/c\/([\w-]+)/i;
 const PAGE_CHANNEL_ID_RE = /"channelId":"(UC[\w-]+)"/;
+const PAGE_TITLE_RE = /<meta property="og:title" content="([^"]+)"/i;
 
 const RESOLVE_ERROR =
   "Couldn't find a YouTube channel for that input. Try the full channel URL instead.";
@@ -20,8 +21,12 @@ function apiKey() {
 }
 
 async function channelsList(params) {
+  const key = apiKey();
+  if (!key) {
+    throw new Error("No YOUTUBE_API_KEY configured.");
+  }
   const res = await axios.get(`${API_BASE}/channels`, {
-    params: { ...params, part: "snippet", key: apiKey() },
+    params: { ...params, part: "snippet", key },
     timeout: YOUTUBE_HTTP_TIMEOUT_MS,
   });
   const item = res.data?.items?.[0];
@@ -33,7 +38,7 @@ async function channelsList(params) {
 }
 
 // Scraping fallback: YouTube exposes no cheap API for legacy /c/ custom URLs.
-// Isolated so it's trivial to find/replace if an official endpoint appears.
+// Also used as a fallback if the official API fails or is quota-exhausted.
 async function resolveFromPageHtml(url) {
   try {
     const res = await axios.get(url, {
@@ -43,9 +48,35 @@ async function resolveFromPageHtml(url) {
     const match = PAGE_CHANNEL_ID_RE.exec(res.data || "");
     if (!match) return null;
     const id = match[1];
-    // Fetch the title via the cheap API now that we have the ID.
-    const byId = await channelsList({ id });
-    return byId || { youtubeChannelId: id, youtubeChannelTitle: id };
+
+    // Try API first to get clean metadata
+    try {
+      const byId = await channelsList({ id });
+      if (byId) return byId;
+    } catch (apiErr) {
+      logger.warning(
+        `API fallback failed during page scrape: ${apiErr.message}`,
+      );
+    }
+
+    // Scrape title from metadata as a secondary fallback
+    let title = id;
+    const titleMatch = PAGE_TITLE_RE.exec(res.data || "");
+    if (titleMatch) {
+      // Decode potential HTML entities (basic decode)
+      title = titleMatch[1]
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/ - YouTube$/i, "");
+    }
+
+    return {
+      youtubeChannelId: id,
+      youtubeChannelTitle: title,
+    };
   } catch (err) {
     logger.warning(`Page scrape resolve failed for ${url}: ${err.message}`);
     return null;
@@ -58,32 +89,70 @@ async function resolveChannel(input) {
   const raw = (input || "").trim();
   if (!raw) throw new Error(RESOLVE_ERROR);
 
-  // 1. Bare UC... ID — no API call.
+  // 1. Bare UC... ID
   if (CHANNEL_ID_RE.test(raw)) {
-    const byId = await channelsList({ id: raw });
-    return byId || { youtubeChannelId: raw, youtubeChannelTitle: raw };
+    try {
+      const byId = await channelsList({ id: raw });
+      if (byId) return byId;
+    } catch (apiErr) {
+      logger.warning(
+        `API channelsList failed for ID ${raw}: ${apiErr.message}`,
+      );
+    }
+    // Fall back to scraping channel page
+    const scraped = await resolveFromPageHtml(
+      `https://www.youtube.com/channel/${raw}`,
+    );
+    return scraped || { youtubeChannelId: raw, youtubeChannelTitle: raw };
   }
 
-  // 2. /channel/UC... URL — extract directly, no API call for the ID.
+  // 2. /channel/UC... URL
   const urlIdMatch = URL_CHANNEL_ID_RE.exec(raw);
   if (urlIdMatch) {
     const id = urlIdMatch[1];
-    const byId = await channelsList({ id });
-    return byId || { youtubeChannelId: id, youtubeChannelTitle: id };
+    try {
+      const byId = await channelsList({ id });
+      if (byId) return byId;
+    } catch (apiErr) {
+      logger.warning(
+        `API channelsList failed for URL ID ${id}: ${apiErr.message}`,
+      );
+    }
+    const scraped = await resolveFromPageHtml(raw);
+    return scraped || { youtubeChannelId: id, youtubeChannelTitle: id };
   }
 
   // 3. @handle (bare or in a URL) — channels.list?forHandle (1 unit).
   const handleMatch = HANDLE_RE.exec(raw);
   if (handleMatch) {
-    const resolved = await channelsList({ forHandle: `@${handleMatch[1]}` });
-    if (resolved) return resolved;
+    try {
+      const resolved = await channelsList({ forHandle: `@${handleMatch[1]}` });
+      if (resolved) return resolved;
+    } catch (apiErr) {
+      logger.warning(
+        `API channelsList failed for handle ${handleMatch[1]}: ${apiErr.message}`,
+      );
+    }
+    const handleUrl = raw.startsWith("http")
+      ? raw
+      : `https://www.youtube.com/@${handleMatch[1]}`;
+    const scraped = await resolveFromPageHtml(handleUrl);
+    if (scraped) return scraped;
   }
 
   // 4. /user/LegacyName — channels.list?forUsername (1 unit).
   const userMatch = USER_RE.exec(raw);
   if (userMatch) {
-    const resolved = await channelsList({ forUsername: userMatch[1] });
-    if (resolved) return resolved;
+    try {
+      const resolved = await channelsList({ forUsername: userMatch[1] });
+      if (resolved) return resolved;
+    } catch (apiErr) {
+      logger.warning(
+        `API channelsList failed for user ${userMatch[1]}: ${apiErr.message}`,
+      );
+    }
+    const scraped = await resolveFromPageHtml(raw);
+    if (scraped) return scraped;
   }
 
   // 5. /c/CustomName — scraping fallback (no official lookup).
