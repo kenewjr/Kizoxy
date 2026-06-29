@@ -5,7 +5,10 @@ const logger = new Logger("PLAY");
 
 const NODE_READY_TIMEOUT_MS = 10000;
 const SEARCH_RETRY_DELAY_MS = 600;
+const PLAYLIST_RETRY_DELAY_MS = 2000;
 const NODE_POLL_INTERVAL_MS = 200;
+
+const PLAYLIST_URL_RE = /[?&]list=|\bplaylist\b/i;
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -105,6 +108,19 @@ async function playLogic(client, ctx, args) {
     }
 
     const requester = isSlash ? ctx.user : ctx.author;
+    const looksLikePlaylist = PLAYLIST_URL_RE.test(query);
+
+    // Immediate feedback — overwritten by the real result once resolved.
+    let placeholderMsg;
+    if (isSlash) {
+      await reply("🔍 Searching...", true);
+    } else {
+      try {
+        placeholderMsg = await ctx.channel.send("🔍 Searching...");
+      } catch (_) {
+        /* channel may be gone */
+      }
+    }
 
     // Search BEFORE creating the player: a failed lookup should not leave an
     // idle voice connection behind. Retry once to absorb a node that just
@@ -112,14 +128,33 @@ async function playLogic(client, ctx, args) {
     let result = await client.manager.search(query, { requester });
     if (!result?.tracks?.length) {
       logger.debug("Search returned empty, retrying once...");
-      await delay(SEARCH_RETRY_DELAY_MS);
+      const retryDelay = looksLikePlaylist
+        ? PLAYLIST_RETRY_DELAY_MS
+        : SEARCH_RETRY_DELAY_MS;
+      await delay(retryDelay);
       result = await client.manager.search(query, { requester });
     }
     if (!result?.tracks?.length) {
       logger.warning(
         `Search retry also empty for query "${query}" — genuine no results`,
       );
+      if (placeholderMsg) {
+        try {
+          await placeholderMsg.delete();
+        } catch (_) {
+          /* already gone */
+        }
+      }
       return reply("❌ | No results found.", true);
+    }
+
+    // Clean up prefix placeholder — slash placeholder is overwritten by reply()
+    if (placeholderMsg) {
+      try {
+        await placeholderMsg.delete();
+      } catch (_) {
+        /* already gone */
+      }
     }
 
     let player = existingPlayer;
@@ -180,4 +215,5 @@ module.exports.waitForNodeReady = waitForNodeReady;
 module.exports.startPlayback = startPlayback;
 module.exports._NODE_READY_TIMEOUT_MS = NODE_READY_TIMEOUT_MS;
 module.exports._SEARCH_RETRY_DELAY_MS = SEARCH_RETRY_DELAY_MS;
+module.exports._PLAYLIST_RETRY_DELAY_MS = PLAYLIST_RETRY_DELAY_MS;
 module.exports._NODE_POLL_INTERVAL_MS = NODE_POLL_INTERVAL_MS;

@@ -111,4 +111,29 @@ describe("youtube channelResolver", () => {
   test("empty input throws the friendly resolve error", async () => {
     await expect(resolveChannel("")).rejects.toThrow(RESOLVE_ERROR);
   });
+
+  test("@handle falls back to HTML scrape when API throws (e.g. no key)", async () => {
+    // First call: API channelsList throws (no key / 403)
+    // Second call: page HTML scrape returns externalId pattern
+    // Third call: API channelsList by scraped ID also throws
+    axios.get
+      .mockRejectedValueOnce(new Error("No YOUTUBE_API_KEY configured."))
+      .mockResolvedValueOnce({
+        data: '<html>"externalId":"UChandle_scrape_000000000"<meta property="og:title" content="Scraped Channel - YouTube"></html>',
+      })
+      .mockRejectedValueOnce(new Error("No YOUTUBE_API_KEY configured."));
+    const res = await resolveChannel("https://www.youtube.com/@NinjaZombieCh");
+    expect(res.youtubeChannelId).toBe("UChandle_scrape_000000000");
+    expect(res.youtubeChannelTitle).toBe("Scraped Channel");
+  });
+
+  test("all strategies exhausted — error message suggests pasting UC... ID", async () => {
+    // @handle with both API and scrape failing
+    axios.get
+      .mockRejectedValueOnce(new Error("No YOUTUBE_API_KEY configured."))
+      .mockResolvedValueOnce({ data: "<html>no channel data here</html>" });
+    await expect(
+      resolveChannel("https://www.youtube.com/@NonexistentHandle"),
+    ).rejects.toThrow(/Channel ID/);
+  });
 });

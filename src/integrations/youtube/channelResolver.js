@@ -11,10 +11,13 @@ const HANDLE_RE = /(?:youtube\.com\/)?@([\w.-]+)/i;
 const USER_RE = /\/user\/([\w-]+)/i;
 const CUSTOM_RE = /\/c\/([\w-]+)/i;
 const PAGE_CHANNEL_ID_RE = /"channelId":"(UC[\w-]+)"/;
+const EXTERNAL_ID_RE = /"externalId":"(UC[\w-]+)"/;
+const META_CHANNEL_ID_RE =
+  /<meta\s+itemprop="channelId"\s+content="(UC[\w-]+)"/i;
 const PAGE_TITLE_RE = /<meta property="og:title" content="([^"]+)"/i;
 
 const RESOLVE_ERROR =
-  "Couldn't find a YouTube channel for that input. Try the full channel URL instead.";
+  "Couldn't find a YouTube channel for that input. Try pasting the raw Channel ID (starts with UC…, found via Share › Copy channel ID on the channel’s About page).";
 
 function apiKey() {
   return require("../../config/config").YOUTUBE_API_KEY;
@@ -45,8 +48,17 @@ async function resolveFromPageHtml(url) {
       timeout: YOUTUBE_HTTP_TIMEOUT_MS,
       headers: { "User-Agent": "Mozilla/5.0" },
     });
-    const match = PAGE_CHANNEL_ID_RE.exec(res.data || "");
-    if (!match) return null;
+    const html = res.data || "";
+
+    // Try multiple patterns — YouTube markup shifts periodically
+    const match =
+      PAGE_CHANNEL_ID_RE.exec(html) ||
+      EXTERNAL_ID_RE.exec(html) ||
+      META_CHANNEL_ID_RE.exec(html);
+    if (!match) {
+      logger.debug(`Page scrape found no channelId pattern in ${url}`);
+      return null;
+    }
     const id = match[1];
 
     // Try API first to get clean metadata
@@ -61,9 +73,8 @@ async function resolveFromPageHtml(url) {
 
     // Scrape title from metadata as a secondary fallback
     let title = id;
-    const titleMatch = PAGE_TITLE_RE.exec(res.data || "");
+    const titleMatch = PAGE_TITLE_RE.exec(html);
     if (titleMatch) {
-      // Decode potential HTML entities (basic decode)
       title = titleMatch[1]
         .replace(/&amp;/g, "&")
         .replace(/&lt;/g, "<")
@@ -91,9 +102,11 @@ async function resolveChannel(input) {
 
   // 1. Bare UC... ID
   if (CHANNEL_ID_RE.test(raw)) {
+    logger.debug(`Strategy 1 (bare ID): ${raw}`);
     try {
       const byId = await channelsList({ id: raw });
       if (byId) return byId;
+      logger.debug("Strategy 1: API returned no items");
     } catch (apiErr) {
       logger.warning(
         `API channelsList failed for ID ${raw}: ${apiErr.message}`,
@@ -110,9 +123,11 @@ async function resolveChannel(input) {
   const urlIdMatch = URL_CHANNEL_ID_RE.exec(raw);
   if (urlIdMatch) {
     const id = urlIdMatch[1];
+    logger.debug(`Strategy 2 (channel URL): ${id}`);
     try {
       const byId = await channelsList({ id });
       if (byId) return byId;
+      logger.debug("Strategy 2: API returned no items");
     } catch (apiErr) {
       logger.warning(
         `API channelsList failed for URL ID ${id}: ${apiErr.message}`,
@@ -125,9 +140,11 @@ async function resolveChannel(input) {
   // 3. @handle (bare or in a URL) — channels.list?forHandle (1 unit).
   const handleMatch = HANDLE_RE.exec(raw);
   if (handleMatch) {
+    logger.debug(`Strategy 3 (handle): @${handleMatch[1]}`);
     try {
       const resolved = await channelsList({ forHandle: `@${handleMatch[1]}` });
       if (resolved) return resolved;
+      logger.debug("Strategy 3: API returned no items");
     } catch (apiErr) {
       logger.warning(
         `API channelsList failed for handle ${handleMatch[1]}: ${apiErr.message}`,
@@ -136,16 +153,20 @@ async function resolveChannel(input) {
     const handleUrl = raw.startsWith("http")
       ? raw
       : `https://www.youtube.com/@${handleMatch[1]}`;
+    logger.debug(`Strategy 3 fallback: scraping ${handleUrl}`);
     const scraped = await resolveFromPageHtml(handleUrl);
     if (scraped) return scraped;
+    logger.debug("Strategy 3 fallback: scrape returned null");
   }
 
   // 4. /user/LegacyName — channels.list?forUsername (1 unit).
   const userMatch = USER_RE.exec(raw);
   if (userMatch) {
+    logger.debug(`Strategy 4 (user): ${userMatch[1]}`);
     try {
       const resolved = await channelsList({ forUsername: userMatch[1] });
       if (resolved) return resolved;
+      logger.debug("Strategy 4: API returned no items");
     } catch (apiErr) {
       logger.warning(
         `API channelsList failed for user ${userMatch[1]}: ${apiErr.message}`,
@@ -158,11 +179,13 @@ async function resolveChannel(input) {
   // 5. /c/CustomName — scraping fallback (no official lookup).
   const customMatch = CUSTOM_RE.exec(raw);
   if (customMatch) {
+    logger.debug(`Strategy 5 (custom): ${customMatch[1]}`);
     const resolved = await resolveFromPageHtml(raw);
     if (resolved) return resolved;
   }
 
-  // 6. Nothing resolved.
+  // 6. Nothing resolved — all strategies exhausted.
+  logger.debug(`All strategies exhausted for input: ${raw}`);
   throw new Error(RESOLVE_ERROR);
 }
 
