@@ -49,7 +49,7 @@ function findRole(guild, input) {
   return guild.roles.cache.find((r) => r.name.toLowerCase() === nameOnly);
 }
 
-async function renderListView(client, interaction) {
+async function renderListView(client, interaction, editMessageDirectly = false) {
   const subscriptions = await tiktokStorage.listSubscriptions(
     interaction.guild.id,
   );
@@ -83,7 +83,11 @@ async function renderListView(client, interaction) {
   }
   components.push(controlRow);
 
-  await interaction.editReply({ embeds: [embed], components });
+  if (editMessageDirectly && interaction.message) {
+    await interaction.message.edit({ embeds: [embed], components });
+  } else {
+    await interaction.editReply({ embeds: [embed], components });
+  }
 }
 
 module.exports = {
@@ -145,6 +149,7 @@ module.exports = {
 
       // 2. Add Modal Submit
       if (customId === "tiktok_panel:add_modal") {
+        await interaction.deferReply({ ephemeral: true });
         const tiktokInput = interaction.fields.getTextInputValue("tiktok_url");
         const announceInput =
           interaction.fields.getTextInputValue("announce_channel");
@@ -212,7 +217,7 @@ module.exports = {
 
           // Re-render list view in original message
           if (interaction.message) {
-            await renderListView(client, interaction);
+            await renderListView(client, interaction, true);
           }
 
           return replySuccess(
