@@ -11,7 +11,7 @@
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "node-cache": "^5.1.2",
     "node-schedule": "^2.1.1",
-    "sharp": "^0.35.1",
+    "sharp": "^0.35.3",
     "shoukaku": "^4.3.0",
     "uuid": "^14.0.0"
   },
