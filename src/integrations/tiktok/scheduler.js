@@ -6,6 +6,7 @@ const {
 } = require("../../config/constants");
 const { fetchProfile, TiktokAccountNotFoundError } = require("./client");
 const notifier = require("./notifier");
+const { buildContent } = require("../../lib/notificationTemplate");
 
 const logger = new Logger("TIKTOK");
 
@@ -158,10 +159,22 @@ class TiktokScheduler {
     const row = notifier.buildLinkRow("Watch on TikTok", video.url);
     for (const { subscription } of subscribers) {
       if (subscription.notifyVideos === false) continue;
+      const prefix = `📲 [TIKTOK] @${username} posted a new video`;
+      const content = buildContent({
+        customMessage: subscription.customMessage,
+        mentionRoleId: subscription.mentionRoleId,
+        defaultPrefix: prefix,
+        vars: {
+          name: `@${username}`,
+          url: video.url,
+          title: video.title || "",
+          type: "video",
+        },
+      });
       await notifier.send(this.client, subscription, {
         embed,
         row,
-        content: notifier.mentionContent(subscription),
+        content,
       });
     }
   }
@@ -176,13 +189,22 @@ class TiktokScheduler {
     const row = notifier.buildLinkRow("Join the live", liveUrl);
     for (const { subscription } of subscribers) {
       if (subscription.notifyLive === false) continue;
+      const prefix = `🔴 [TIKTOK LIVE] @${username} is live on TikTok!`;
+      const content = buildContent({
+        customMessage: subscription.customMessage,
+        mentionRoleId: subscription.mentionRoleId,
+        defaultPrefix: prefix,
+        vars: {
+          name: `@${username}`,
+          url: liveUrl,
+          title: `@${username} is live`,
+          type: "live",
+        },
+      });
       await notifier.send(this.client, subscription, {
         embed,
         row,
-        content: notifier.mentionContent(
-          subscription,
-          `🔴 @${username} is now LIVE!`,
-        ),
+        content,
       });
     }
   }

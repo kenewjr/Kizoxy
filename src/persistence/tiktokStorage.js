@@ -59,6 +59,7 @@ class TiktokStorage extends JSONStorage {
       profileUrl: sub.profileUrl,
       discordChannelId: sub.discordChannelId,
       mentionRoleId: sub.mentionRoleId ?? null,
+      customMessage: sub.customMessage ?? null,
       notifyVideos: sub.notifyVideos !== false,
       notifyLive: sub.notifyLive !== false,
       createdAt: new Date().toISOString(),

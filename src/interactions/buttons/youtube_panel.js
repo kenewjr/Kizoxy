@@ -49,7 +49,11 @@ function findRole(guild, input) {
   return guild.roles.cache.find((r) => r.name.toLowerCase() === nameOnly);
 }
 
-async function renderListView(client, interaction, editMessageDirectly = false) {
+async function renderListView(
+  client,
+  interaction,
+  editMessageDirectly = false,
+) {
   const subscriptions = await youtubeStorage.listSubscriptions(
     interaction.guild.id,
   );

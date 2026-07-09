@@ -77,6 +77,7 @@ const LOADERS = [
   "loadTempVC",
   "loadYoutube",
   "loadTiktok",
+  "loadDashboard",
 ];
 
 async function bootstrap() {

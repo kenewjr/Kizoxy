@@ -47,6 +47,7 @@ module.exports = [
       "infra/",
       "coverage/",
       ".github/",
+      "src/dashboard/public/",
     ],
   },
 ];

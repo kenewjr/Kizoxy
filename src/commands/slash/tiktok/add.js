@@ -37,6 +37,13 @@ module.exports = {
       required: false,
     },
     {
+      name: "custom_message",
+      description:
+        "Custom text. Placeholders: {role} {name} {url} {title} {type}.",
+      type: ApplicationCommandOptionType.String,
+      required: false,
+    },
+    {
       name: "notify_videos",
       description: "Announce new videos (default: true).",
       type: ApplicationCommandOptionType.Boolean,
@@ -112,6 +119,7 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     const mentionRole = interaction.options.getRole("mention_role");
+    const customMessage = interaction.options.getString("custom_message");
     const notifyVideos = interaction.options.getBoolean("notify_videos");
     const notifyLive = interaction.options.getBoolean("notify_live");
 
@@ -139,6 +147,7 @@ module.exports = {
         profileUrl: resolved.profileUrl,
         discordChannelId: channel.id,
         mentionRoleId: mentionRole?.id ?? null,
+        customMessage: customMessage || null,
         notifyVideos: notifyVideos !== false,
         notifyLive: notifyLive !== false,
       });

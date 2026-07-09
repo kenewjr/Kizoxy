@@ -54,9 +54,11 @@ class YoutubeStorage extends JSONStorage {
       youtubeChannelUrl: sub.youtubeChannelUrl,
       announceChannelId: sub.announceChannelId,
       mentionRoleId: sub.mentionRoleId ?? null,
+      customMessage: sub.customMessage ?? null,
       notifyVideos: sub.notifyVideos !== false,
       notifyShorts: sub.notifyShorts !== false,
       notifyLive: sub.notifyLive !== false,
+      notifyUpcoming: sub.notifyUpcoming !== false,
       createdAt: new Date().toISOString(),
     };
     g.subscriptions.push(record);
@@ -75,6 +77,15 @@ class YoutubeStorage extends JSONStorage {
     this.scheduleSave();
     logger.info(`Removed subscription ${subscriptionId} for guild ${guildId}`);
     return removed;
+  }
+
+  async updateSubscription(guildId, subscriptionId, updates) {
+    const g = await this._guild(guildId);
+    const sub = g.subscriptions.find((s) => s.id === subscriptionId);
+    if (!sub) return null;
+    Object.assign(sub, updates);
+    this.scheduleSave();
+    return sub;
   }
 
   // Deduplicated set of YouTube channel IDs across every guild, each mapped to

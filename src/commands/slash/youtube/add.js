@@ -37,6 +37,13 @@ module.exports = {
       required: false,
     },
     {
+      name: "custom_message",
+      description:
+        "Custom text. Placeholders: {role} {name} {url} {title} {type}.",
+      type: ApplicationCommandOptionType.String,
+      required: false,
+    },
+    {
       name: "notify_videos",
       description: "Announce new regular videos (default: true).",
       type: ApplicationCommandOptionType.Boolean,
@@ -51,6 +58,12 @@ module.exports = {
     {
       name: "notify_live",
       description: "Announce when the channel goes live (default: true).",
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: "notify_upcoming",
+      description: "Announce upcoming scheduled streams (default: true).",
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -118,9 +131,11 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     const mentionRole = interaction.options.getRole("mention_role");
+    const customMessage = interaction.options.getString("custom_message");
     const notifyVideos = interaction.options.getBoolean("notify_videos");
     const notifyShorts = interaction.options.getBoolean("notify_shorts");
     const notifyLive = interaction.options.getBoolean("notify_live");
+    const notifyUpcoming = interaction.options.getBoolean("notify_upcoming");
 
     let resolved;
     try {
@@ -147,9 +162,11 @@ module.exports = {
         youtubeChannelUrl: `https://www.youtube.com/channel/${resolved.youtubeChannelId}`,
         announceChannelId: announceChannel.id,
         mentionRoleId: mentionRole?.id ?? null,
+        customMessage: customMessage || null,
         notifyVideos: notifyVideos !== false,
         notifyShorts: notifyShorts !== false,
         notifyLive: notifyLive !== false,
+        notifyUpcoming: notifyUpcoming !== false,
       });
     } catch (err) {
       logger.error(`Failed to add subscription: ${err.message}`);

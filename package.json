@@ -4,6 +4,7 @@
     "canvacord": "^6.0.4",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
+    "express": "^5.1.0",
     "fast-xml-parser": "^5.9.3",
     "kazagumo": "^3.4.3",
     "kuroshiro": "^1.2.0",
@@ -16,7 +17,7 @@
   },
   "name": "kizoxy",
   "description": "✈ Join Discord: https://discord.gg/qeemvqq 👌",
-  "version": "3.4",
+  "version": "3.5",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -47,6 +48,7 @@
   "devDependencies": {
     "eslint": "^10.5.0",
     "jest": "^30.4.2",
-    "prettier": "3.8.4"
+    "prettier": "3.8.4",
+    "supertest": "^7.2.2"
   }
 }

@@ -25,4 +25,9 @@ module.exports = {
   ],
 
   LOG_FORMAT: process.env.LOG_FORMAT || "pretty", // "pretty" or "json"
+
+  // Dashboard admin panel (host-only, no auth).
+  DASHBOARD_HOST: process.env.DASHBOARD_HOST || "127.0.0.1",
+  DASHBOARD_PORT: parseInt(process.env.DASHBOARD_PORT, 10) || 4040,
+  BOT_COLOR: process.env.BOT_COLOR || "#5865F2",
 };

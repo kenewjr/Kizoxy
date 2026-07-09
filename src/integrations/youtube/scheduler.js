@@ -3,15 +3,24 @@ const { YOUTUBE_POLL_INTERVAL_MS } = require("../../config/constants");
 const { fetchLatestFeedEntry, fetchVideoDetails } = require("./client");
 const { classify } = require("./classifier");
 const { buildAnnouncementEmbed, buildWatchRow } = require("./formatter");
+const { buildContent } = require("../../lib/notificationTemplate");
 
 const logger = new Logger("YOUTUBE");
 
 // Maps a classification type to the subscription toggle that gates it.
 const TYPE_TOGGLE = {
   live: "notifyLive",
-  upcoming: "notifyLive",
+  upcoming: "notifyUpcoming",
   short: "notifyShorts",
   video: "notifyVideos",
+};
+
+// Content text prefix per classification type (Rule I1).
+const TYPE_CONTENT = {
+  live: (name) => `🔴 [LIVE] ${name} is now streaming live!`,
+  upcoming: (name) => `🗓️ [UPCOMING] ${name} has a stream coming up`,
+  short: (name) => `📱 [SHORT] ${name} posted a new Short`,
+  video: (name) => `📺 [VIDEO] ${name} uploaded a new video`,
 };
 
 class YoutubeScheduler {
@@ -20,6 +29,28 @@ class YoutubeScheduler {
     this.subStorage = subStorage;
     this.stateStorage = stateStorage;
     this._interval = null;
+    // channelId -> consecutive feed-failure count. Used to warn once on a
+    // permanent failure (404/403/400) then go quiet, avoiding 60s log spam.
+    this._feedFailures = new Map();
+  }
+
+  // Permanent HTTP statuses mean the channel is gone/blocked; retrying is
+  // pointless so warn only on the first hit. Everything else (5xx, network,
+  // timeout) is transient and logged at debug to keep the log clean.
+  _logFeedFailure(channelId, err) {
+    const status = err.response?.status;
+    const permanent = status === 404 || status === 403 || status === 400;
+    const count = (this._feedFailures.get(channelId) || 0) + 1;
+    this._feedFailures.set(channelId, count);
+    if (permanent) {
+      if (count === 1) {
+        logger.warning(
+          `Feed fetch failed for ${channelId}: ${err.message} (status ${status}, permanent — suppressing further warnings)`,
+        );
+      }
+      return;
+    }
+    logger.debug(`Feed fetch failed for ${channelId}: ${err.message}`);
   }
 
   start() {
@@ -62,8 +93,9 @@ class YoutubeScheduler {
     let entry;
     try {
       entry = await fetchLatestFeedEntry(channelId);
+      this._feedFailures.delete(channelId); // recovered
     } catch (err) {
-      logger.warning(`Feed fetch failed for ${channelId}: ${err.message}`);
+      this._logFeedFailure(channelId, err);
       return;
     }
     if (!entry?.videoId) return;
@@ -107,7 +139,8 @@ class YoutubeScheduler {
   async _fanOut(videoItem, type, subscribers) {
     const toggle = TYPE_TOGGLE[type];
     for (const { guildId, subscription } of subscribers) {
-      if (toggle && subscription[toggle] === false) continue;
+      // Backward-compat: missing field defaults to true via ?? true check.
+      if (toggle && (subscription[toggle] ?? true) === false) continue;
 
       try {
         const channel = await this.client.channels
@@ -128,9 +161,21 @@ class YoutubeScheduler {
           channelTitle: subscription.youtubeChannelTitle,
         });
         const components = [buildWatchRow(videoItem.id)];
-        const content = subscription.mentionRoleId
-          ? `<@&${subscription.mentionRoleId}>`
-          : undefined;
+        const channelName = subscription.youtubeChannelTitle || "YouTube";
+        const typePrefix = (TYPE_CONTENT[type] || TYPE_CONTENT.video)(
+          channelName,
+        );
+        const content = buildContent({
+          customMessage: subscription.customMessage,
+          mentionRoleId: subscription.mentionRoleId,
+          defaultPrefix: typePrefix,
+          vars: {
+            name: channelName,
+            url: `https://www.youtube.com/watch?v=${videoItem.id}`,
+            title: videoItem.snippet?.title || "",
+            type,
+          },
+        });
 
         await channel
           .send({ content, embeds: [embed], components })

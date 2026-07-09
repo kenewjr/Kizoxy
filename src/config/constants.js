@@ -20,4 +20,9 @@ module.exports = {
 
   // Ephemeral auto-delete settings (Rule Q1).
   EPHEMERAL_AUTO_DELETE_MS: 15000,
+
+  // Dashboard log viewer caps.
+  MAX_LOG_LINES: 5000,
+  LOG_TAIL_DEFAULT: 200,
+  LOG_SEARCH_MAX: 500,
 };
