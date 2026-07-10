@@ -275,3 +275,110 @@ describe("YouTube scheduler TYPE_TOGGLE", () => {
     ).not.toThrow();
   });
 });
+
+describe("New Dashboard Endpoints", () => {
+  describe("GET /api/guilds/:id/level", () => {
+    it("returns level top 10 for guild", async () => {
+      const res = await request(app)
+        .get("/api/guilds/guild-test-1/level")
+        .expect(200);
+      expect(res.body).toHaveProperty("level_top10");
+      expect(Array.isArray(res.body.level_top10)).toBe(true);
+    });
+  });
+
+  describe("GET /api/guilds/:id/tempvc", () => {
+    it("returns active temp channels and generators details", async () => {
+      const res = await request(app)
+        .get("/api/guilds/guild-test-1/tempvc")
+        .expect(200);
+      expect(res.body).toHaveProperty("generators");
+      expect(res.body).toHaveProperty("active_count");
+      expect(res.body).toHaveProperty("active_channels");
+    });
+  });
+
+  describe("Commands Customization API", () => {
+    it("GET /api/commands returns all commands with customization flags", async () => {
+      const res = await request(app).get("/api/commands").expect(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      if (res.body.length > 0) {
+        expect(res.body[0]).toHaveProperty("name");
+        expect(res.body[0]).toHaveProperty("displayName");
+        expect(res.body[0]).toHaveProperty("description");
+      }
+    });
+
+    it("PATCH /api/commands/:name validates inputs and saves overrides", async () => {
+      // Find a command to patch
+      const listRes = await request(app).get("/api/commands");
+      if (listRes.body.length > 0) {
+        const cmdName = listRes.body[0].name;
+
+        // Valid patch
+        await request(app)
+          .patch(`/api/commands/${encodeURIComponent(cmdName)}`)
+          .send({
+            displayName: "Custom Name",
+            description: "Custom description",
+          })
+          .expect(200);
+
+        // Invalid patch - display name too long
+        await request(app)
+          .patch(`/api/commands/${encodeURIComponent(cmdName)}`)
+          .send({ displayName: "A".repeat(40) })
+          .expect(400);
+
+        // Invalid patch - description too long
+        await request(app)
+          .patch(`/api/commands/${encodeURIComponent(cmdName)}`)
+          .send({ description: "B".repeat(120) })
+          .expect(400);
+
+        // Reset with DELETE
+        await request(app)
+          .delete(`/api/commands/${encodeURIComponent(cmdName)}`)
+          .expect(200);
+      }
+    });
+  });
+
+  describe("Custom Message Validation", () => {
+    it("rejects custom messages longer than 500 characters", async () => {
+      const longMessage = "A".repeat(501);
+
+      // YouTube POST
+      await request(app)
+        .post("/api/guilds/guild-test-1/youtube")
+        .send({
+          channel_input: "test",
+          announce_channel_id: "12345",
+          custom_message: longMessage,
+        })
+        .expect(400);
+
+      // YouTube PATCH
+      await request(app)
+        .patch("/api/guilds/guild-test-1/youtube/sub-123")
+        .send({ custom_message: longMessage })
+        .expect(400);
+
+      // TikTok POST
+      await request(app)
+        .post("/api/guilds/guild-test-1/tiktok")
+        .send({
+          username_or_url: "test",
+          announce_channel_id: "12345",
+          custom_message: longMessage,
+        })
+        .expect(400);
+
+      // TikTok PATCH
+      await request(app)
+        .patch("/api/guilds/guild-test-1/tiktok/sub-123")
+        .send({ custom_message: longMessage })
+        .expect(400);
+    });
+  });
+});

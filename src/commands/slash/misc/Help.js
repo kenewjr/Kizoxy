@@ -9,6 +9,7 @@ const {
 const Embeds = require("../../../lib/embeds");
 const { replyError, safeReply } = require("../../../lib/interactions");
 const Logger = require("../../../lib/logger");
+const commandStorage = require("../../../persistence/commandStorage");
 
 const logger = new Logger("HELP");
 
@@ -60,9 +61,15 @@ function collectCommands() {
           if (!cmd.name || !cmd.description) continue;
           if (cmd.ownerOnly) continue;
 
+          const cmdName = Array.isArray(cmd.name)
+            ? cmd.name.join(" ")
+            : cmd.name;
+          const custom = commandStorage.data[cmdName] || {};
+
           allCommands.get(category).push({
-            name: Array.isArray(cmd.name) ? cmd.name.join(" ") : cmd.name,
-            description: cmd.description,
+            name: cmdName,
+            displayName: custom.displayName || cmdName,
+            description: custom.description || cmd.description,
             type: label,
           });
         } catch (err) {
@@ -89,6 +96,12 @@ function getSortedCategories(allCommands) {
 
 function buildHomeEmbed(client, guild, totalCommands, totalCategories) {
   const prefix = client.prefix || client.config?.PREFIX || "k";
+
+  function getCmdName(name, original) {
+    const custom = commandStorage.data[name];
+    return custom?.displayName ? custom.displayName : original;
+  }
+
   return Embeds.brand(client, {
     author: {
       name: `Help — ${guild.members.me.displayName}`,
@@ -100,12 +113,12 @@ function buildHomeEmbed(client, guild, totalCommands, totalCategories) {
       `Total commands: **${totalCommands}** across **${totalCategories}** categories.`,
       "",
       "### ✨ Feature Highlights",
-      "🎶 **/play**: Play any song or playlist in a voice channel.",
-      "🔊 **/vcsetup**: Initialize temporary voice channel generator.",
-      "⏰ **/alarm**: Manage recurring alarms and reminders.",
-      "🏆 **/rank**: View your current XP level and leaderboard ranking.",
-      "📢 **/youtube list**: Manage YouTube notification subscriptions.",
-      "🎵 **/tiktok list**: Manage TikTok notification subscriptions.",
+      `🎶 **/${getCmdName("play", "play")}**: Play any song or playlist in a voice channel.`,
+      `🔊 **/${getCmdName("vcsetup", "vcsetup")}**: Initialize temporary voice channel generator.`,
+      `⏰ **/${getCmdName("alarm", "alarm")}**: Manage recurring alarms and reminders.`,
+      `🏆 **/${getCmdName("rank", "rank")}**: View your current XP level and leaderboard ranking.`,
+      `📢 **/${getCmdName("youtube list", "youtube list")}**: Manage YouTube notification subscriptions.`,
+      `🎵 **/${getCmdName("tiktok list", "tiktok list")}**: Manage TikTok notification subscriptions.`,
       "",
       "Use the dropdown select menu below to view all commands for a specific category.",
     ].join("\n"),
@@ -123,7 +136,9 @@ function buildCategoryEmbed(client, category, commands) {
   if (slashCmds.length) {
     lines.push("### 💻 Slash Commands");
     lines.push(
-      slashCmds.map((c) => `\`/${c.name}\` — ${c.description}`).join("\n"),
+      slashCmds
+        .map((c) => `\`/${c.displayName || c.name}\` — ${c.description}`)
+        .join("\n"),
     );
   }
   if (prefixCmds.length) {
@@ -133,7 +148,9 @@ function buildCategoryEmbed(client, category, commands) {
     lines.push(`### ⌨️ Prefix Commands (Prefix: \`${prefix}\`)`);
     lines.push(
       prefixCmds
-        .map((c) => `\`${prefix}${c.name}\` — ${c.description}`)
+        .map(
+          (c) => `\`${prefix}${c.displayName || c.name}\` — ${c.description}`,
+        )
         .join("\n"),
     );
   }

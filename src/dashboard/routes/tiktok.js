@@ -29,6 +29,20 @@ router.post("/:id/tiktok", async (req, res) => {
       return res.status(400).json({ error: "announce_channel_id is required" });
     }
 
+    const custom_message = req.body.custom_message;
+    if (custom_message !== undefined && custom_message !== null) {
+      if (typeof custom_message !== "string") {
+        return res
+          .status(400)
+          .json({ error: "custom_message must be a string" });
+      }
+      if (custom_message.length > 500) {
+        return res
+          .status(400)
+          .json({ error: "custom_message must be at most 500 characters" });
+      }
+    }
+
     let resolved;
     try {
       resolved = resolveProfile(username_or_url);
@@ -59,6 +73,24 @@ router.post("/:id/tiktok", async (req, res) => {
 router.patch("/:id/tiktok/:subId", async (req, res) => {
   try {
     const { id: guildId, subId } = req.params;
+
+    const customMessageVal =
+      req.body.custom_message !== undefined
+        ? req.body.custom_message
+        : req.body.customMessage;
+    if (customMessageVal !== undefined && customMessageVal !== null) {
+      if (typeof customMessageVal !== "string") {
+        return res
+          .status(400)
+          .json({ error: "custom_message must be a string" });
+      }
+      if (customMessageVal.length > 500) {
+        return res
+          .status(400)
+          .json({ error: "custom_message must be at most 500 characters" });
+      }
+    }
+
     const patch = {};
     if (req.body.notify_posts !== undefined)
       patch.notifyVideos = req.body.notify_posts;

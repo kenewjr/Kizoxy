@@ -344,4 +344,70 @@ router.get("/:id/level/leaderboard", async (req, res) => {
   }
 });
 
+// GET /api/guilds/:id/level
+router.get("/:id/level", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = req.app.locals.client;
+    const guild = client.guilds.cache.get(id);
+    if (!guild) return res.status(404).json({ error: "Guild not found" });
+
+    if (!client.levelStorage) {
+      const LevelStorage = require("../../persistence/levelStorage");
+      client.levelStorage = new LevelStorage();
+    }
+
+    const list = await client.levelStorage.getLeaderboard(id);
+    const top10 = list.slice(0, 10).map((user, idx) => ({
+      userId: user.userId,
+      xp: user.xp,
+      level: user.level,
+      rank: idx + 1,
+    }));
+
+    res.json({
+      level_top10: top10,
+    });
+  } catch (err) {
+    logger.error(`GET /api/guilds/${req.params.id}/level: ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch level data" });
+  }
+});
+
+// GET /api/guilds/:id/tempvc
+router.get("/:id/tempvc", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = req.app.locals.client;
+    const guild = client.guilds.cache.get(id);
+    if (!guild) return res.status(404).json({ error: "Guild not found" });
+
+    const tempVcStorage = require("../../persistence/tempVcStorage");
+    const tempvcData = await tempVcStorage._guild(id).catch(() => null);
+
+    res.json({
+      generators: tempvcData?.generators
+        ? Object.values(tempvcData.generators)
+        : [],
+      active_count: tempvcData?.tempChannels
+        ? Object.keys(tempvcData.tempChannels).length
+        : 0,
+      active_channels: tempvcData?.tempChannels
+        ? Object.values(tempvcData.tempChannels).map((ch) => {
+            const channelObj = guild.channels?.cache?.get(ch.id);
+            return {
+              id: ch.id,
+              ownerId: ch.ownerId,
+              createdAt: ch.createdAt,
+              memberCount: channelObj ? (channelObj.members?.size ?? "—") : "—",
+            };
+          })
+        : [],
+    });
+  } catch (err) {
+    logger.error(`GET /api/guilds/${req.params.id}/tempvc: ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch TempVC data" });
+  }
+});
+
 module.exports = router;

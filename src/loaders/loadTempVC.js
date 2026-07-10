@@ -11,8 +11,8 @@ async function reconcileGuild(guild) {
   const generators = await tempVcStorage.getAllGenerators(guild.id);
   for (const gen of generators) {
     const channel =
-      guild.channels.cache.get(gen.id) ||
-      (await guild.channels.fetch(gen.id).catch(() => null));
+      guild.channels?.cache?.get(gen.id) ||
+      (await guild.channels?.fetch?.(gen.id).catch(() => null));
     if (!channel) {
       logger.warning(
         `Generator ${gen.id} no longer exists in ${guild.name}; removing`,
@@ -27,8 +27,8 @@ async function reconcileGuild(guild) {
   const tempChannels = await tempVcStorage.getAllTempChannels(guild.id);
   for (const tc of tempChannels) {
     const channel =
-      guild.channels.cache.get(tc.id) ||
-      (await guild.channels.fetch(tc.id).catch(() => null));
+      guild.channels?.cache?.get(tc.id) ||
+      (await guild.channels?.fetch?.(tc.id).catch(() => null));
 
     if (!channel) {
       await tempVcStorage.removeTempChannel(guild.id, tc.id);

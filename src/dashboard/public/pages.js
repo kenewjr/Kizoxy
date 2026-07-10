@@ -287,6 +287,15 @@ async function renderGuild(guildId, initialTab) {
 }
 
 function switchGuildTab(guildId, tab) {
+  if (state.tabCleanup) {
+    try {
+      state.tabCleanup();
+    } catch (e) {
+      console.error("Tab cleanup error:", e);
+    }
+    state.tabCleanup = null;
+  }
+
   document.querySelectorAll("#guild-tabs .tab").forEach((el) => {
     el.classList.toggle("active", el.dataset.tab === tab);
   });
@@ -392,9 +401,22 @@ async function renderYouTube(el, guildId) {
             <div class="form-group" style="flex:1"><label>Mention Role ID (optional)</label><input class="input" id="yt-mention-id" placeholder="e.g. 1234... or blank" oninput="updateMsgPreview('yt-custom-msg','yt-mention-id','yt-add-preview','🔔 {name} uploaded a new {type}!\n{title}\n{url}')"></div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex:1"><label>Custom Message (optional)</label><input class="input" id="yt-custom-msg" placeholder="{role} {name} uploaded {title} {url}" oninput="updateMsgPreview('yt-custom-msg','yt-mention-id','yt-add-preview','🔔 {name} uploaded a new {type}!\n{title}\n{url}')"></div>
+            <div class="form-group" style="flex:1">
+              <label>Custom Message (optional)</label>
+              <textarea class="input" id="yt-custom-msg" rows="3" maxlength="500" placeholder="{role} {name} uploaded {title} {url}" oninput="updateMsgPreview('yt-custom-msg','yt-mention-id','yt-add-preview','🔔 {name} uploaded a new {type}!\n{title}\n{url}')" style="resize:vertical; min-height:60px; font-family:inherit;"></textarea>
+            </div>
           </div>
-          <div class="form-hint" style="font-size:11px;color:var(--text-3);margin-bottom:4px">Placeholders: {role} {name} {url} {title} {type}. Leave blank for the default message.</div>
+          <div class="helper-card" style="margin-top:10px; margin-bottom:10px; padding:10px; background:var(--bg-mid); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px;">
+            <div style="font-weight:600; margin-bottom:4px; color:var(--text-1)">💬 Custom Message Guide</div>
+            <div style="color:var(--text-3); margin-bottom:6px">Placeholders are automatically replaced when a notification is posted. Max 500 characters.</div>
+            <ul style="padding-left:16px; margin:0; color:var(--text-2); line-height:1.4">
+              <li><code>{role}</code>: Mentions the role. If not manually positioned, pings are prepended.</li>
+              <li><code>{name}</code>: Channel name.</li>
+              <li><code>{url}</code>: Link to the YouTube video / stream.</li>
+              <li><code>{title}</code>: Video title.</li>
+              <li><code>{type}</code>: Upload type (e.g. video, short, live, upcoming).</li>
+            </ul>
+          </div>
           <div class="form-preview" id="yt-add-preview" style="font-size:12px;color:var(--text-3);background:var(--bg-2);padding:8px 10px;border-radius:6px;margin-bottom:10px;white-space:pre-wrap;border:1px solid var(--border)"></div>
           <div class="form-row" style="margin-bottom:12px">
             <label style="font-size:12px;color:var(--text-3);margin-right:16px">Videos ${toggleHtml("", true, 'id="yt-add-videos"')}</label>
@@ -431,9 +453,22 @@ function ytRow(s, guildId) {
     <td colspan="8" style="background:var(--bg-2)">
       <div class="form-row">
         <div class="form-group" style="flex:1"><label>Mention Role ID</label><input class="input" id="yt-edit-mention-${s.id}" value="${escAttr(s.mentionRoleId || "")}" placeholder="blank = no ping" oninput="updateMsgPreview('yt-edit-msg-${s.id}','yt-edit-mention-${s.id}','yt-edit-preview-${s.id}','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')"></div>
-        <div class="form-group" style="flex:2"><label>Custom Message</label><input class="input" id="yt-edit-msg-${s.id}" value="${escAttr(s.customMessage || "")}" placeholder="{role} {name} uploaded {title} {url}" oninput="updateMsgPreview('yt-edit-msg-${s.id}','yt-edit-mention-${s.id}','yt-edit-preview-${s.id}','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')"></div>
+        <div class="form-group" style="flex:2">
+          <label>Custom Message</label>
+          <textarea class="input" id="yt-edit-msg-${s.id}" rows="3" maxlength="500" placeholder="{role} {name} uploaded {title} {url}" oninput="updateMsgPreview('yt-edit-msg-${s.id}','yt-edit-mention-${s.id}','yt-edit-preview-${s.id}','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')" style="resize:vertical; min-height:60px; font-family:inherit;">${esc(s.customMessage || "")}</textarea>
+        </div>
       </div>
-      <div class="form-hint" style="font-size:11px;color:var(--text-3);margin-bottom:4px">Placeholders: {role} {name} {url} {title} {type}. Leave message blank for the default.</div>
+      <div class="helper-card" style="margin-top:10px; margin-bottom:10px; padding:10px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px;">
+        <div style="font-weight:600; margin-bottom:4px; color:var(--text-1)">💬 Custom Message Guide</div>
+        <div style="color:var(--text-3); margin-bottom:6px">Placeholders are automatically replaced when a notification is posted. Max 500 characters.</div>
+        <ul style="padding-left:16px; margin:0; color:var(--text-2); line-height:1.4">
+          <li><code>{role}</code>: Mentions the role. If not manually positioned, pings are prepended.</li>
+          <li><code>{name}</code>: Channel name.</li>
+          <li><code>{url}</code>: Link to the YouTube video / stream.</li>
+          <li><code>{title}</code>: Video title.</li>
+          <li><code>{type}</code>: Upload type (e.g. video, short, live, upcoming).</li>
+        </ul>
+      </div>
       <div class="form-preview" id="yt-edit-preview-${s.id}" style="font-size:12px;color:var(--text-3);background:var(--bg-1);padding:8px 10px;border-radius:6px;margin-bottom:10px;white-space:pre-wrap;border:1px solid var(--border)"></div>
       <button class="btn btn--primary btn--sm" onclick="saveYtEdit('${guildId}','${s.id}')">Save</button>
     </td>
@@ -573,9 +608,22 @@ async function renderTikTok(el, guildId) {
             <div class="form-group" style="flex:1"><label>Mention Role ID (optional)</label><input class="input" id="tt-mention-id" placeholder="e.g. 1234... or blank" oninput="updateMsgPreview('tt-custom-msg','tt-mention-id','tt-add-preview','🎵 {name} posted a new {type}!\n{url}')"></div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex:1"><label>Custom Message (optional)</label><input class="input" id="tt-custom-msg" placeholder="{role} {name} posted {url}" oninput="updateMsgPreview('tt-custom-msg','tt-mention-id','tt-add-preview','🎵 {name} posted a new {type}!\n{url}')"></div>
+            <div class="form-group" style="flex:1">
+              <label>Custom Message (optional)</label>
+              <textarea class="input" id="tt-custom-msg" rows="3" maxlength="500" placeholder="{role} {name} posted {url}" oninput="updateMsgPreview('tt-custom-msg','tt-mention-id','tt-add-preview','🎵 {name} posted a new {type}!\n{url}')" style="resize:vertical; min-height:60px; font-family:inherit;"></textarea>
+            </div>
           </div>
-          <div class="form-hint" style="font-size:11px;color:var(--text-3);margin-bottom:4px">Placeholders: {role} {name} {url} {title} {type}. Leave blank for the default message.</div>
+          <div class="helper-card" style="margin-top:10px; margin-bottom:10px; padding:10px; background:var(--bg-mid); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px;">
+            <div style="font-weight:600; margin-bottom:4px; color:var(--text-1)">💬 Custom Message Guide</div>
+            <div style="color:var(--text-3); margin-bottom:6px">Placeholders are automatically replaced when a notification is posted. Max 500 characters.</div>
+            <ul style="padding-left:16px; margin:0; color:var(--text-2); line-height:1.4">
+              <li><code>{role}</code>: Mentions the role. If not manually positioned, pings are prepended.</li>
+              <li><code>{name}</code>: Creator username.</li>
+              <li><code>{url}</code>: Link to the TikTok video / live.</li>
+              <li><code>{title}</code>: Video title.</li>
+              <li><code>{type}</code>: Upload type (e.g. video, live).</li>
+            </ul>
+          </div>
           <div class="form-preview" id="tt-add-preview" style="font-size:12px;color:var(--text-3);background:var(--bg-2);padding:8px 10px;border-radius:6px;margin-bottom:10px;white-space:pre-wrap;border:1px solid var(--border)"></div>
           <div class="form-row" style="margin-bottom:12px">
             <label style="font-size:12px;color:var(--text-3);margin-right:16px">Posts ${toggleHtml("", true, 'id="tt-add-posts"')}</label>
@@ -606,9 +654,22 @@ function ttRow(s, guildId) {
     <td colspan="5" style="background:var(--bg-2)">
       <div class="form-row">
         <div class="form-group" style="flex:1"><label>Mention Role ID</label><input class="input" id="tt-edit-mention-${s.id}" value="${escAttr(s.mentionRoleId || "")}" placeholder="blank = no ping" oninput="updateMsgPreview('tt-edit-msg-${s.id}','tt-edit-mention-${s.id}','tt-edit-preview-${s.id}','🎵 {name} posted a new {type}!\\n{url}')"></div>
-        <div class="form-group" style="flex:2"><label>Custom Message</label><input class="input" id="tt-edit-msg-${s.id}" value="${escAttr(s.customMessage || "")}" placeholder="{role} {name} posted {url}" oninput="updateMsgPreview('tt-edit-msg-${s.id}','tt-edit-mention-${s.id}','tt-edit-preview-${s.id}','🎵 {name} posted a new {type}!\\n{url}')"></div>
+        <div class="form-group" style="flex:2">
+          <label>Custom Message</label>
+          <textarea class="input" id="tt-edit-msg-${s.id}" rows="3" maxlength="500" placeholder="{role} {name} posted {url}" oninput="updateMsgPreview('tt-edit-msg-${s.id}','tt-edit-mention-${s.id}','tt-edit-preview-${s.id}','🎵 {name} posted a new {type}!\\n{url}')" style="resize:vertical; min-height:60px; font-family:inherit;">${esc(s.customMessage || "")}</textarea>
+        </div>
       </div>
-      <div class="form-hint" style="font-size:11px;color:var(--text-3);margin-bottom:4px">Placeholders: {role} {name} {url} {title} {type}. Leave message blank for the default.</div>
+      <div class="helper-card" style="margin-top:10px; margin-bottom:10px; padding:10px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px;">
+        <div style="font-weight:600; margin-bottom:4px; color:var(--text-1)">💬 Custom Message Guide</div>
+        <div style="color:var(--text-3); margin-bottom:6px">Placeholders are automatically replaced when a notification is posted. Max 500 characters.</div>
+        <ul style="padding-left:16px; margin:0; color:var(--text-2); line-height:1.4">
+          <li><code>{role}</code>: Mentions the role. If not manually positioned, pings are prepended.</li>
+          <li><code>{name}</code>: Creator username.</li>
+          <li><code>{url}</code>: Link to the TikTok video / live.</li>
+          <li><code>{title}</code>: Video title.</li>
+          <li><code>{type}</code>: Upload type (e.g. video, live).</li>
+        </ul>
+      </div>
       <div class="form-preview" id="tt-edit-preview-${s.id}" style="font-size:12px;color:var(--text-3);background:var(--bg-1);padding:8px 10px;border-radius:6px;margin-bottom:10px;white-space:pre-wrap;border:1px solid var(--border)"></div>
       <button class="btn btn--primary btn--sm" onclick="saveTtEdit('${guildId}','${s.id}')">Save</button>
     </td>
@@ -713,18 +774,135 @@ async function submitTtAdd(guildId) {
 
 // ── Guild Tab: TempVC ──
 function renderTempVC(el, g) {
-  const gens = g.tempvc?.generators || [];
-  el.innerHTML = `
-    <div class="card" style="padding:0;overflow-x:auto">
-      <table class="table">
-        <thead><tr><th>Generator Channel ID</th><th>Default Name</th><th>Category</th></tr></thead>
-        <tbody>${gens.length ? gens.map((gen) => `<tr><td style="font-family:var(--font-mono);font-size:12px">${esc(gen.id)}</td><td>${esc(gen.defaultName || "")}</td><td style="font-family:var(--font-mono);font-size:12px">${esc(gen.categoryId || "N/A")}</td></tr>`).join("") : '<tr><td colspan="3" style="color:var(--text-3)">No generators configured.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div style="margin-top:8px" class="stat-row">
-      <div class="stat-card"><div class="stat-card__label">Active Temp Channels</div><div class="stat-card__value">${g.tempvc?.active_count ?? 0}</div></div>
-    </div>
-    <div class="info-note">TempVC settings are managed via /vc slash commands.</div>`;
+  let lastUpdated = Date.now();
+
+  async function loadData(showSkeleton = false) {
+    if (showSkeleton) {
+      el.innerHTML = `
+        <div class="tab-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="font-size:14px;font-weight:600">TempVC Generators</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="last-updated-text" style="font-size:12px;color:var(--text-3)">Loading...</span>
+            <button class="btn btn--secondary btn--sm" disabled>↻ Refresh</button>
+          </div>
+        </div>
+        <div class="skeleton" style="height:200px"></div>`;
+    }
+
+    try {
+      const data = await api.get(`/guilds/${g.id}/tempvc`);
+      lastUpdated = Date.now();
+      renderContent(data);
+    } catch (err) {
+      el.innerHTML = `
+        <div class="tab-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="font-size:14px;font-weight:600">TempVC Generators</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="last-updated-text" style="font-size:12px;color:var(--red)">Failed to load</span>
+            <button class="btn btn--secondary btn--sm" id="tempvc-refresh-btn">Retry</button>
+          </div>
+        </div>
+        <div class="card" style="color:var(--red)">Could not load TempVC data.</div>`;
+      const btn = document.getElementById("tempvc-refresh-btn");
+      if (btn) btn.onclick = () => loadData(true);
+    }
+  }
+
+  function getRelativeTimeString(timeMs) {
+    const diffSec = Math.floor((Date.now() - timeMs) / 1000);
+    if (diffSec < 5) return "just now";
+    if (diffSec < 60) return `${diffSec}s ago`;
+    return `${Math.floor(diffSec / 60)}m ago`;
+  }
+
+  function updateTimeLabel() {
+    const label = document.getElementById("tempvc-time-label");
+    if (label) {
+      label.textContent = `Last updated: ${getRelativeTimeString(lastUpdated)}`;
+    }
+  }
+
+  function formatLimit(limit) {
+    if (!limit || limit === 0) return "Unlimited";
+    return `${limit} users`;
+  }
+
+  function formatBitrate(bitrate) {
+    if (!bitrate) return "—";
+    return `${bitrate / 1000} kbps`;
+  }
+
+  function renderContent(data) {
+    const gens = data.generators || [];
+    const activeChannels = data.active_channels || [];
+
+    el.innerHTML = `
+      <div class="tab-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:14px;font-weight:600">TempVC Generators</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="last-updated-text" id="tempvc-time-label" style="font-size:12px;color:var(--text-3)">Last updated: just now</span>
+          <button class="btn btn--secondary btn--sm" id="tempvc-refresh-btn">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto;margin-bottom:16px">
+        <table class="table">
+          <thead><tr><th>Generator Channel ID</th><th>Default Name</th><th>Category ID</th><th>Bitrate</th><th>User Limit</th></tr></thead>
+          <tbody>${
+            gens.length
+              ? gens
+                  .map(
+                    (gen) => `<tr>
+            <td><code class="code-chip">${esc(gen.id)}</code></td>
+            <td>${esc(gen.defaultName || "")}</td>
+            <td><code class="code-chip">${esc(gen.categoryId || "N/A")}</code></td>
+            <td>${esc(formatBitrate(gen.defaultBitrate))}</td>
+            <td>${esc(formatLimit(gen.defaultLimit))}</td>
+          </tr>`,
+                  )
+                  .join("")
+              : '<tr><td colspan="5" style="color:var(--text-3);padding:16px">No generators configured.</td></tr>'
+          }</tbody>
+        </table>
+      </div>
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Active Temporary Channels</h3>
+      <div class="card" style="padding:0;overflow-x:auto;margin-bottom:16px">
+        <table class="table">
+          <thead><tr><th>Channel ID</th><th>Owner ID</th><th>Created At</th><th>Active Members</th></tr></thead>
+          <tbody>${
+            activeChannels.length
+              ? activeChannels
+                  .map(
+                    (ch) => `<tr>
+            <td><code class="code-chip">${esc(ch.id)}</code></td>
+            <td><code class="code-chip">${esc(ch.ownerId)}</code></td>
+            <td>${ch.createdAt ? new Date(ch.createdAt).toLocaleString() : "N/A"}</td>
+            <td>${esc(ch.memberCount)}</td>
+          </tr>`,
+                  )
+                  .join("")
+              : '<tr><td colspan="4" style="color:var(--text-3);padding:16px">No active temporary voice channels.</td></tr>'
+          }</tbody>
+        </table>
+      </div>
+      <div class="info-note">TempVC settings are managed via /vc slash commands.</div>`;
+
+    const btn = document.getElementById("tempvc-refresh-btn");
+    if (btn) {
+      btn.onclick = async () => {
+        btn.textContent = "Refreshing...";
+        btn.disabled = true;
+        await loadData(false);
+      };
+    }
+  }
+
+  // Initial load
+  loadData(true);
+
+  const ticker = setInterval(updateTimeLabel, 5000);
+  state.tabCleanup = () => {
+    clearInterval(ticker);
+  };
 }
 
 // ── Guild Tab: Alarms ──
@@ -754,27 +932,105 @@ function renderAlarms(el, g) {
 
 // ── Guild Tab: Level ──
 function renderLevel(el, g) {
-  const top = g.level_top10 || [];
-  el.innerHTML = `
-    <div class="card" style="padding:0;overflow-x:auto">
-      <table class="table">
-        <thead><tr><th>Rank</th><th>User ID</th><th>XP</th><th>Level</th></tr></thead>
-        <tbody>${
-          top.length
-            ? top
-                .map(
-                  (u, i) => `<tr>
-          <td>#${i + 1}</td>
-          <td style="font-family:var(--font-mono);font-size:12px">${esc(u.userId)}</td>
-          <td>${u.xp}</td>
-          <td>${u.level}</td>
-        </tr>`,
-                )
-                .join("")
-            : '<tr><td colspan="4" style="color:var(--text-3)">No level data.</td></tr>'
-        }</tbody>
-      </table>
-    </div>`;
+  let lastUpdated = Date.now();
+  let intervalId = null;
+
+  async function loadData(showSkeleton = false) {
+    if (showSkeleton) {
+      el.innerHTML = `
+        <div class="tab-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="font-size:14px;font-weight:600">Level Leaderboard</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="last-updated-text" style="font-size:12px;color:var(--text-3)">Loading...</span>
+            <button class="btn btn--secondary btn--sm" disabled>↻ Refresh</button>
+          </div>
+        </div>
+        <div class="skeleton" style="height:200px"></div>`;
+    }
+
+    try {
+      const data = await api.get(`/guilds/${g.id}/level`);
+      lastUpdated = Date.now();
+      renderContent(data.level_top10);
+    } catch (err) {
+      el.innerHTML = `
+        <div class="tab-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="font-size:14px;font-weight:600">Level Leaderboard</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="last-updated-text" style="font-size:12px;color:var(--red)">Failed to load</span>
+            <button class="btn btn--secondary btn--sm" id="level-refresh-btn">Retry</button>
+          </div>
+        </div>
+        <div class="card" style="color:var(--red)">Could not load level data.</div>`;
+      const btn = document.getElementById("level-refresh-btn");
+      if (btn) btn.onclick = () => loadData(true);
+    }
+  }
+
+  function getRelativeTimeString(timeMs) {
+    const diffSec = Math.floor((Date.now() - timeMs) / 1000);
+    if (diffSec < 5) return "just now";
+    if (diffSec < 60) return `${diffSec}s ago`;
+    return `${Math.floor(diffSec / 60)}m ago`;
+  }
+
+  function updateTimeLabel() {
+    const label = document.getElementById("level-time-label");
+    if (label) {
+      label.textContent = `Last updated: ${getRelativeTimeString(lastUpdated)}`;
+    }
+  }
+
+  function renderContent(top) {
+    el.innerHTML = `
+      <div class="tab-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:14px;font-weight:600">Level Leaderboard</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="last-updated-text" id="level-time-label" style="font-size:12px;color:var(--text-3)">Last updated: just now</span>
+          <button class="btn btn--secondary btn--sm" id="level-refresh-btn">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table class="table">
+          <thead><tr><th>Rank</th><th>User ID</th><th>XP</th><th>Level</th></tr></thead>
+          <tbody>${
+            top && top.length
+              ? top
+                  .map(
+                    (u, i) => `<tr>
+            <td>#${i + 1}</td>
+            <td><code class="code-chip">${esc(u.userId)}</code></td>
+            <td>${u.xp}</td>
+            <td>${u.level}</td>
+          </tr>`,
+                  )
+                  .join("")
+              : '<tr><td colspan="4" style="color:var(--text-3);padding:16px">No level data.</td></tr>'
+          }</tbody>
+        </table>
+      </div>`;
+
+    const btn = document.getElementById("level-refresh-btn");
+    if (btn) {
+      btn.onclick = async () => {
+        btn.textContent = "Refreshing...";
+        btn.disabled = true;
+        await loadData(false);
+      };
+    }
+  }
+
+  // Initial load
+  loadData(true);
+
+  // Set up 60s auto-refresh and time ticker
+  const ticker = setInterval(updateTimeLabel, 5000);
+  intervalId = setInterval(() => loadData(false), 60000);
+
+  state.tabCleanup = () => {
+    clearInterval(ticker);
+    clearInterval(intervalId);
+  };
 }
 
 // ── Logs Page ──

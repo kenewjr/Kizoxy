@@ -138,6 +138,10 @@ const routes = {
     title: "Guilds",
     render: () => typeof renderGuilds === "function" && renderGuilds(),
   },
+  "#commands": {
+    title: "Commands",
+    render: () => typeof renderCommands === "function" && renderCommands(),
+  },
   "#config": {
     title: "Configuration",
     render: () => typeof renderConfig === "function" && renderConfig(),
@@ -216,6 +220,7 @@ function renderSidebar(meta) {
   nav.innerHTML = [
     { hash: "#overview", icon: "🏠", label: "Overview" },
     { hash: "#guilds", icon: "⚙️", label: "Guilds" },
+    { hash: "#commands", icon: "📖", label: "Commands" },
     { hash: "#config", icon: "🔧", label: "Config" },
     { hash: "#logs", icon: "📋", label: "Logs" },
   ]
@@ -308,7 +313,7 @@ async function boot() {
   // Set up shortcuts & help.
   document.getElementById("help-shortcuts-btn").onclick = () => {
     showToast(
-      "Shortcuts: g+o (Overview), g+g (Guilds), g+c (Config), g+l (Logs). Esc: cancel prompts.",
+      "Shortcuts: g+o (Overview), g+g (Guilds), g+m (Commands), g+c (Config), g+l (Logs). Esc: cancel prompts.",
       "info",
       6000,
     );
@@ -348,6 +353,9 @@ async function boot() {
         lastGTime = 0;
       } else if (key === "g") {
         location.hash = "#guilds";
+        lastGTime = 0;
+      } else if (key === "m") {
+        location.hash = "#commands";
         lastGTime = 0;
       } else if (key === "c") {
         location.hash = "#config";

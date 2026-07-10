@@ -86,10 +86,15 @@ async function getGuildDetail(client, guildId) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return null;
 
+  if (!client.levelStorage) {
+    const LevelStorage = require("../../persistence/levelStorage");
+    client.levelStorage = new LevelStorage();
+  }
+
   const [fixembed, tempvc, leaderboard] = await Promise.allSettled([
     Promise.resolve(fixembedStorage.getSettings(guildId)),
     tempVcStorage._guild(guildId),
-    client.levelStorage?.getLeaderboard?.(guildId),
+    client.levelStorage.getLeaderboard(guildId),
   ]);
 
   const tempvcData = tempvc.status === "fulfilled" ? tempvc.value : null;
@@ -124,7 +129,7 @@ async function getGuildDetail(client, guildId) {
         : 0,
       active_channels: tempvcData?.tempChannels
         ? Object.values(tempvcData.tempChannels).map((ch) => {
-            const channelObj = guild.channels.cache.get(ch.id);
+            const channelObj = guild.channels?.cache?.get(ch.id);
             return {
               id: ch.id,
               ownerId: ch.ownerId,

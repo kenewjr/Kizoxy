@@ -30,6 +30,8 @@ client.prefixCommands = new Map();
 const LogStorage = require("./persistence/logStorage");
 client.logStorage = new LogStorage();
 
+client.commandStorage = require("./persistence/commandStorage");
+
 const Nodes = client.config.NODES;
 
 client.manager = new Kazagumo(
@@ -82,6 +84,11 @@ const LOADERS = [
 
 async function bootstrap() {
   const bootStart = Date.now();
+
+  // Load command customizations before other loaders run
+  await client.commandStorage.load().catch((err) => {
+    bootLogger.error(`Failed to load command customizations: ${err.message}`);
+  });
 
   const results = await Promise.all(
     LOADERS.map((mod) => runLoader(mod, require(`./loaders/${mod}`))),
@@ -192,6 +199,7 @@ async function gracefulShutdown(signal) {
     client.youtubeStateStorage,
     client.tiktokStorage,
     client.tiktokStateStorage,
+    client.commandStorage,
   ];
   await Promise.all(
     storages
