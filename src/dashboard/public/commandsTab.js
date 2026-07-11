@@ -1,6 +1,7 @@
 let commandsList = [];
 let commandsSearchQuery = "";
 let commandsActiveCategory = "All";
+let commandsActiveType = "Slash";
 
 async function renderCommands() {
   const content = document.getElementById("content");
@@ -15,12 +16,33 @@ async function renderCommands() {
   }
 }
 
+window.switchCommandsType = function (type, el) {
+  commandsActiveType = type;
+  commandsActiveCategory = "All";
+  document.querySelectorAll("#commands-subtabs .tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.type === type);
+  });
+  renderCommandsLayout(document.getElementById("content"));
+};
+
 function renderCommandsLayout(container) {
-  const categories = ["All", ...new Set(commandsList.map((c) => c.category))];
+  const categories = [
+    "All",
+    ...new Set(
+      commandsList
+        .filter((c) => c.type === commandsActiveType)
+        .map((c) => c.category),
+    ),
+  ];
 
   container.innerHTML = `
+    <div class="tabs" id="commands-subtabs" style="margin-bottom:16px;">
+      <div class="tab ${commandsActiveType === "Slash" ? "active" : ""}" data-type="Slash" onclick="switchCommandsType('Slash', this)">Slash Commands</div>
+      <div class="tab ${commandsActiveType === "Prefix" ? "active" : ""}" data-type="Prefix" onclick="switchCommandsType('Prefix', this)">Prefix Commands</div>
+    </div>
+
     <div class="card" style="margin-bottom:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-      <input class="search-input" id="cmd-search" placeholder="Search commands..." oninput="filterCommandsList()" style="width:240px">
+      <input class="search-input" id="cmd-search" placeholder="Search ${commandsActiveType.toLowerCase()} commands..." value="${escAttr(commandsSearchQuery)}" oninput="filterCommandsList()" style="width:240px">
       <div style="display:flex; gap:6px; flex-wrap:wrap;" id="cmd-category-filters">
         ${categories
           .map(
@@ -51,13 +73,14 @@ function renderCommandsLayout(container) {
 
 function renderCommandsRows(list) {
   const filtered = list.filter((c) => {
+    const matchesType = c.type === commandsActiveType;
     const matchesSearch =
       c.name.toLowerCase().includes(commandsSearchQuery) ||
       c.originalDescription.toLowerCase().includes(commandsSearchQuery) ||
       c.description.toLowerCase().includes(commandsSearchQuery);
     const matchesCategory =
       commandsActiveCategory === "All" || c.category === commandsActiveCategory;
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesType;
   });
 
   if (filtered.length === 0) {

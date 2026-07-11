@@ -75,6 +75,12 @@ class TempVcStorage extends JSONStorage {
       defaultBitrate: Number.isInteger(generatorData.defaultBitrate)
         ? generatorData.defaultBitrate
         : 64000,
+      bitrate: Number.isInteger(generatorData.bitrate)
+        ? generatorData.bitrate
+        : Number.isInteger(generatorData.defaultBitrate)
+          ? Math.round(generatorData.defaultBitrate / 1000)
+          : 64,
+      rtcRegion: generatorData.rtcRegion ?? null,
       templateId: generatorData.templateId ?? null,
       createdAt: generatorData.createdAt ?? Date.now(),
     };
@@ -189,6 +195,7 @@ class TempVcStorage extends JSONStorage {
       id,
       name: templateData?.name ?? "Untitled",
       channelName: templateData?.channelName ?? "{username}'s Channel",
+      namePattern: templateData?.namePattern ?? null,
       limit: Number.isInteger(templateData?.limit) ? templateData.limit : 0,
       bitrate: Number.isInteger(templateData?.bitrate)
         ? templateData.bitrate

@@ -67,8 +67,8 @@ body {
 }
 
 #bot-info img {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -462,7 +462,16 @@ body {
 .status-dot--online {
   background: var(--green);
 }
+.status-dot--idle {
+  background: var(--yellow);
+}
+.status-dot--dnd {
+  background: var(--red);
+}
 .status-dot--offline {
+  background: var(--text-3);
+}
+.status-dot--invisible {
   background: var(--text-3);
 }
 .status-dot--reconnecting {
@@ -766,4 +775,29 @@ body {
 }
 .last-updated-text {
   font-style: italic;
+}
+
+.xp-bar {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  width: 140px;
+}
+
+.xp-bar__fill {
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 300ms;
+  height: 100%;
+}
+
+.id-chip {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-2);
+  display: inline-block;
 }

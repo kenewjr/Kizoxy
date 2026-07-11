@@ -7,6 +7,16 @@ const _warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 const _errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
 // ── Mock client ──
+const mockChannel = {
+  id: "channel-1",
+  name: "general",
+  type: 0, // GuildText
+  permissionsFor: () => ({
+    has: () => true,
+  }),
+  send: jest.fn().mockResolvedValue({ id: "msg-123" }),
+};
+
 const mockGuild = {
   id: "guild-test-1",
   name: "Test Guild",
@@ -14,8 +24,8 @@ const mockGuild = {
   ownerId: "owner123",
   iconURL: () => null,
   joinedAt: new Date("2024-01-01"),
-  channels: { cache: { size: 10 } },
-  roles: { cache: { size: 5 } },
+  channels: { cache: new Map([["channel-1", mockChannel]]) },
+  roles: { cache: new Map() },
 };
 
 const mockClient = {
@@ -24,6 +34,11 @@ const mockClient = {
     username: "Kizoxy",
     tag: "Kizoxy#0001",
     displayAvatarURL: () => "https://example.com/avatar.png",
+    setUsername: jest.fn().mockImplementation(function (u) {
+      this.username = u;
+      return Promise.resolve();
+    }),
+    setPresence: jest.fn().mockResolvedValue({}),
   },
   ws: { status: 0 },
   guilds: { cache: new Map([["guild-test-1", mockGuild]]) },
@@ -379,6 +394,90 @@ describe("New Dashboard Endpoints", () => {
         .patch("/api/guilds/guild-test-1/tiktok/sub-123")
         .send({ custom_message: longMessage })
         .expect(400);
+    });
+  });
+
+  describe("Send Message & Updates & Bot & Config Tab Extensions", () => {
+    // Send Msg GET
+    it("GET /api/sendmsg/channels/:guildId returns text channels with bot permissions", async () => {
+      const res = await request(app)
+        .get("/api/sendmsg/channels/guild-test-1")
+        .expect(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body[0]).toHaveProperty("id", "channel-1");
+      expect(res.body[0]).toHaveProperty("name", "general");
+    });
+
+    // Send Msg POST
+    it("POST /api/sendmsg dispatches message content to Discord text channel", async () => {
+      const res = await request(app)
+        .post("/api/sendmsg")
+        .send({
+          guild_id: "guild-test-1",
+          channel_id: "channel-1",
+          message: "Test message from dashboard",
+          embed: false,
+        })
+        .expect(200);
+      expect(res.body).toEqual({ success: true, message_id: "msg-123" });
+    });
+
+    // Updates GET
+    it("GET /api/updates returns packages list with outdated flags", async () => {
+      const res = await request(app).get("/api/updates").expect(200);
+      expect(res.body).toHaveProperty("packages");
+      expect(res.body).toHaveProperty("outdated_count");
+      expect(res.body).toHaveProperty("total_count");
+    });
+
+    // Bot Identity & Presence PATCH
+    it("PATCH /api/bot/username sets bot username", async () => {
+      const res = await request(app)
+        .patch("/api/bot/username")
+        .send({ username: "NewKizoxy" })
+        .expect(200);
+      expect(res.body).toHaveProperty("username", "NewKizoxy");
+    });
+
+    it("PATCH /api/bot/presence sets presence attributes", async () => {
+      const res = await request(app)
+        .patch("/api/bot/presence")
+        .send({
+          status: "idle",
+          activity_type: "playing",
+          activity_text: "with tests",
+        })
+        .expect(200);
+      expect(res.body).toEqual({
+        status: "idle",
+        activity: "with tests",
+        rotation_paused: true,
+      });
+    });
+
+    it("PATCH /api/bot/presence/resume resumes rotation", async () => {
+      const res = await request(app)
+        .patch("/api/bot/presence/resume")
+        .expect(200);
+      expect(res.body).toEqual({ rotation_paused: false });
+    });
+
+    // Config PATCH
+    it("PATCH /api/config allows updating editable settings", async () => {
+      const res = await request(app)
+        .patch("/api/config")
+        .send({ prefix: "k!", bot_color: "#123456", log_format: "json" })
+        .expect(200);
+      expect(res.body.bot.prefix).toBe("k!");
+      expect(res.body.bot.bot_color).toBe("#123456");
+      expect(res.body.bot.log_format).toBe("json");
+    });
+
+    it("PATCH /api/config rejects readonly token update", async () => {
+      await request(app)
+        .patch("/api/config")
+        .send({ token: "newtoken123" })
+        .expect(403);
     });
   });
 });

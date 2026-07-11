@@ -13,6 +13,9 @@ async function handleAdd(client, interaction) {
   const category = interaction.options.getChannel("category");
   const customName = interaction.options.getString("name");
   const customLimit = interaction.options.getInteger("limit");
+  const customBitrate = interaction.options.getInteger("bitrate");
+  const customRegion = interaction.options.getString("region");
+  const rtcRegion = customRegion === "auto" ? null : customRegion;
 
   if (channel.type !== ChannelType.GuildVoice) {
     return interaction.editReply({
@@ -79,6 +82,10 @@ async function handleAdd(client, interaction) {
     defaultName: customName || "{username}'s Channel",
     defaultLimit: Number.isInteger(customLimit) ? customLimit : 0,
     defaultBitrate: channel.bitrate || 64000,
+    bitrate:
+      customBitrate ||
+      (channel.bitrate ? Math.round(channel.bitrate / 1000) : 64),
+    rtcRegion,
     templateId: null,
     createdAt: Date.now(),
   });
@@ -108,7 +115,12 @@ async function handleAdd(client, interaction) {
           },
           {
             name: "Default bitrate",
-            value: `${Math.round(generator.defaultBitrate / 1000)} kbps`,
+            value: `${generator.bitrate} kbps`,
+            inline: true,
+          },
+          {
+            name: "Voice Region",
+            value: generator.rtcRegion || "Automatic",
             inline: true,
           },
         ],
@@ -230,6 +242,36 @@ module.exports = {
               required: false,
               min_value: 0,
               max_value: 99,
+            },
+            {
+              type: ApplicationCommandOptionType.Integer,
+              name: "bitrate",
+              description: "Default bitrate in kbps (8-384)",
+              required: false,
+              min_value: 8,
+              max_value: 384,
+            },
+            {
+              type: ApplicationCommandOptionType.String,
+              name: "region",
+              description: "Voice region",
+              required: false,
+              choices: [
+                { name: "auto", value: "auto" },
+                { name: "brazil", value: "brazil" },
+                { name: "hongkong", value: "hongkong" },
+                { name: "india", value: "india" },
+                { name: "japan", value: "japan" },
+                { name: "rotterdam", value: "rotterdam" },
+                { name: "russia", value: "russia" },
+                { name: "singapore", value: "singapore" },
+                { name: "southafrica", value: "southafrica" },
+                { name: "sydney", value: "sydney" },
+                { name: "us-central", value: "us-central" },
+                { name: "us-east", value: "us-east" },
+                { name: "us-south", value: "us-south" },
+                { name: "us-west", value: "us-west" },
+              ],
             },
           ],
         },

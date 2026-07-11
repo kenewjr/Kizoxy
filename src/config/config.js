@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-module.exports = {
+const config = {
   PREFIX: process.env.PREFIX || "k",
   TOKEN: process.env.TOKEN || "YOUR_TOKEN_BOT",
   OWNER_ID: process.env.OWNER_ID || "YOUR_DISCORD_OWNER_ID",
@@ -29,3 +29,19 @@ module.exports = {
   DASHBOARD_PORT: parseInt(process.env.DASHBOARD_PORT, 10) || 4040,
   BOT_COLOR: process.env.BOT_COLOR || "#5865F2",
 };
+
+const fs = require("fs");
+const path = require("path");
+const overridesPath = path.join(__dirname, "../../data/config_overrides.json");
+if (fs.existsSync(overridesPath)) {
+  try {
+    const overrides = JSON.parse(fs.readFileSync(overridesPath, "utf8"));
+    if (overrides.bot_color) config.BOT_COLOR = overrides.bot_color;
+    if (overrides.prefix) config.PREFIX = overrides.prefix;
+    if (overrides.log_format) config.LOG_FORMAT = overrides.log_format;
+  } catch (_err) {
+    // ignore
+  }
+}
+
+module.exports = config;

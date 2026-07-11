@@ -196,19 +196,19 @@ router.get("/:id/tempvc/generators", async (req, res) => {
         .filter((vr) => vr.channelId === gen.id)
         .map((vr) => vr.roleId);
 
-      const genTemplates = templates.filter(
-        (t) => t.generatorId === gen.id || t.id === gen.templateId,
-      );
-
       return {
         id: gen.id,
         channelId: gen.id,
         guildId: id,
         defaultName: gen.defaultName || null,
-        limit: gen.defaultLimit ?? 0,
-        bitrate: gen.defaultBitrate ?? null,
+        limit: gen.userLimit ?? gen.defaultLimit ?? 0,
+        bitrate:
+          gen.bitrate ??
+          (gen.defaultBitrate ? Math.round(gen.defaultBitrate / 1000) : 64),
+        rtcRegion: gen.rtcRegion ?? null,
+        templateId: gen.templateId ?? null,
         voiceRoles: genRoles,
-        templates: genTemplates,
+        templates: templates,
         activeChannelCount: tempChannels.filter((c) => c.generatorId === gen.id)
           .length,
       };
@@ -220,6 +220,96 @@ router.get("/:id/tempvc/generators", async (req, res) => {
       `GET /api/guilds/${req.params.id}/tempvc/generators: ${err.message}`,
     );
     res.status(500).json({ error: "Failed to fetch TempVC generators" });
+  }
+});
+
+// PATCH /api/guilds/:id/tempvc/:generatorId
+router.patch("/:id/tempvc/:generatorId", async (req, res) => {
+  try {
+    const { id, generatorId } = req.params;
+    const client = req.app.locals.client;
+    const guild = client.guilds.cache.get(id);
+    if (!guild) return res.status(404).json({ error: "Guild not found" });
+
+    const tempVcStorage = require("../../persistence/tempVcStorage");
+    const generator = await tempVcStorage.getGenerator(id, generatorId);
+    if (!generator) {
+      return res.status(404).json({ error: "Generator not found" });
+    }
+
+    const { bitrate, rtcRegion, defaultName, userLimit, templateId } = req.body;
+    const updates = {};
+
+    if (bitrate !== undefined) {
+      if (typeof bitrate !== "number" || bitrate < 8 || bitrate > 384) {
+        return res
+          .status(400)
+          .json({ error: "Bitrate must be between 8 and 384 kbps" });
+      }
+      updates.bitrate = bitrate;
+      updates.defaultBitrate = bitrate * 1000;
+    }
+
+    if (rtcRegion !== undefined) {
+      const allowed = [
+        "auto",
+        "brazil",
+        "hongkong",
+        "india",
+        "japan",
+        "rotterdam",
+        "russia",
+        "singapore",
+        "southafrica",
+        "sydney",
+        "us-central",
+        "us-east",
+        "us-south",
+        "us-west",
+      ];
+      if (rtcRegion !== null && !allowed.includes(rtcRegion)) {
+        return res.status(400).json({ error: "Invalid voice region" });
+      }
+      updates.rtcRegion = rtcRegion === "auto" ? null : rtcRegion;
+    }
+
+    if (defaultName !== undefined) {
+      if (typeof defaultName !== "string" || !defaultName.trim()) {
+        return res.status(400).json({ error: "Invalid defaultName" });
+      }
+      updates.defaultName = defaultName;
+    }
+
+    if (userLimit !== undefined) {
+      if (typeof userLimit !== "number" || userLimit < 0 || userLimit > 99) {
+        return res
+          .status(400)
+          .json({ error: "Limit must be between 0 and 99" });
+      }
+      updates.userLimit = userLimit;
+      updates.defaultLimit = userLimit;
+    }
+
+    if (templateId !== undefined) {
+      if (templateId !== null) {
+        const template = await tempVcStorage.getTemplate(id, templateId);
+        if (!template)
+          return res.status(400).json({ error: "Template not found" });
+      }
+      updates.templateId = templateId;
+    }
+
+    const updated = await tempVcStorage.updateGenerator(
+      id,
+      generatorId,
+      updates,
+    );
+    res.json(updated);
+  } catch (err) {
+    logger.error(
+      `PATCH /api/guilds/${req.params.id}/tempvc/${req.params.generatorId}: ${err.message}`,
+    );
+    res.status(500).json({ error: "Failed to update generator settings" });
   }
 });
 
@@ -357,13 +447,33 @@ router.get("/:id/level", async (req, res) => {
       client.levelStorage = new LevelStorage();
     }
 
+    const { nextLevelXp } = require("../helpers/guildData");
     const list = await client.levelStorage.getLeaderboard(id);
-    const top10 = list.slice(0, 10).map((user, idx) => ({
-      userId: user.userId,
-      xp: user.xp,
-      level: user.level,
-      rank: idx + 1,
-    }));
+    const skipNames = guild.memberCount > 50;
+
+    const top10 = list.slice(0, 10).map((user, idx) => {
+      let server_name = null;
+      let global_name = null;
+      if (!skipNames) {
+        const member = guild.members.cache.get(user.userId);
+        if (member) {
+          server_name = member.displayName;
+          global_name = member.user.globalName ?? member.user.username;
+        }
+      }
+      const next_xp = nextLevelXp(user.level, user.xp);
+      return {
+        rank: idx + 1,
+        user_id: user.userId,
+        userId: user.userId,
+        server_name,
+        global_name,
+        xp: user.xp,
+        level: user.level,
+        next_xp,
+        xp_to_next: Math.max(0, next_xp - user.xp),
+      };
+    });
 
     res.json({
       level_top10: top10,

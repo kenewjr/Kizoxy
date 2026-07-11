@@ -122,6 +122,25 @@ async function playLogic(client, ctx, args) {
       }
     }
 
+    try {
+      const donateSeenStorage = require("../../persistence/donateSeenStorage");
+      const userId = requester.id;
+      const channel = ctx.channel;
+      if (
+        channel &&
+        typeof channel.send === "function" &&
+        !donateSeenStorage.hasSeen(userId)
+      ) {
+        donateSeenStorage.markSeen(userId);
+        const DONATE_MSG =
+          "♪ **Kizoxy** is free for everyone. If you enjoy it, a donation helps keep it running:\n" +
+          "🔗 **https://tako.id/kenewjr**  — thank you! 💙";
+        channel.send(DONATE_MSG).catch(() => {});
+      }
+    } catch (_) {
+      // ignore
+    }
+
     // Search BEFORE creating the player: a failed lookup should not leave an
     // idle voice connection behind. Retry once to absorb a node that just
     // finished connecting.

@@ -11,6 +11,7 @@ const logger = new Logger("VC:Template");
 const EDITABLE_FIELDS = [
   "name",
   "channelName",
+  "namePattern",
   "limit",
   "bitrate",
   "locked",
@@ -60,6 +61,7 @@ async function handleCreate(client, interaction) {
   const name = interaction.options.getString("name", true).slice(0, 64);
   const channelName =
     interaction.options.getString("channel-name") || "{username}'s Channel";
+  const namePattern = interaction.options.getString("name-pattern") || null;
   const limit = interaction.options.getInteger("limit") ?? 0;
   const locked = interaction.options.getBoolean("locked") ?? false;
   const hidden = interaction.options.getBoolean("hidden") ?? false;
@@ -67,6 +69,7 @@ async function handleCreate(client, interaction) {
   const template = await tempVcStorage.addTemplate(interaction.guildId, {
     name,
     channelName,
+    namePattern,
     limit,
     bitrate: 64000,
     isLocked: locked,
@@ -86,6 +89,11 @@ async function handleCreate(client, interaction) {
           { name: "ID", value: `\`${template.id}\``, inline: false },
           { name: "Name", value: template.name, inline: true },
           { name: "Channel name", value: template.channelName, inline: true },
+          {
+            name: "Name pattern",
+            value: template.namePattern || "—",
+            inline: true,
+          },
           {
             name: "Limit",
             value: template.limit ? String(template.limit) : "Unlimited",
@@ -303,6 +311,12 @@ module.exports = {
           type: ApplicationCommandOptionType.Boolean,
           name: "hidden",
           description: "Hide channel by default",
+          required: false,
+        },
+        {
+          type: ApplicationCommandOptionType.String,
+          name: "name-pattern",
+          description: "Name template pattern, e.g. {owner}'s Room",
           required: false,
         },
       ],

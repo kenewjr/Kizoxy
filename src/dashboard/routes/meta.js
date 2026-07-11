@@ -49,6 +49,8 @@ router.get("/stats", async (req, res) => {
       }
     }
 
+    const donateSeenStorage = require("../../persistence/donateSeenStorage");
+
     res.json({
       guild_count: client.guilds.cache.size,
       user_count: userCount,
@@ -58,6 +60,7 @@ router.get("/stats", async (req, res) => {
       memory_rss_mb: Math.round(mem.rss / 1024 / 1024),
       active_player_count: client.manager?.players?.size ?? 0,
       active_alarm_count: activeAlarmIds.size,
+      donate_seen_count: donateSeenStorage.getSeenCount(),
     });
   } catch (err) {
     logger.error(`GET /api/stats: ${err.message}`);
@@ -104,6 +107,207 @@ router.get("/players", (req, res) => {
   } catch (err) {
     logger.error(`GET /api/players: ${err.message}`);
     res.status(500).json({ error: "Failed to fetch players" });
+  }
+});
+
+let updatesCache = null;
+
+function isOutdated(current, latest) {
+  if (!current || !latest) return false;
+  const cleanCurrent = current.replace(/^[\^~]/, "");
+  const c = cleanCurrent.split(".").map(Number);
+  const l = latest.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const cv = c[i] || 0;
+    const lv = l[i] || 0;
+    if (lv > cv) return true;
+    if (lv < cv) return false;
+  }
+  return false;
+}
+
+// GET /api/updates
+router.get("/updates", async (req, res) => {
+  try {
+    const now = Date.now();
+    const forceRefresh =
+      req.query.refresh === "1" || req.query.refresh === "true";
+    if (updatesCache && !forceRefresh && now - updatesCache.timestamp < 60000) {
+      return res.json(updatesCache.data);
+    }
+
+    const pkg = require("../../../package.json");
+    const dependencies = {
+      ...(pkg.dependencies || {}),
+      ...(pkg.devDependencies || {}),
+    };
+    const packagesList = Object.entries(dependencies).map(
+      ([name, current]) => ({
+        name,
+        current,
+        is_dev: Object.prototype.hasOwnProperty.call(
+          pkg.devDependencies || {},
+          name,
+        ),
+      }),
+    );
+
+    const axios = require("axios");
+    const results = await Promise.allSettled(
+      packagesList.map(async (p) => {
+        try {
+          const registryRes = await axios.get(
+            `https://registry.npmjs.org/${encodeURIComponent(p.name)}/latest`,
+            { timeout: 5000 },
+          );
+          const latest = registryRes.data?.version ?? null;
+          return {
+            name: p.name,
+            current: p.current,
+            latest,
+            is_dev: p.is_dev,
+            outdated: isOutdated(p.current, latest),
+            error: !latest,
+          };
+        } catch (_err) {
+          return {
+            name: p.name,
+            current: p.current,
+            latest: null,
+            is_dev: p.is_dev,
+            outdated: false,
+            error: true,
+          };
+        }
+      }),
+    );
+
+    const packages = results.map((r, i) => {
+      if (r.status === "fulfilled") {
+        return r.value;
+      }
+      return {
+        name: packagesList[i].name,
+        current: packagesList[i].current,
+        latest: null,
+        is_dev: packagesList[i].is_dev,
+        outdated: false,
+        error: true,
+      };
+    });
+
+    const outdated_count = packages.filter((p) => p.outdated).length;
+    const responseData = {
+      checked_at: new Date().toISOString(),
+      node_version: process.version,
+      packages,
+      outdated_count,
+      total_count: packages.length,
+    };
+
+    updatesCache = {
+      timestamp: now,
+      data: responseData,
+    };
+
+    res.json(responseData);
+  } catch (err) {
+    logger.error(`GET /api/updates: ${err.message}`);
+    res.status(500).json({ error: "Failed to check updates" });
+  }
+});
+
+// PATCH /api/bot/username
+router.patch("/bot/username", async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (
+      !username ||
+      typeof username !== "string" ||
+      !username.trim() ||
+      username.length < 2 ||
+      username.length > 32
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Username must be between 2 and 32 characters." });
+    }
+
+    const client = req.app.locals.client;
+    await client.user.setUsername(username.trim());
+    res.json({ username: client.user.username });
+  } catch (err) {
+    logger.error(`PATCH /api/bot/username: ${err.message}`);
+    res.status(422).json({ error: err.message });
+  }
+});
+
+// PATCH /api/bot/presence
+router.patch("/bot/presence", async (req, res) => {
+  try {
+    const { status, activity_type, activity_text } = req.body;
+    const client = req.app.locals.client;
+
+    const allowedStatuses = ["online", "idle", "dnd", "invisible"];
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const allowedTypes = ["playing", "listening", "watching", "competing"];
+    if (activity_type && !allowedTypes.includes(activity_type)) {
+      return res.status(400).json({ error: "Invalid activity type" });
+    }
+
+    if (
+      activity_text !== undefined &&
+      typeof activity_text === "string" &&
+      activity_text.length > 128
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Activity text must be max 128 characters" });
+    }
+
+    const clientReady = require("../../events/client/clientReady");
+    clientReady.pausePresenceRotation();
+
+    const { ActivityType } = require("discord.js");
+    const typeMap = {
+      playing: ActivityType.Playing,
+      listening: ActivityType.Listening,
+      watching: ActivityType.Watching,
+      competing: ActivityType.Competing,
+    };
+
+    const activities = activity_text
+      ? [{ name: activity_text, type: typeMap[activity_type ?? "playing"] }]
+      : [];
+
+    await client.user.setPresence({
+      status: status ?? "online",
+      activities,
+    });
+
+    res.json({
+      status: status ?? "online",
+      activity: activity_text ?? null,
+      rotation_paused: true,
+    });
+  } catch (err) {
+    logger.error(`PATCH /api/bot/presence: ${err.message}`);
+    res.status(500).json({ error: "Failed to set presence" });
+  }
+});
+
+// PATCH /api/bot/presence/resume
+router.patch("/bot/presence/resume", async (req, res) => {
+  try {
+    const clientReady = require("../../events/client/clientReady");
+    clientReady.resumePresenceRotation();
+    res.json({ rotation_paused: false });
+  } catch (err) {
+    logger.error(`PATCH /api/bot/presence/resume: ${err.message}`);
+    res.status(500).json({ error: "Failed to resume presence rotation" });
   }
 });
 

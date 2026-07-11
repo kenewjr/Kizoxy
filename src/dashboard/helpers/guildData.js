@@ -16,20 +16,38 @@ function getVersion() {
   return _version;
 }
 
+const SHOUKAKU_STATE = {
+  CONNECTING: 0,
+  CONNECTED: 1,
+  DISCONNECTED: 2,
+  RECONNECTING: 3,
+};
+
 function lavalinkStatus(client) {
   try {
-    const nodes = [...(client.manager?.shoukaku?.nodes?.values?.() ?? [])];
-    if (nodes.length === 0) return "disconnected";
-    return nodes.some((n) => n.state === 2) ? "connected" : "reconnecting";
+    const shoukaku = client.manager?.shoukaku || client.kazagumo?.shoukaku;
+    const node = shoukaku?.nodes?.values?.().next?.().value;
+    if (!node) return "disconnected";
+    if (node.state === SHOUKAKU_STATE.CONNECTED) return "connected";
+    if (node.state === SHOUKAKU_STATE.CONNECTING) return "connecting";
+    if (node.state === SHOUKAKU_STATE.RECONNECTING) return "reconnecting";
+    return "disconnected";
   } catch {
-    return "unknown";
+    return "disconnected";
   }
+}
+
+function nextLevelXp(currentLevel, _currentXp) {
+  return 5 * Math.pow(currentLevel, 2) + 50 * currentLevel + 100;
 }
 
 async function getBotMeta(client) {
   const mem = process.memoryUsage();
   let userCount = 0;
   for (const g of client.guilds.cache.values()) userCount += g.memberCount;
+
+  const clientReady = require("../../events/client/clientReady");
+  const presence = client.user?.presence;
 
   return {
     bot_name: client.user?.username ?? "Kizoxy",
@@ -45,6 +63,10 @@ async function getBotMeta(client) {
     version: getVersion(),
     guild_count: client.guilds.cache.size,
     user_count: userCount,
+    rotation_paused: clientReady.isRotationPaused(),
+    presence_status: presence?.status ?? "online",
+    presence_activity: presence?.activities?.[0]?.name ?? null,
+    presence_activity_type: presence?.activities?.[0]?.type ?? 0,
   };
 }
 
@@ -144,4 +166,4 @@ async function getGuildDetail(client, guildId) {
   };
 }
 
-module.exports = { getBotMeta, getGuildList, getGuildDetail };
+module.exports = { getBotMeta, getGuildList, getGuildDetail, nextLevelXp };

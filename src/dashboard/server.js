@@ -26,6 +26,7 @@ function createDashboard(client) {
   app.use("/api/guilds", require("./routes/tiktok"));
   app.use("/api/logs", require("./routes/logs"));
   app.use("/api/commands", require("./routes/commands"));
+  app.use("/api/sendmsg", require("./routes/sendmsg"));
 
   // SPA catch-all: any GET not matched by /api/* returns index.html.
   // Express v5 requires named wildcard params.

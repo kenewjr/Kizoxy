@@ -11,6 +11,16 @@ function validateName(name) {
   }
 }
 
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(2)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(2)} MB`;
+  const gb = mb / 1024;
+  return `${gb.toFixed(2)} GB`;
+}
+
 function listLogFiles() {
   try {
     const entries = fs.readdirSync(LOGS_DIR);
@@ -20,7 +30,12 @@ function listLogFiles() {
         try {
           const stat = fs.statSync(full);
           if (!stat.isFile()) return null;
-          return { name, size_bytes: stat.size, modified_at: stat.mtimeMs };
+          return {
+            name,
+            size_bytes: stat.size,
+            size_formatted: formatSize(stat.size),
+            modified_at: stat.mtimeMs,
+          };
         } catch {
           return null;
         }

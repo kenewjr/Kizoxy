@@ -142,6 +142,14 @@ const routes = {
     title: "Commands",
     render: () => typeof renderCommands === "function" && renderCommands(),
   },
+  "#sendmsg": {
+    title: "Send Message",
+    render: () => typeof renderSendMsg === "function" && renderSendMsg(),
+  },
+  "#updates": {
+    title: "Check for Updates",
+    render: () => typeof renderUpdates === "function" && renderUpdates(),
+  },
   "#config": {
     title: "Configuration",
     render: () => typeof renderConfig === "function" && renderConfig(),
@@ -202,17 +210,23 @@ function renderSidebar(meta) {
     botInfo.innerHTML = `<div class="skeleton" style="width:32px;height:32px;border-radius:50%"></div><div class="bot-meta"><div class="skeleton" style="width:80px;height:14px;margin-bottom:4px"></div><div class="skeleton" style="width:60px;height:12px"></div></div>`;
     footer.innerHTML = `<div class="skeleton" style="width:100px;height:12px"></div>`;
   } else {
-    const statusClass =
-      meta.status === "online"
-        ? "online"
-        : meta.status === "reconnecting"
-          ? "reconnecting"
-          : "offline";
+    const statusVal = meta.presence_status || meta.status || "online";
+    const statusClass = statusVal.toLowerCase();
+
+    let disc = "";
+    if (meta.bot_tag && meta.bot_tag.includes("#")) {
+      const parts = meta.bot_tag.split("#");
+      disc = parts[1];
+    }
+    const tagDisplay =
+      disc === "0" || disc === "0000" ? "#0" : disc ? `#${disc}` : "";
+
     botInfo.innerHTML = `
-      <img src="${esc(meta.bot_avatar_url || "")}" alt="" style="width:32px;height:32px;border-radius:50%" onerror="this.style.display='none'">
+      <img src="${esc(meta.bot_avatar_url || "")}" alt="" style="width:40px;height:40px;border-radius:50%" onerror="this.style.display='none'">
       <div class="bot-meta">
-        <div class="bot-name">${esc(meta.bot_name)}</div>
-        <div class="bot-tag"><span class="status-dot status-dot--${statusClass}"></span> ${esc(meta.status)}</div>
+        <div class="bot-name" style="font-size:14px;font-weight:600;">${esc(meta.bot_name)}</div>
+        ${tagDisplay ? `<div style="font-size:11px;color:var(--text-3);line-height:1.1;">${esc(tagDisplay)}</div>` : ""}
+        <div class="bot-tag" style="line-height:1.1;margin-top:2px;"><span class="status-dot status-dot--${statusClass}"></span> ${esc(statusVal)}</div>
       </div>`;
     footer.innerHTML = `<div class="uptime" id="uptime-display">${formatUptime(meta.uptime_ms)}</div><div style="margin-top:4px">v${esc(meta.version)}</div>`;
   }
@@ -221,6 +235,8 @@ function renderSidebar(meta) {
     { hash: "#overview", icon: "🏠", label: "Overview" },
     { hash: "#guilds", icon: "⚙️", label: "Guilds" },
     { hash: "#commands", icon: "📖", label: "Commands" },
+    { hash: "#sendmsg", icon: "✉️", label: "Send Msg" },
+    { hash: "#updates", icon: "🚀", label: "Updates" },
     { hash: "#config", icon: "🔧", label: "Config" },
     { hash: "#logs", icon: "📋", label: "Logs" },
   ]

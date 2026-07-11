@@ -3,6 +3,17 @@ const Logger = require("../../lib/logger");
 
 const logger = new Logger("READY");
 
+let paused = false;
+function pausePresenceRotation() {
+  paused = true;
+}
+function resumePresenceRotation() {
+  paused = false;
+}
+function isRotationPaused() {
+  return paused;
+}
+
 module.exports = async (client) => {
   logger.success(`${client.user.username} (${client.user.id}) is Ready!`);
 
@@ -32,6 +43,7 @@ module.exports = async (client) => {
   });
 
   setInterval(() => {
+    if (paused) return;
     currentActivity = (currentActivity + 1) % activities.length;
     client.user.setActivity(activities[currentActivity]);
   }, 60000); // 60 seconds
@@ -48,3 +60,6 @@ module.exports = async (client) => {
 };
 
 module.exports.eventName = Events.ClientReady;
+module.exports.pausePresenceRotation = pausePresenceRotation;
+module.exports.resumePresenceRotation = resumePresenceRotation;
+module.exports.isRotationPaused = isRotationPaused;

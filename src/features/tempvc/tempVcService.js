@@ -1,4 +1,8 @@
-const { ChannelType, PermissionFlagsBits } = require("discord.js");
+const {
+  ChannelType,
+  PermissionFlagsBits,
+  ActivityType,
+} = require("discord.js");
 const Logger = require("../../lib/logger");
 const tempVcStorage = require("../../persistence/tempVcStorage");
 
@@ -65,14 +69,28 @@ function sanitizeName(raw) {
   return cleaned.slice(0, MAX_CHANNEL_NAME_LENGTH);
 }
 
-function renderChannelName(template, member, count) {
+function renderChannelName(template, member, count, guild) {
   const tpl = template || "{username}'s Channel";
   const username = member?.user?.username ?? "user";
   const displayname = member?.displayName ?? username;
+  const owner = displayname;
+
+  const playingActivity = member?.presence?.activities?.find(
+    (a) => a.type === ActivityType.Playing || a.type === 0,
+  );
+  const game = playingActivity?.name ?? "Voice";
+  const number = String(count ?? 1);
+  const guildName = guild?.name ?? "Guild";
+
   const replaced = tpl
     .replace(/\{username\}/gi, username)
     .replace(/\{displayname\}/gi, displayname)
-    .replace(/\{count\}/gi, String(count ?? 1));
+    .replace(/\{count\}/gi, number)
+    .replace(/\{owner\}/gi, owner)
+    .replace(/\{game\}/gi, game)
+    .replace(/\{number\}/gi, number)
+    .replace(/\{guild\}/gi, guildName);
+
   return sanitizeName(replaced);
 }
 
@@ -134,7 +152,11 @@ async function createTempChannel(guild, member, generator) {
   const guildId = guild.id;
   try {
     const count = (await getChannelCount(guildId, generator.id)) + 1;
-    const name = renderChannelName(generator.defaultName, member, count);
+    const template = generator.templateId
+      ? await tempVcStorage.getTemplate(guildId, generator.templateId)
+      : null;
+    const pattern = template?.namePattern || generator.defaultName;
+    const name = renderChannelName(pattern, member, count, guild);
 
     const overwrites = [
       {
@@ -157,16 +179,25 @@ async function createTempChannel(guild, member, generator) {
       },
     ];
 
+    const userLimit =
+      generator.userLimit !== undefined && generator.userLimit !== null
+        ? generator.userLimit
+        : (generator.defaultLimit ?? 0);
+
+    const bitrate =
+      generator.bitrate !== undefined && generator.bitrate !== null
+        ? generator.bitrate * 1000
+        : (generator.defaultBitrate ?? 64000);
+
+    const rtcRegion = generator.rtcRegion || null;
+
     const channel = await guild.channels.create({
       name,
       type: ChannelType.GuildVoice,
       parent: generator.categoryId || null,
-      userLimit: Number.isInteger(generator.defaultLimit)
-        ? generator.defaultLimit
-        : 0,
-      bitrate: Number.isInteger(generator.defaultBitrate)
-        ? generator.defaultBitrate
-        : 64000,
+      userLimit,
+      bitrate,
+      rtcRegion,
       permissionOverwrites: overwrites,
       reason: `TempVC for ${member.user.tag} via generator ${generator.id}`,
     });
