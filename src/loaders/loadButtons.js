@@ -12,7 +12,20 @@ module.exports = (client) => {
   let failedLoads = [];
 
   try {
-    const files = fs.readdirSync(buttonsDir).filter((f) => f.endsWith(".js"));
+    const entries = fs.readdirSync(buttonsDir);
+    const files = [];
+    for (const entry of entries) {
+      const fullPath = path.join(buttonsDir, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        const indexFile = path.join(fullPath, "index.js");
+        if (fs.existsSync(indexFile)) {
+          files.push(path.join(entry, "index.js"));
+        }
+      } else if (entry.endsWith(".js")) {
+        files.push(entry);
+      }
+    }
 
     logger.info(`Loading ${files.length} buttons...`);
 

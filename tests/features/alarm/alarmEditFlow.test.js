@@ -3,12 +3,12 @@ jest.mock("uuid", () => ({ v4: () => "test-uuid" }));
 
 const {
   buildEditAlarmModal,
-} = require("../src/features/alarm/alarmButtonHelper");
+} = require("../../../src/features/alarm/alarmButtonHelper");
 const {
   buildDetailButtons,
   buildRecurringSelectRow,
-} = require("../src/features/alarm/alarmFormatter");
-const { updateAlarm } = require("../src/features/alarm/alarmService");
+} = require("../../../src/features/alarm/alarmFormatter");
+const { updateAlarm } = require("../../../src/features/alarm/alarmService");
 
 describe("alarm edit flow", () => {
   describe("buildEditAlarmModal", () => {

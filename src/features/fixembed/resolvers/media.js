@@ -1,6 +1,5 @@
 // Streaming / video / music platforms: YouTube, Twitch clips, BiliBili, Spotify.
 
-const axios = require("axios");
 const { resolveEmbedEZ } = require("../fixembedResolverHelper");
 
 module.exports = [
@@ -33,17 +32,21 @@ module.exports = [
       const koutubUrl = normalizedUrl.replace(/youtube\.com/i, "koutube.com");
 
       // Verify Koutube is responding (lightweight HEAD check)
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
       try {
-        const check = await axios.head(koutubUrl, {
-          timeout: 3000,
-          maxRedirects: 2,
-          validateStatus: (s) => s < 500,
+        const check = await fetch(koutubUrl, {
+          method: "HEAD",
+          redirect: "follow",
+          signal: controller.signal,
         });
         if (check.status < 400) {
           return { fixed: koutubUrl, authorUrl: null, authorName: null };
         }
       } catch (_) {
         // Koutube down — fall through to EmbedEZ
+      } finally {
+        clearTimeout(timer);
       }
 
       // Fallback: EmbedEZ

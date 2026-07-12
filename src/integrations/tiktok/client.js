@@ -1,4 +1,3 @@
-const axios = require("axios");
 const Logger = require("../../lib/logger");
 const { TIKTOK_HTTP_TIMEOUT_MS } = require("../../config/constants");
 
@@ -129,48 +128,61 @@ async function fetchProfile(username) {
 
   if (base) {
     const url = `${base.replace(/\/$/, "")}/user/${encodeURIComponent(username)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
     try {
-      const res = await axios.get(url, {
-        timeout: TIKTOK_HTTP_TIMEOUT_MS,
-        headers: key ? { Authorization: `Bearer ${key}` } : undefined,
-        validateStatus: (s) => s === 200 || s === 404,
+      const headers = {};
+      if (key) headers["Authorization"] = `Bearer ${key}`;
+      const res = await fetch(url, {
+        headers,
+        signal: controller.signal,
       });
       if (res.status === 404) throw new TiktokAccountNotFoundError(username);
-      return _normalize(username, res.data);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return _normalize(username, data);
     } catch (err) {
       if (err instanceof TiktokAccountNotFoundError) throw err;
       logger.warning(`Provider fetch failed for @${username}: ${err.message}`);
       throw err;
+    } finally {
+      clearTimeout(timer);
     }
   } else {
     // Scraper fallback (TikWM API)
     const url = `https://www.tikwm.com/api/user/posts?unique_id=${encodeURIComponent(username)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
     try {
-      const res = await axios.get(url, {
-        timeout: TIKTOK_HTTP_TIMEOUT_MS,
+      const res = await fetch(url, {
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
+        signal: controller.signal,
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
 
-      if (res.data && res.data.code !== 0) {
-        const msg = String(res.data.msg || "").toLowerCase();
+      if (data && data.code !== 0) {
+        const msg = String(data.msg || "").toLowerCase();
         if (msg.includes("invalid") || msg.includes("not found")) {
           throw new TiktokAccountNotFoundError(username);
         }
-        throw new Error(`TikWM error code ${res.data.code}: ${res.data.msg}`);
+        throw new Error(`TikWM error code ${data.code}: ${data.msg}`);
       }
 
-      if (!res.data || !res.data.data) {
+      if (!data || !data.data) {
         throw new Error("Empty response from TikWM API");
       }
 
-      return _normalize(username, res.data);
+      return _normalize(username, data);
     } catch (err) {
       if (err instanceof TiktokAccountNotFoundError) throw err;
       logger.warning(`Scraper fetch failed for @${username}: ${err.message}`);
       throw err;
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

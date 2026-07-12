@@ -1,8 +1,8 @@
-const { patchInteraction } = require("../src/lib/patchInteractions");
-const { scheduleAutoDelete } = require("../src/features/music/musicHelper");
-const { getEphemeralStats } = require("../src/lib/ephemeralStats");
-const Logger = require("../src/lib/logger");
-const { EPHEMERAL_AUTO_DELETE_MS } = require("../src/config/constants");
+const { patchInteraction } = require("../../src/lib/patchInteractions");
+const { scheduleAutoDelete } = require("../../src/features/music/musicHelper");
+const { getEphemeralStats } = require("../../src/lib/ephemeralStats");
+const Logger = require("../../src/lib/logger");
+const { EPHEMERAL_AUTO_DELETE_MS } = require("../../src/config/constants");
 
 describe("Ephemeral Auto-Delete Systems Reconciliation", () => {
   let mockPrototype;

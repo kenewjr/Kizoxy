@@ -1,4 +1,3 @@
-const axios = require("axios");
 const Logger = require("../../lib/logger");
 const {
   YOUTUBE_HTTP_TIMEOUT_MS,
@@ -22,22 +21,24 @@ function parseIsoDurationToSeconds(iso) {
 // video redirects to /watch. YouTube exposes no stable public "is this a Short"
 // API flag, so this is best-effort, not guaranteed.
 async function probeIsShort(videoId) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), YOUTUBE_HTTP_TIMEOUT_MS);
   try {
-    const res = await axios.get(`${SHORTS_URL}${videoId}`, {
-      timeout: YOUTUBE_HTTP_TIMEOUT_MS,
-      maxRedirects: 0,
-      validateStatus: (s) => s >= 200 && s < 400,
+    const res = await fetch(`${SHORTS_URL}${videoId}`, {
+      method: "GET",
       headers: { "User-Agent": "Mozilla/5.0" },
+      redirect: "manual",
+      signal: controller.signal,
     });
-    const location = res.headers?.location || "";
-    if (res.status >= 300 && location.includes("/watch")) return false;
+    const location = res.headers?.get("location") || "";
+    if (res.status >= 300 && res.status < 400 && location.includes("/watch"))
+      return false;
     return res.status === 200;
   } catch (err) {
-    // A 303/302 to /watch surfaces here when redirects are disabled.
-    const location = err.response?.headers?.location || "";
-    if (location.includes("/watch")) return false;
     logger.debug(`Shorts probe inconclusive for ${videoId}: ${err.message}`);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

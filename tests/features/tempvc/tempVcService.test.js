@@ -1,6 +1,6 @@
-const tempVcService = require("../src/features/tempvc/tempVcService");
+const tempVcService = require("../../../src/features/tempvc/tempVcService");
 
-jest.mock("../src/persistence/tempVcStorage", () => {
+jest.mock("../../../src/persistence/tempVcStorage", () => {
   const records = new Map();
   return {
     getGenerator: jest.fn(
@@ -21,7 +21,7 @@ jest.mock("../src/persistence/tempVcStorage", () => {
   };
 });
 
-const tempVcStorage = require("../src/persistence/tempVcStorage");
+const tempVcStorage = require("../../../src/persistence/tempVcStorage");
 
 describe("tempVcService.renderChannelName", () => {
   const makeMember = (username, displayName) => ({

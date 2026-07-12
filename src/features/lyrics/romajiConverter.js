@@ -45,6 +45,9 @@ function isJapanese(text) {
   return japaneseRegex.test(text);
 }
 
+const NodeCache = require("node-cache");
+const romajiCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
+
 async function convertToRomaji(text) {
   if (!text || typeof text !== "string") {
     return "";
@@ -53,6 +56,11 @@ async function convertToRomaji(text) {
   if (!isJapanese(text)) {
     return text;
   }
+
+  const key =
+    "romaji:" + require("crypto").createHash("sha1").update(text).digest("hex");
+  const cached = romajiCache.get(key);
+  if (cached !== undefined) return cached;
 
   try {
     const kuroshiro = await initializeKuroshiro();
@@ -63,6 +71,7 @@ async function convertToRomaji(text) {
       romajiSystem: "hepburn", // Use Hepburn romanization (most common)
     });
 
+    romajiCache.set(key, romaji);
     return romaji;
   } catch (error) {
     logger.error(`Conversion error: ${error.message}`);
@@ -72,12 +81,18 @@ async function convertToRomaji(text) {
 }
 
 async function convertLyricsToRomaji(lyricsText) {
-  if (!lyricsText || !isJapanese(lyricsText)) {
-    return lyricsText;
+  const text = Array.isArray(lyricsText) ? lyricsText.join("\n") : lyricsText;
+  if (!text || !isJapanese(text)) {
+    return text;
   }
 
+  const key =
+    "lyrics:" + require("crypto").createHash("sha1").update(text).digest("hex");
+  const cached = romajiCache.get(key);
+  if (cached !== undefined) return cached;
+
   try {
-    const paragraphs = lyricsText.split(/\n\n+/);
+    const paragraphs = text.split(/\n\n+/);
     const romajiParagraphs = [];
 
     for (const paragraph of paragraphs) {
@@ -102,11 +117,17 @@ async function convertLyricsToRomaji(lyricsText) {
       romajiParagraphs.push(romajiLines.join("\n"));
     }
 
-    return romajiParagraphs.join("\n\n");
+    const result = romajiParagraphs.join("\n\n");
+    romajiCache.set(key, result);
+    return result;
   } catch (error) {
     logger.error(`Lyrics conversion error: ${error.message}`);
-    return lyricsText;
+    return text;
   }
+}
+
+function getCacheStats() {
+  return romajiCache.getStats();
 }
 
 function isJapaneseTrack(title, author) {
@@ -140,6 +161,7 @@ async function preInitialize() {
 module.exports = {
   convertToRomaji,
   convertLyricsToRomaji,
+  getCacheStats,
   isJapanese,
   isJapaneseTrack,
   preInitialize,

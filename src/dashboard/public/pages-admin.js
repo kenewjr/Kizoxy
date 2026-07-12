@@ -173,24 +173,47 @@ async function renderConfig() {
               </div>
             </div>
 
-            <div class="form-group">
-              <label>Activity Type</label>
-              <select class="select" id="presence-activity-type">
-                <option value="playing" ${activityTypeMapped === "playing" ? "selected" : ""}>Playing</option>
-                <option value="listening" ${activityTypeMapped === "listening" ? "selected" : ""}>Listening to</option>
-                <option value="watching" ${activityTypeMapped === "watching" ? "selected" : ""}>Watching</option>
-                <option value="competing" ${activityTypeMapped === "competing" ? "selected" : ""}>Competing in</option>
-              </select>
+            <div class="form-group" style="margin-top:16px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="presence-rotation-toggle" ${!metaData.rotation_paused ? "checked" : ""}>
+                <span>Enable Activity Auto-Rotation</span>
+              </label>
             </div>
 
-            <div class="form-group">
-              <label>Activity Text</label>
-              <input class="input" id="presence-activity-text" value="${escAttr(metaData.presence_activity || "")}" placeholder="Kizoxy Bot · /help">
+            <!-- Single Activity Form -->
+            <div id="presence-single-form" style="${metaData.rotation_paused ? "display:block" : "display:none"}">
+              <div class="form-group">
+                <label>Activity Type</label>
+                <select class="select" id="presence-activity-type">
+                  <option value="playing" ${activityTypeMapped === "playing" ? "selected" : ""}>Playing</option>
+                  <option value="listening" ${activityTypeMapped === "listening" ? "selected" : ""}>Listening to</option>
+                  <option value="watching" ${activityTypeMapped === "watching" ? "selected" : ""}>Watching</option>
+                  <option value="competing" ${activityTypeMapped === "competing" ? "selected" : ""}>Competing in</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Activity Text</label>
+                <input class="input" id="presence-activity-text" value="${escAttr(metaData.presence_activity || "")}" placeholder="Kizoxy Bot · /help">
+              </div>
             </div>
 
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn--primary" id="presence-save-btn">Set Presence</button>
-              <button class="btn btn--secondary" id="presence-resume-btn" style="${metaData.rotation_paused ? "display:inline-flex" : "display:none"}">Resume Rotation</button>
+            <!-- Rotation Editor Form -->
+            <div id="presence-rotation-form" style="${!metaData.rotation_paused ? "display:block" : "display:none"}">
+              <div class="helper-card" style="margin:10px 0; padding:10px; background:var(--bg-mid); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px;">
+                <div style="font-weight:600; margin-bottom:4px; color:var(--text-1)">💡 Placeholder Tokens</div>
+                <div style="color:var(--text-3); margin-bottom:4px">You can use these placeholders to display live statistics:</div>
+                <ul style="padding-left:16px; margin:0; color:var(--text-2); line-height:1.4">
+                  <li><code>{guilds}</code> - Total server count (e.g., 12 servers)</li>
+                  <li><code>{users}</code> - Total member count across all servers</li>
+                  <li><code>{prefix}</code> - Command prefix (e.g., kplay)</li>
+                </ul>
+              </div>
+              <div id="presence-activities-list" style="margin-bottom:12px;"></div>
+              <button class="btn btn--ghost btn--sm" id="presence-add-row-btn" style="margin-bottom:12px;">+ Add Activity</button>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:16px;">
+              <button class="btn btn--primary" id="presence-save-btn">Save Presence Settings</button>
             </div>
           </div>
         </div>
@@ -241,6 +264,54 @@ async function renderConfig() {
       }
     };
 
+    const rotationListEl = document.getElementById("presence-activities-list");
+    const addRowBtn = document.getElementById("presence-add-row-btn");
+    const rotationToggle = document.getElementById("presence-rotation-toggle");
+    const singleForm = document.getElementById("presence-single-form");
+    const rotationForm = document.getElementById("presence-rotation-form");
+
+    rotationToggle.onchange = () => {
+      const isRot = rotationToggle.checked;
+      singleForm.style.display = isRot ? "none" : "block";
+      rotationForm.style.display = isRot ? "block" : "none";
+    };
+
+    function createActivityRowHtml(text = "", type = "playing") {
+      const rowId = "act-row-" + Math.random().toString(36).substring(2, 9);
+      return `
+        <div class="form-row activity-row" id="${rowId}" style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+          <select class="select activity-row-type" style="flex:1;">
+            <option value="playing" ${type === "playing" ? "selected" : ""}>Playing</option>
+            <option value="listening" ${type === "listening" ? "selected" : ""}>Listening</option>
+            <option value="watching" ${type === "watching" ? "selected" : ""}>Watching</option>
+            <option value="competing" ${type === "competing" ? "selected" : ""}>Competing</option>
+          </select>
+          <input class="input activity-row-text" style="flex:3;" value="${escAttr(text)}" placeholder="e.g. {guilds} servers">
+          <button class="btn btn--danger btn--sm" onclick="document.getElementById('${rowId}').remove()" style="flex-shrink:0; padding:6px 10px;">✕</button>
+        </div>
+      `;
+    }
+
+    const initialActs =
+      metaData.custom_activities && metaData.custom_activities.length > 0
+        ? metaData.custom_activities
+        : [
+            { text: "kplay <songs>", type: "listening" },
+            { text: "{guilds} servers", type: "watching" },
+            { text: "{users} users", type: "watching" },
+            { text: "/help for commands", type: "playing" },
+          ];
+
+    rotationListEl.innerHTML = initialActs
+      .map((act) => createActivityRowHtml(act.text, act.type))
+      .join("");
+
+    addRowBtn.onclick = () => {
+      const div = document.createElement("div");
+      div.innerHTML = createActivityRowHtml();
+      rotationListEl.appendChild(div.firstElementChild);
+    };
+
     let selectedStatus = metaData.presence_status || "online";
     const statusBtns = document.querySelectorAll(
       "#presence-status-group button",
@@ -255,36 +326,39 @@ async function renderConfig() {
 
     document.getElementById("presence-save-btn").onclick = async () => {
       try {
-        const activity_type = document.getElementById(
-          "presence-activity-type",
-        ).value;
-        const activity_text = document
-          .getElementById("presence-activity-text")
-          .value.trim();
-        await api.patch("/bot/presence", {
+        const isRot = rotationToggle.checked;
+        const payload = {
           status: selectedStatus,
-          activity_type,
-          activity_text: activity_text || null,
-        });
-        showToast("Presence updated", "success");
-        document.getElementById("presence-resume-btn").style.display =
-          "inline-flex";
-        document.getElementById("presence-rotation-badge").innerHTML =
-          '<span class="badge badge--yellow">✋ Manually set</span>';
+          pause_rotation: !isRot,
+        };
+
+        if (!isRot) {
+          payload.activity_type = document.getElementById(
+            "presence-activity-type",
+          ).value;
+          payload.activity_text = document
+            .getElementById("presence-activity-text")
+            .value.trim();
+        } else {
+          const rows = document.querySelectorAll(".activity-row");
+          const custom_activities = [];
+          rows.forEach((row) => {
+            const type = row.querySelector(".activity-row-type").value;
+            const text = row.querySelector(".activity-row-text").value.trim();
+            if (text) {
+              custom_activities.push({ type, text });
+            }
+          });
+          payload.custom_activities = custom_activities;
+        }
+
+        await api.patch("/bot/presence", payload);
+        showToast("Presence configuration saved", "success");
+        document.getElementById("presence-rotation-badge").innerHTML = isRot
+          ? '<span class="badge badge--green">⟳ Auto-rotating</span>'
+          : '<span class="badge badge--yellow">✋ Manually set</span>';
       } catch (err) {
         showToast("Failed to update presence", "error");
-      }
-    };
-
-    document.getElementById("presence-resume-btn").onclick = async () => {
-      try {
-        await api.patch("/bot/presence/resume");
-        showToast("Rotating presence resumed", "success");
-        document.getElementById("presence-resume-btn").style.display = "none";
-        document.getElementById("presence-rotation-badge").innerHTML =
-          '<span class="badge badge--green">⟳ Auto-rotating</span>';
-      } catch (err) {
-        showToast("Failed to resume presence", "error");
       }
     };
 

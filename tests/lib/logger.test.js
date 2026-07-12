@@ -1,21 +1,25 @@
-const Logger = require("../src/lib/logger");
+const Logger = require("../../src/lib/logger");
 
 describe("Logger Utility", () => {
   let originalConsoleWarn;
   let originalConsoleError;
+  let originalConsoleLog;
 
   beforeAll(() => {
     // Mock console methods to keep test output clean
     originalConsoleWarn = console.warn;
     originalConsoleError = console.error;
+    originalConsoleLog = console.log;
     console.warn = jest.fn();
     console.error = jest.fn();
+    console.log = jest.fn();
   });
 
   afterAll(() => {
     // Restore console methods
     console.warn = originalConsoleWarn;
     console.error = originalConsoleError;
+    console.log = originalConsoleLog;
   });
 
   beforeEach(() => {
@@ -27,12 +31,12 @@ describe("Logger Utility", () => {
     expect(logger.moduleName).toBe("TEST_MODULE");
   });
 
-  test("info() should call console.warn", () => {
+  test("info() should call console.log", () => {
     const logger = new Logger("TEST_MODULE");
     logger.info("Hello Info");
-    expect(console.warn).toHaveBeenCalledTimes(1);
-    expect(console.warn.mock.calls[0][0]).toContain("Hello Info");
-    expect(console.warn.mock.calls[0][0]).toContain("TEST_MODULE");
+    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(console.log.mock.calls[0][0]).toContain("Hello Info");
+    expect(console.log.mock.calls[0][0]).toContain("TEST_MODULE");
   });
 
   test("error() should call console.error", () => {

@@ -10,7 +10,7 @@ const {
   buildCacheKey,
   buildEmbedFromData,
   extractOriginalMetadata,
-} = require("../src/features/lyrics/lyricsServiceHelper");
+} = require("../../../src/features/lyrics/lyricsServiceHelper");
 
 describe("lyricsServiceHelper", () => {
   // Logger routes non-error output through console.warn; silence it so helper

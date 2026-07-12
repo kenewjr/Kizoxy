@@ -3,7 +3,7 @@ const path = require("path");
 
 const _warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-const { TiktokStorage } = require("../src/persistence/tiktokStorage");
+const { TiktokStorage } = require("../../../src/persistence/tiktokStorage");
 
 const TEST_FILENAME = `tiktok.test.${process.pid}.${Date.now()}.json`;
 const TEST_FILEPATH = path.join(__dirname, "..", "data", TEST_FILENAME);

@@ -4,7 +4,7 @@ const {
   resolvePage,
   parsePaginationId,
   buildNewAlarmModal,
-} = require("../src/features/alarm/alarmButtonHelper");
+} = require("../../../src/features/alarm/alarmButtonHelper");
 
 describe("alarmButtonHelper", () => {
   describe("PAGINATION_PREFIXES", () => {

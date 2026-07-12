@@ -6,7 +6,7 @@ const path = require("path");
 // be installed BEFORE the require below — not in beforeAll.
 const _warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-const { TempVcStorage } = require("../src/persistence/tempVcStorage");
+const { TempVcStorage } = require("../../../src/persistence/tempVcStorage");
 
 const TEST_FILENAME = `tempvc.test.${process.pid}.${Date.now()}.json`;
 const TEST_FILEPATH = path.join(__dirname, "..", "data", TEST_FILENAME);

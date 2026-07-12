@@ -10,9 +10,6 @@
   </a>
   <img src="https://img.shields.io/badge/Node.js-18%2B-43853d?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js Version" />
   <img src="https://img.shields.io/badge/Discord.js-14-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.js" />
-  <a href="https://discord.gg/qeemvqq">
-    <img src="https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Server" />
-  </a>
 </p>
 
 <p>
@@ -238,12 +235,13 @@ Available types: `reset` · `3d` · `bassboost` · `doubletime` · `karaoke` · 
 <details>
 <summary><b>⚙️ Settings & Misc</b></summary>
 
-| Command             | Description                         |
-| :------------------ | :---------------------------------- |
-| `/fixembed`         | Configure social-media embed fixing |
-| `/setlog <channel>` | Set the server log channel          |
-| `/anime`            | Anime schedule and info (Jikan)     |
-| `/help`             | Open the help menu                  |
+| Command             | Description                              |
+| :------------------ | :--------------------------------------- |
+| `/fixembed`         | Configure social-media embed fixing      |
+| `/setlog <channel>` | Set the server log channel               |
+| `/anime`            | Anime schedule and info (Jikan)          |
+| `/donate`           | Dukung perkembangan bot dengan berdonasi |
+| `/help`             | Open the help menu                       |
 
 </details>
 
@@ -298,7 +296,7 @@ Distributed under the **Apache 2.0** License. See [LICENSE](./LICENSE) for detai
 
 <br />
 
-<sub>Built with ❤️ by <a href="https://github.com/kenewjr">@kenewjr</a> · <a href="https://discord.gg/qeemvqq">Join the Discord</a></sub>
+<sub>Built with ❤️ by <a href="https://github.com/kenewjr">@kenewjr</a></sub>
 
 <img src="https://capsule-render.vercel.app/api?type=waving&height=80&section=footer&color=0:ec4899,50:8b5cf6,100:6366f1" />
 

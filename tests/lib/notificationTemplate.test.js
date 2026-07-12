@@ -1,7 +1,7 @@
 const {
   buildContent,
   renderTemplate,
-} = require("../src/lib/notificationTemplate");
+} = require("../../src/lib/notificationTemplate");
 
 describe("notificationTemplate", () => {
   test("renderTemplate substitutes known placeholders and blanks unknown", () => {

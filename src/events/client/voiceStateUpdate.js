@@ -7,6 +7,8 @@ const logger = new Logger("VOICE_STATE");
 
 const XP_PER_MINUTE = 10;
 const MIN_DURATION = 60000; // 1 minute
+const xpDebounce = new Map(); // memberId -> timeoutId
+const XP_DEBOUNCE_MS = 500;
 
 module.exports = async (client, oldState, newState) => {
   if (newState.member?.user?.bot) return;
@@ -35,15 +37,22 @@ module.exports = async (client, oldState, newState) => {
         const xpToAdd = minutes * XP_PER_MINUTE;
 
         if (xpToAdd > 0) {
-          try {
-            await client.levelStorage.addXp(
-              oldState.member.id,
-              oldState.guild.id,
-              xpToAdd,
-            );
-          } catch (error) {
-            logger.error(`Error adding voice XP: ${error.message}`);
+          const memberId = oldState.member.id;
+          const guildId = oldState.guild.id;
+          if (xpDebounce.has(memberId)) {
+            clearTimeout(xpDebounce.get(memberId));
           }
+          xpDebounce.set(
+            memberId,
+            setTimeout(async () => {
+              xpDebounce.delete(memberId);
+              try {
+                await client.levelStorage.addXp(memberId, guildId, xpToAdd);
+              } catch (error) {
+                logger.error(`Error adding voice XP: ${error.message}`);
+              }
+            }, XP_DEBOUNCE_MS),
+          );
         }
       }
     }

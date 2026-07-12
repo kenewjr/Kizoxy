@@ -449,31 +449,59 @@ router.get("/:id/level", async (req, res) => {
 
     const { nextLevelXp } = require("../helpers/guildData");
     const list = await client.levelStorage.getLeaderboard(id);
-    const skipNames = guild.memberCount > 50;
+    const top10raw = list.slice(0, 10);
+    const userIds = top10raw.map((u) => u.userId);
 
-    const top10 = list.slice(0, 10).map((user, idx) => {
-      let server_name = null;
-      let global_name = null;
-      if (!skipNames) {
-        const member = guild.members.cache.get(user.userId);
+    let fetchedMembers = new Map();
+    if (userIds.length > 0) {
+      try {
+        const fetched = await guild.members.fetch({
+          user: userIds,
+          withPresences: false,
+          force: false,
+        });
+        fetchedMembers = fetched;
+      } catch (e) {
+        logger.debug(
+          `Member batch fetch failed for leaderboard in guild ${id}: ${e.message}`,
+        );
+      }
+    }
+
+    const top10 = await Promise.all(
+      top10raw.map(async (user, idx) => {
+        let server_name = null;
+        let global_name = null;
+        const member = fetchedMembers.get(user.userId);
         if (member) {
           server_name = member.displayName;
           global_name = member.user.globalName ?? member.user.username;
+        } else {
+          try {
+            const u =
+              client.users.cache.get(user.userId) ||
+              (await client.users.fetch(user.userId).catch(() => null));
+            if (u) {
+              server_name = u.globalName ?? u.username;
+              global_name = u.username;
+            }
+          } catch (_) {}
         }
-      }
-      const next_xp = nextLevelXp(user.level, user.xp);
-      return {
-        rank: idx + 1,
-        user_id: user.userId,
-        userId: user.userId,
-        server_name,
-        global_name,
-        xp: user.xp,
-        level: user.level,
-        next_xp,
-        xp_to_next: Math.max(0, next_xp - user.xp),
-      };
-    });
+
+        const next_xp = nextLevelXp(user.level, user.xp);
+        return {
+          rank: idx + 1,
+          user_id: user.userId,
+          userId: user.userId,
+          server_name,
+          global_name,
+          xp: user.xp,
+          level: user.level,
+          next_xp,
+          xp_to_next: Math.max(0, next_xp - user.xp),
+        };
+      }),
+    );
 
     res.json({
       level_top10: top10,

@@ -1,5 +1,5 @@
-const donateSlash = require("../src/commands/slash/misc/Donate");
-const donatePrefix = require("../src/commands/prefix/misc/donate");
+const donateSlash = require("../../../src/commands/slash/misc/Donate");
+const donatePrefix = require("../../../src/commands/prefix/misc/donate");
 
 describe("donate command", () => {
   let mockClient;

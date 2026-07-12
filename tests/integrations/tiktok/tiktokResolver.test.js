@@ -1,7 +1,7 @@
 const {
   resolveProfile,
   RESOLVE_ERROR,
-} = require("../src/integrations/tiktok/resolver");
+} = require("../../../src/integrations/tiktok/resolver");
 
 describe("tiktok resolver", () => {
   test("full profile URL extracts normalized username", () => {

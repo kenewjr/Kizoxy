@@ -5,7 +5,7 @@ const {
   validateMusicContext,
   scheduleAutoDelete,
   buildMusicControlRow,
-} = require("../src/features/music/musicHelper");
+} = require("../../../src/features/music/musicHelper");
 
 describe("musicHelper", () => {
   describe("constants", () => {

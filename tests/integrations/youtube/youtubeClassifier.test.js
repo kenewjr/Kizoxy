@@ -1,18 +1,25 @@
-jest.mock("axios");
-const axios = require("axios");
-
 const {
   classify,
   parseIsoDurationToSeconds,
-} = require("../src/integrations/youtube/classifier");
+} = require("../../../src/integrations/youtube/classifier");
 
 describe("youtube classifier", () => {
-  beforeEach(() => jest.clearAllMocks());
+  let originalFetch;
+  beforeAll(() => {
+    originalFetch = global.fetch;
+  });
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+  });
 
   test("liveBroadcastContent live → live (no Shorts probe)", async () => {
     const item = { id: "v1", snippet: { liveBroadcastContent: "live" } };
     await expect(classify(item)).resolves.toBe("live");
-    expect(axios.get).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test("liveBroadcastContent upcoming → upcoming", async () => {
@@ -21,7 +28,10 @@ describe("youtube classifier", () => {
   });
 
   test("Shorts probe resolving 200 → short", async () => {
-    axios.get.mockResolvedValueOnce({ status: 200, headers: {} });
+    global.fetch.mockResolvedValueOnce({
+      status: 200,
+      headers: { get: () => "" },
+    });
     const item = {
       id: "v3",
       snippet: { liveBroadcastContent: "none" },
@@ -31,9 +41,9 @@ describe("youtube classifier", () => {
   });
 
   test("Shorts probe redirect to /watch → video", async () => {
-    axios.get.mockResolvedValueOnce({
+    global.fetch.mockResolvedValueOnce({
       status: 303,
-      headers: { location: "https://www.youtube.com/watch?v=v4" },
+      headers: { get: () => "https://www.youtube.com/watch?v=v4" },
     });
     const item = {
       id: "v4",
@@ -44,7 +54,7 @@ describe("youtube classifier", () => {
   });
 
   test("inconclusive probe + short duration → short (fallback)", async () => {
-    axios.get.mockRejectedValueOnce(new Error("network"));
+    global.fetch.mockRejectedValueOnce(new Error("network"));
     const item = {
       id: "v5",
       snippet: { liveBroadcastContent: "none" },
@@ -54,7 +64,7 @@ describe("youtube classifier", () => {
   });
 
   test("inconclusive probe + long duration → video (fallback)", async () => {
-    axios.get.mockRejectedValueOnce(new Error("network"));
+    global.fetch.mockRejectedValueOnce(new Error("network"));
     const item = {
       id: "v6",
       snippet: { liveBroadcastContent: "none" },

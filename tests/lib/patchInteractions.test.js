@@ -1,4 +1,4 @@
-const { patchInteraction } = require("../src/lib/patchInteractions");
+const { patchInteraction } = require("../../src/lib/patchInteractions");
 
 describe("patchInteractions", () => {
   let mockPrototype;

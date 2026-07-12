@@ -5,7 +5,7 @@ const {
   FX_EMBED_SUBDOMAIN,
   TIKTOK_SUBDOMAIN,
   isSpoiler,
-} = require("../src/features/fixembed/fixembedResolverHelper");
+} = require("../../../src/features/fixembed/fixembedResolverHelper");
 
 describe("fixembedResolverHelper", () => {
   describe("URL_REGEX", () => {

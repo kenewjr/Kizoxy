@@ -79,3 +79,91 @@ function colorizeLog(content) {
     )
     .join("");
 }
+
+function renderSearchableSelect(
+  id,
+  items,
+  placeholder,
+  selectedValue,
+  onchangeAttr,
+) {
+  const selectedItem = items.find(
+    (item) => String(item.id) === String(selectedValue || ""),
+  );
+  const selectedName = selectedItem ? selectedItem.name : "";
+  const selectedVal = selectedItem ? selectedItem.id : "";
+
+  return `
+    <div class="searchable-select" id="select-container-${id}" style="position:relative">
+      <input class="input" id="${id}-search" placeholder="${placeholder}" value="${escAttr(selectedName)}" autocomplete="off" onclick="toggleDropdown('${id}')" oninput="filterDropdown('${id}')" style="padding-right:30px">
+      <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--text-3)">▼</span>
+      <input type="hidden" id="${id}" value="${selectedVal}" ${onchangeAttr ? `onchange="${onchangeAttr}"` : ""}>
+      <div class="dropdown-options" id="${id}-options" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1000; max-height:180px; overflow-y:auto; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); margin-top:4px; box-shadow:0 4px 12px rgba(0,0,0,0.5)">
+        <div class="dropdown-option" data-value="" data-search="none" onclick="selectDropdownOption('${id}', '', 'None / Belum diatur')" style="padding:8px 12px; cursor:pointer; color:var(--text-3); border-bottom:1px solid var(--border-light); font-style:italic" onmouseenter="this.style.background='var(--bg-3)'" onmouseleave="this.style.background=''">
+          None / Belum diatur
+        </div>
+        ${items
+          .map(
+            (item) => `
+          <div class="dropdown-option" data-value="${item.id}" data-search="${escAttr(item.name)}" onclick="selectDropdownOption('${id}', '${item.id}', '${escAttr(item.name)}')" style="padding:8px 12px; cursor:pointer; color:var(--text-1); border-bottom:1px solid var(--border-light)" onmouseenter="this.style.background='var(--bg-3)'" onmouseleave="this.style.background=''">
+            ${item.color ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${item.color}; margin-right:8px"></span>` : ""}
+            ${esc(item.name)}
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+window.toggleDropdown = function (id) {
+  document.querySelectorAll(".dropdown-options").forEach((el) => {
+    if (el.id !== `${id}-options`) el.style.display = "none";
+  });
+  const el = document.getElementById(`${id}-options`);
+  if (el) {
+    el.style.display = el.style.display === "none" ? "block" : "none";
+  }
+};
+
+window.filterDropdown = function (id) {
+  const searchInput = document.getElementById(`${id}-search`);
+  if (!searchInput) return;
+  const filter = searchInput.value.toLowerCase();
+  const optionsContainer = document.getElementById(`${id}-options`);
+  if (optionsContainer) {
+    optionsContainer.style.display = "block";
+    const options = optionsContainer.getElementsByClassName("dropdown-option");
+    for (let i = 0; i < options.length; i++) {
+      const txtValue = options[i].getAttribute("data-search") || "";
+      if (txtValue.toLowerCase().indexOf(filter) > -1) {
+        options[i].style.display = "";
+      } else {
+        options[i].style.display = "none";
+      }
+    }
+  }
+};
+
+window.selectDropdownOption = function (id, value, name) {
+  const searchInput = document.getElementById(`${id}-search`);
+  const hiddenInput = document.getElementById(id);
+  const optionsContainer = document.getElementById(`${id}-options`);
+  if (searchInput && hiddenInput && optionsContainer) {
+    searchInput.value = name;
+    hiddenInput.value = value;
+    optionsContainer.style.display = "none";
+
+    const event = new Event("change", { bubbles: true });
+    hiddenInput.dispatchEvent(event);
+  }
+};
+
+document.addEventListener("click", function (e) {
+  if (!e.target.closest(".searchable-select")) {
+    document.querySelectorAll(".dropdown-options").forEach((el) => {
+      el.style.display = "none";
+    });
+  }
+});

@@ -6,7 +6,7 @@ jest.mock("shoukaku", () => ({
   Constants: { State: { CONNECTED: 2, CONNECTING: 1, DISCONNECTED: 0 } },
 }));
 
-jest.mock("../src/lib/logger", () => {
+jest.mock("../../../src/lib/logger", () => {
   return jest.fn().mockImplementation(() => ({
     info: jest.fn(),
     success: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock("../src/lib/logger", () => {
   }));
 });
 
-const playLogic = require("../src/features/music/playLogic");
+const playLogic = require("../../../src/features/music/playLogic");
 
 const CONNECTED = Constants.State.CONNECTED;
 const CONNECTING = Constants.State.CONNECTING;

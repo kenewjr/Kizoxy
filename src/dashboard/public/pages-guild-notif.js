@@ -7,6 +7,7 @@ async function renderYouTube(el, guildId) {
   el.innerHTML = '<div class="skeleton" style="height:200px"></div>';
   try {
     const subs = await api.get(`/guilds/${guildId}/youtube`);
+    const g = state.currentGuild;
     el.innerHTML = `
       <div class="card" style="padding:0;overflow-x:auto">
         <table class="table" id="yt-table">
@@ -20,10 +21,10 @@ async function renderYouTube(el, guildId) {
         <div class="collapsible-body">
           <div class="form-row">
             <div class="form-group" style="flex:1"><label>Channel URL / @handle / UC... ID</label><input class="input" id="yt-channel-input"></div>
-            <div class="form-group" style="flex:1"><label>Announce Channel ID</label><input class="input" id="yt-announce-id" placeholder="e.g. 1234..."></div>
+            <div class="form-group" style="flex:1"><label>Announce Channel ID</label>${renderSearchableSelect("yt-announce-id", g.channels || [], "Search channel...", "")}</div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex:1"><label>Mention Role ID (optional)</label><input class="input" id="yt-mention-id" placeholder="e.g. 1234... or blank" oninput="updateMsgPreview('yt-custom-msg','yt-mention-id','yt-add-preview','🔔 {name} uploaded a new {type}!\n{title}\n{url}')"></div>
+            <div class="form-group" style="flex:1"><label>Mention Role ID (optional)</label>${renderSearchableSelect("yt-mention-id", [...(g.roles || []).map((r) => ({ id: r.id, name: r.name, color: r.color })), ...(g.members || []).map((m) => ({ id: m.id, name: `${m.name} (${m.tag})` }))], "Search role or member...", "", "updateMsgPreview('yt-custom-msg','yt-mention-id','yt-add-preview','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')")}</div>
           </div>
           <div class="form-row">
             <div class="form-group" style="flex:1">
@@ -61,6 +62,7 @@ async function renderYouTube(el, guildId) {
 }
 
 function ytRow(s, guildId) {
+  const g = state.currentGuild;
   return `<tr id="yt-row-${s.id}">
     <td>${esc(s.youtubeChannelTitle || "")}</td>
     <td style="font-family:var(--font-mono);font-size:12px">${esc(s.youtubeChannelId || "")}</td>
@@ -77,7 +79,7 @@ function ytRow(s, guildId) {
   <tr id="yt-edit-${s.id}" style="display:none">
     <td colspan="8" style="background:var(--bg-2)">
       <div class="form-row">
-        <div class="form-group" style="flex:1"><label>Mention Role ID</label><input class="input" id="yt-edit-mention-${s.id}" value="${escAttr(s.mentionRoleId || "")}" placeholder="blank = no ping" oninput="updateMsgPreview('yt-edit-msg-${s.id}','yt-edit-mention-${s.id}','yt-edit-preview-${s.id}','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')"></div>
+        <div class="form-group" style="flex:1"><label>Mention Role ID</label>${renderSearchableSelect("yt-edit-mention-" + s.id, [...(g.roles || []).map((r) => ({ id: r.id, name: r.name, color: r.color })), ...(g.members || []).map((m) => ({ id: m.id, name: `${m.name} (${m.tag})` }))], "Search role or member...", s.mentionRoleId, "updateMsgPreview('yt-edit-msg-" + s.id + "','yt-edit-mention-" + s.id + "','yt-edit-preview-" + s.id + "','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')")}</div>
         <div class="form-group" style="flex:2">
           <label>Custom Message</label>
           <textarea class="input" id="yt-edit-msg-${s.id}" rows="3" maxlength="500" placeholder="{role} {name} uploaded {title} {url}" oninput="updateMsgPreview('yt-edit-msg-${s.id}','yt-edit-mention-${s.id}','yt-edit-preview-${s.id}','🔔 {name} uploaded a new {type}!\\n{title}\\n{url}')" style="resize:vertical; min-height:60px; font-family:inherit;">${esc(s.customMessage || "")}</textarea>
@@ -202,6 +204,7 @@ async function renderTikTok(el, guildId) {
   el.innerHTML = '<div class="skeleton" style="height:200px"></div>';
   try {
     const subs = await api.get(`/guilds/${guildId}/tiktok`);
+    const g = state.currentGuild;
     const dismissed = sessionStorage.getItem("tt-info-dismissed");
     const infoBanner = dismissed
       ? ""
@@ -224,10 +227,10 @@ async function renderTikTok(el, guildId) {
         <div class="collapsible-body">
           <div class="form-row">
             <div class="form-group" style="flex:1"><label>Username or Profile URL</label><input class="input" id="tt-username-input"></div>
-            <div class="form-group" style="flex:1"><label>Announce Channel ID</label><input class="input" id="tt-announce-id" placeholder="e.g. 1234..."></div>
+            <div class="form-group" style="flex:1"><label>Announce Channel ID</label>${renderSearchableSelect("tt-announce-id", g.channels || [], "Search channel...", "")}</div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex:1"><label>Mention Role ID (optional)</label><input class="input" id="tt-mention-id" placeholder="e.g. 1234... or blank" oninput="updateMsgPreview('tt-custom-msg','tt-mention-id','tt-add-preview','🎵 {name} posted a new {type}!\n{url}')"></div>
+            <div class="form-group" style="flex:1"><label>Mention Role ID (optional)</label>${renderSearchableSelect("tt-mention-id", [...(g.roles || []).map((r) => ({ id: r.id, name: r.name, color: r.color })), ...(g.members || []).map((m) => ({ id: m.id, name: `${m.name} (${m.tag})` }))], "Search role or member...", "", "updateMsgPreview('tt-custom-msg','tt-mention-id','tt-add-preview','🎵 {name} posted a new {type}!\\n{url}')")}</div>
           </div>
           <div class="form-row">
             <div class="form-group" style="flex:1">
@@ -262,6 +265,7 @@ async function renderTikTok(el, guildId) {
 }
 
 function ttRow(s, guildId) {
+  const g = state.currentGuild;
   return `<tr id="tt-row-${s.id}">
     <td>@${esc(s.username || "")}</td>
     <td style="font-family:var(--font-mono);font-size:12px">${esc(s.discordChannelId || "")}</td>
@@ -275,7 +279,7 @@ function ttRow(s, guildId) {
   <tr id="tt-edit-${s.id}" style="display:none">
     <td colspan="5" style="background:var(--bg-2)">
       <div class="form-row">
-        <div class="form-group" style="flex:1"><label>Mention Role ID</label><input class="input" id="tt-edit-mention-${s.id}" value="${escAttr(s.mentionRoleId || "")}" placeholder="blank = no ping" oninput="updateMsgPreview('tt-edit-msg-${s.id}','tt-edit-mention-${s.id}','tt-edit-preview-${s.id}','🎵 {name} posted a new {type}!\\n{url}')"></div>
+        <div class="form-group" style="flex:1"><label>Mention Role ID</label>${renderSearchableSelect("tt-edit-mention-" + s.id, [...(g.roles || []).map((r) => ({ id: r.id, name: r.name, color: r.color })), ...(g.members || []).map((m) => ({ id: m.id, name: `${m.name} (${m.tag})` }))], "Search role or member...", s.mentionRoleId, "updateMsgPreview('tt-edit-msg-" + s.id + "','tt-edit-mention-" + s.id + "','tt-edit-preview-" + s.id + "','🎵 {name} posted a new {type}!\\n{url}')")}</div>
         <div class="form-group" style="flex:2">
           <label>Custom Message</label>
           <textarea class="input" id="tt-edit-msg-${s.id}" rows="3" maxlength="500" placeholder="{role} {name} posted {url}" oninput="updateMsgPreview('tt-edit-msg-${s.id}','tt-edit-mention-${s.id}','tt-edit-preview-${s.id}','🎵 {name} posted a new {type}!\\n{url}')" style="resize:vertical; min-height:60px; font-family:inherit;">${esc(s.customMessage || "")}</textarea>

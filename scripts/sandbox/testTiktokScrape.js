@@ -1,13 +1,10 @@
-/* eslint-disable no-console */
-const axios = require("axios");
-
 async function main() {
   const username = "mrbeast";
   const url = `https://www.tiktok.com/@${username}`;
   console.log(`Fetching ${url}...`);
 
   try {
-    const res = await axios.get(url, {
+    const res = await fetch(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -20,11 +17,12 @@ async function main() {
     });
 
     console.log("Status:", res.status);
-    console.log("Headers:", Object.keys(res.headers));
-    console.log("HTML length:", res.data.length);
+    console.log("Headers:", Array.from(res.headers.keys()));
+    const data = await res.text();
+    console.log("HTML length:", data.length);
 
     // Try to find __UNIVERSAL_DATA_FOR_REHYDRATION__
-    const matchRehydration = res.data.match(
+    const matchRehydration = data.match(
       /<script\s+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"\s+type="application\/json">([\s\S]*?)<\/script>/,
     );
     if (matchRehydration) {
@@ -43,7 +41,7 @@ async function main() {
     }
 
     // Try to find SIGI_STATE
-    const matchSigi = res.data.match(
+    const matchSigi = data.match(
       /window\['SIGI_STATE'\]\s*=\s*(\{[\s\S]*?\});/,
     );
     if (matchSigi) {
@@ -59,10 +57,6 @@ async function main() {
     }
   } catch (err) {
     console.error("Fetch failed:", err.message);
-    if (err.response) {
-      console.error("Status:", err.response.status);
-      console.error("Data excerpt:", err.response.data.slice(0, 1000));
-    }
   }
 }
 

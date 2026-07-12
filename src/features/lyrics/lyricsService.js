@@ -1,7 +1,4 @@
-const axios = require("axios");
 const NodeCache = require("node-cache");
-const http = require("http");
-const https = require("https");
 const Logger = require("../../lib/logger");
 const { convertLyricsToRomaji, isJapanese } = require("./romajiConverter");
 const { searchLRCLIB } = require("./lrclibClient");
@@ -50,26 +47,6 @@ function getCacheStats() {
   return { ...lyricsCache.getStats(), keys: lyricsCache.keys().length };
 }
 
-const httpAgent = new http.Agent({
-  keepAlive: true,
-  maxSockets: 10,
-  maxFreeSockets: 5,
-  timeout: TIMEOUT_MS,
-});
-
-const httpsAgent = new https.Agent({
-  keepAlive: true,
-  maxSockets: 10,
-  maxFreeSockets: 5,
-  timeout: TIMEOUT_MS,
-});
-
-const axiosInstance = axios.create({
-  httpAgent,
-  httpsAgent,
-  timeout: TIMEOUT_MS,
-});
-
 function _sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -104,11 +81,12 @@ const _resolvers = [
 
       logger.info(`LavalinkLrclib: fetching from ${url}`);
 
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
-        const response = await axiosInstance.get(url, {
+        const response = await fetch(url, {
           headers: { Authorization: LAVALINK_PASSWORD },
-          timeout: TIMEOUT_MS,
-          validateStatus: () => true,
+          signal: controller.signal,
         });
 
         if (response.status < 200 || response.status >= 300) {
@@ -118,26 +96,27 @@ const _resolvers = [
           return null;
         }
 
-        if (!response.data?.text) {
+        const data = await response.json();
+        if (!data?.text) {
           logger.warning("LavalinkLrclib: empty lyrics text in response");
           return null;
         }
 
         logger.success(
-          `LavalinkLrclib: found | source=${response.data.source} | len=${response.data.text.length}`,
+          `LavalinkLrclib: found | source=${data.source} | len=${data.text.length}`,
         );
 
         return {
-          source: response.data.source || "lrclib",
-          text: response.data.text,
-          lines: response.data.lines || [],
-          hasSyncedLyrics:
-            Array.isArray(response.data.lines) &&
-            response.data.lines.length > 0,
+          source: data.source || "lrclib",
+          text: data.text,
+          lines: data.lines || [],
+          hasSyncedLyrics: Array.isArray(data.lines) && data.lines.length > 0,
         };
       } catch (error) {
         logger.warning(`LavalinkLrclib: request failed — ${error.message}`);
         return null;
+      } finally {
+        clearTimeout(timer);
       }
     },
   },

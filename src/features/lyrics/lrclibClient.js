@@ -1,4 +1,3 @@
-const axios = require("axios");
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("LRCLIB");
@@ -86,42 +85,57 @@ function _pickBest(results, trackName, artistName, durationSec) {
 
 async function _get(trackName, artistName, durationSec) {
   if (!trackName || !artistName) return null;
+  const url = new URL(`${LRCLIB_API}/get`);
+  url.searchParams.set("track_name", trackName);
+  url.searchParams.set("artist_name", artistName);
+  if (durationSec)
+    url.searchParams.set("duration", String(Math.floor(durationSec)));
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const params = { track_name: trackName, artist_name: artistName };
-    if (durationSec) params.duration = Math.floor(durationSec);
-
-    const res = await axios.get(`${LRCLIB_API}/get`, {
-      params,
+    const res = await fetch(url.toString(), {
       headers: LRCLIB_HEADERS,
-      timeout: REQUEST_TIMEOUT_MS,
-      validateStatus: (s) => s < 500,
+      signal: controller.signal,
     });
-
-    if (
-      res.status === 200 &&
-      res.data &&
-      (res.data.plainLyrics || res.data.syncedLyrics)
-    ) {
-      return res.data;
+    if (res.status >= 500) return null;
+    if (res.status === 200) {
+      const data = await res.json();
+      if (data && (data.plainLyrics || data.syncedLyrics)) {
+        return data;
+      }
     }
     return null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 async function _search(params) {
+  const url = new URL(`${LRCLIB_API}/search`);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await axios.get(`${LRCLIB_API}/search`, {
-      params,
+    const res = await fetch(url.toString(), {
       headers: LRCLIB_HEADERS,
-      timeout: REQUEST_TIMEOUT_MS,
-      validateStatus: (s) => s < 500,
+      signal: controller.signal,
     });
-    if (res.status === 200 && Array.isArray(res.data)) return res.data;
+    if (res.status >= 500) return [];
+    if (res.status === 200) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
     return [];
   } catch {
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
 

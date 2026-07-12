@@ -1,9 +1,9 @@
-const { backoffMs } = require("../src/integrations/tiktok/scheduler");
-const { _normalize } = require("../src/integrations/tiktok/client");
+const { backoffMs } = require("../../../src/integrations/tiktok/scheduler");
+const { _normalize } = require("../../../src/integrations/tiktok/client");
 const {
   TIKTOK_BACKOFF_BASE_MS,
   TIKTOK_BACKOFF_MAX_MS,
-} = require("../src/config/constants");
+} = require("../../../src/config/constants");
 
 describe("tiktok scheduler backoff", () => {
   test("no failures = no wait", () => {

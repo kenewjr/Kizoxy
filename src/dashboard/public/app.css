@@ -696,11 +696,65 @@ body {
   border-color: var(--accent);
 }
 
-/* ── Mobile ── */
+/* ── Responsive Rules ── */
+#sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: var(--text-1);
+  cursor: pointer;
+  padding: 8px;
+  margin-right: 8px;
+}
+
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  body {
+    grid-template-columns: 60px 1fr;
+  }
+  #sidebar {
+    width: 60px;
+  }
+  #sidebar .bot-meta,
+  #sidebar #sidebar-footer,
+  #sidebar #sidebar-filter-container,
+  #sidebar .nav-label {
+    display: none !important;
+  }
+  .nav-link {
+    justify-content: center;
+    padding: 12px 0;
+  }
+  .nav-icon {
+    font-size: 18px;
+  }
+}
+
 @media (max-width: 768px) {
   body {
     grid-template-columns: 1fr;
   }
+
+  body.sidebar-open #sidebar-overlay {
+    display: block;
+  }
+
+  body.sidebar-open #sidebar {
+    transform: translateX(0);
+  }
+
   #sidebar {
     position: fixed;
     left: 0;
@@ -708,23 +762,49 @@ body {
     width: var(--sidebar-w);
     transform: translateX(-100%);
     transition: transform 200ms ease;
+    z-index: 1000;
   }
-  #sidebar.open {
-    transform: translateX(0);
-  }
+
   #sidebar-toggle {
     display: block;
   }
+
   .logs-layout {
     flex-direction: column;
     height: auto;
   }
+
   .logs-filelist {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding-right: 0;
     padding-bottom: 8px;
+  }
+
+  .stat-row {
+    flex-direction: column;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+
+  .table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-header {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
   }
 }
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // One-off dry-run: fetch a TikTok profile, resolve its username, fetch details,
 // and print what would be announced — without touching storage or posting to Discord.
 //

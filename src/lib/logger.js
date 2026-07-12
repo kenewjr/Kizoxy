@@ -73,8 +73,10 @@ class Logger {
       };
       if (level === "error") {
         console.error(JSON.stringify(entry));
-      } else {
+      } else if (level === "warning") {
         console.warn(JSON.stringify(entry));
+      } else {
+        console.log(JSON.stringify(entry));
       }
       return;
     }
@@ -110,8 +112,10 @@ class Logger {
 
     if (level === "error") {
       console.error(formatted);
-    } else {
+    } else if (level === "warning") {
       console.warn(formatted);
+    } else {
+      console.log(formatted);
     }
   }
 

@@ -69,7 +69,7 @@ afterAll(() => {
 });
 
 // ── Build app ──
-const createDashboard = require("../src/dashboard/server");
+const createDashboard = require("../../src/dashboard/server");
 const app = createDashboard(mockClient);
 
 describe("Dashboard API", () => {
@@ -247,7 +247,7 @@ describe("Dashboard API", () => {
 
 // ── Notification Content String Tests ──
 describe("YouTube notification content strings", () => {
-  const { BADGES } = require("../src/integrations/youtube/formatter");
+  const { BADGES } = require("../../src/integrations/youtube/formatter");
 
   it("BADGES has live type", () => {
     expect(BADGES.live.label).toContain("LIVE");
@@ -286,7 +286,7 @@ describe("YouTube scheduler TYPE_TOGGLE", () => {
   // Can't directly access TYPE_TOGGLE, but we can verify via constructor
   it("YoutubeScheduler loads without error", () => {
     expect(() =>
-      require("../src/integrations/youtube/scheduler"),
+      require("../../src/integrations/youtube/scheduler"),
     ).not.toThrow();
   });
 });

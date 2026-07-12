@@ -17,6 +17,22 @@ router.get("/meta", async (req, res) => {
   }
 });
 
+// GET /api/health
+router.get("/health", (req, res) => {
+  const client = req.app.locals.client;
+  if (!client || !client.ws || client.ws.status !== 0) {
+    return res.status(503).json({
+      status: "unhealthy",
+      ws_status: client?.ws?.status ?? -1,
+      uptime_ms: process.uptime() * 1000,
+    });
+  }
+  return res.json({
+    status: "ok",
+    uptime_ms: process.uptime() * 1000,
+  });
+});
+
 // GET /api/stats
 router.get("/stats", async (req, res) => {
   try {
@@ -50,6 +66,7 @@ router.get("/stats", async (req, res) => {
     }
 
     const donateSeenStorage = require("../../persistence/donateSeenStorage");
+    const romajiConverter = require("../../features/lyrics/romajiConverter");
 
     res.json({
       guild_count: client.guilds.cache.size,
@@ -61,6 +78,7 @@ router.get("/stats", async (req, res) => {
       active_player_count: client.manager?.players?.size ?? 0,
       active_alarm_count: activeAlarmIds.size,
       donate_seen_count: donateSeenStorage.getSeenCount(),
+      romaji_cache: romajiConverter.getCacheStats(),
     });
   } catch (err) {
     logger.error(`GET /api/stats: ${err.message}`);
@@ -152,15 +170,18 @@ router.get("/updates", async (req, res) => {
       }),
     );
 
-    const axios = require("axios");
     const results = await Promise.allSettled(
       packagesList.map(async (p) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
         try {
-          const registryRes = await axios.get(
+          const registryRes = await fetch(
             `https://registry.npmjs.org/${encodeURIComponent(p.name)}/latest`,
-            { timeout: 5000 },
+            { signal: controller.signal },
           );
-          const latest = registryRes.data?.version ?? null;
+          if (!registryRes.ok) throw new Error(`HTTP ${registryRes.status}`);
+          const registryData = await registryRes.json();
+          const latest = registryData?.version ?? null;
           return {
             name: p.name,
             current: p.current,
@@ -178,6 +199,8 @@ router.get("/updates", async (req, res) => {
             outdated: false,
             error: true,
           };
+        } finally {
+          clearTimeout(timer);
         }
       }),
     );
@@ -245,7 +268,13 @@ router.patch("/bot/username", async (req, res) => {
 // PATCH /api/bot/presence
 router.patch("/bot/presence", async (req, res) => {
   try {
-    const { status, activity_type, activity_text } = req.body;
+    const {
+      status,
+      activity_type,
+      activity_text,
+      custom_activities,
+      pause_rotation,
+    } = req.body;
     const client = req.app.locals.client;
 
     const allowedStatuses = ["online", "idle", "dnd", "invisible"];
@@ -253,45 +282,91 @@ router.patch("/bot/presence", async (req, res) => {
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const allowedTypes = ["playing", "listening", "watching", "competing"];
-    if (activity_type && !allowedTypes.includes(activity_type)) {
-      return res.status(400).json({ error: "Invalid activity type" });
+    const fs = require("fs");
+    const path = require("path");
+    const overridesPath = path.join(
+      __dirname,
+      "../../../data/config_overrides.json",
+    );
+    const dir = path.dirname(overridesPath);
+
+    let currentOverrides = {};
+    if (fs.existsSync(overridesPath)) {
+      try {
+        currentOverrides = JSON.parse(fs.readFileSync(overridesPath, "utf8"));
+      } catch (_) {}
     }
 
-    if (
-      activity_text !== undefined &&
-      typeof activity_text === "string" &&
-      activity_text.length > 128
-    ) {
-      return res
-        .status(400)
-        .json({ error: "Activity text must be max 128 characters" });
+    if (status) {
+      currentOverrides.bot_status = status;
     }
 
+    if (custom_activities !== undefined) {
+      currentOverrides.custom_activities = custom_activities;
+    }
+
+    let rotation_paused = currentOverrides.rotation_paused ?? false;
+    if (pause_rotation !== undefined) {
+      rotation_paused = pause_rotation;
+    } else if (activity_text !== undefined) {
+      rotation_paused = true;
+    }
+
+    currentOverrides.rotation_paused = rotation_paused;
     const clientReady = require("../../events/client/clientReady");
-    clientReady.pausePresenceRotation();
+    if (rotation_paused) {
+      clientReady.pausePresenceRotation();
+    } else {
+      clientReady.resumePresenceRotation();
+    }
 
-    const { ActivityType } = require("discord.js");
-    const typeMap = {
-      playing: ActivityType.Playing,
-      listening: ActivityType.Listening,
-      watching: ActivityType.Watching,
-      competing: ActivityType.Competing,
-    };
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const tempPath = overridesPath + ".tmp";
+    fs.writeFileSync(
+      tempPath,
+      JSON.stringify(currentOverrides, null, 2),
+      "utf8",
+    );
+    fs.renameSync(tempPath, overridesPath);
 
-    const activities = activity_text
-      ? [{ name: activity_text, type: typeMap[activity_type ?? "playing"] }]
-      : [];
-
-    await client.user.setPresence({
-      status: status ?? "online",
-      activities,
-    });
+    // Apply presence immediately
+    const targetStatus = status ?? currentOverrides.bot_status ?? "online";
+    if (currentOverrides.rotation_paused) {
+      const { ActivityType } = require("discord.js");
+      const typeMap = {
+        playing: ActivityType.Playing,
+        listening: ActivityType.Listening,
+        watching: ActivityType.Watching,
+        competing: ActivityType.Competing,
+      };
+      const actText =
+        activity_text !== undefined
+          ? activity_text
+          : custom_activities?.[0]?.text || null;
+      const actType =
+        activity_type !== undefined
+          ? activity_type
+          : custom_activities?.[0]?.type || "playing";
+      const type = typeMap[actType];
+      await client.user.setPresence({
+        status: targetStatus,
+        activities: actText ? [{ name: actText, type }] : [],
+      });
+    } else {
+      await client.user.setPresence({
+        status: targetStatus,
+      });
+    }
 
     res.json({
-      status: status ?? "online",
-      activity: activity_text ?? null,
-      rotation_paused: true,
+      status: targetStatus,
+      activity:
+        activity_text !== undefined
+          ? activity_text
+          : custom_activities?.[0]?.text || null,
+      rotation_paused: !!currentOverrides.rotation_paused,
     });
   } catch (err) {
     logger.error(`PATCH /api/bot/presence: ${err.message}`);

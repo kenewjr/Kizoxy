@@ -40,6 +40,12 @@ module.exports = [
     },
   },
   {
+    files: ["src/lib/logger.js", "tests/**/*.js", "scripts/**/*.js"],
+    rules: {
+      "no-console": ["error", { allow: ["log", "warn", "error"] }],
+    },
+  },
+  {
     ignores: [
       "node_modules/",
       "data/",

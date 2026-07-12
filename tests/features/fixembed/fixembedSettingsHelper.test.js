@@ -15,7 +15,7 @@ const {
   clearAllRow,
   ignorePage,
   behaviorPage,
-} = require("../src/features/fixembed/fixembedSettingsHelper");
+} = require("../../../src/features/fixembed/fixembedSettingsHelper");
 
 const settings = {
   enabled: true,

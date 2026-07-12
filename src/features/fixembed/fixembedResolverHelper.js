@@ -1,19 +1,24 @@
-const axios = require("axios");
-
 const URL_REGEX = /https?:\/\/[^\s<>"\])\\']+/gi;
 async function resolveEmbedEZ(url) {
+  const targetUrl = new URL("https://embedez.com/api/v1/providers/combined");
+  targetUrl.searchParams.set("q", url);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await axios.get(
-      "https://embedez.com/api/v1/providers/combined",
-      {
-        params: { q: url },
-        timeout: 5000,
-      },
-    );
-    if (res.status === 200 && res.data?.data?.key) {
-      return `https://embedez.com/embed/${res.data.data.key}`;
+    const res = await fetch(targetUrl.toString(), {
+      signal: controller.signal,
+    });
+    if (res.status === 200) {
+      const data = await res.json();
+      if (data?.data?.key) {
+        return `https://embedez.com/embed/${data.data.key}`;
+      }
     }
-  } catch (_) {}
+  } catch (_) {
+  } finally {
+    clearTimeout(timer);
+  }
   return null;
 }
 const FX_EMBED_SUBDOMAIN = {

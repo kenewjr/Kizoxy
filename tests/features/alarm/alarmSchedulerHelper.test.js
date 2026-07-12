@@ -5,8 +5,8 @@ const {
   formatAlarmDateString,
   recurringText,
   buildScheduledEmbed,
-} = require("../src/features/alarm/alarmSchedulerHelper");
-const { COLORS } = require("../src/lib/embeds");
+} = require("../../../src/features/alarm/alarmSchedulerHelper");
+const { COLORS } = require("../../../src/lib/embeds");
 
 describe("alarmSchedulerHelper", () => {
   describe("safeSetTimeout", () => {

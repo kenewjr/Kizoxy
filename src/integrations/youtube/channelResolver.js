@@ -1,4 +1,3 @@
-const axios = require("axios");
 const Logger = require("../../lib/logger");
 const { YOUTUBE_HTTP_TIMEOUT_MS } = require("../../config/constants");
 
@@ -28,27 +27,45 @@ async function channelsList(params) {
   if (!key) {
     throw new Error("No YOUTUBE_API_KEY configured.");
   }
-  const res = await axios.get(`${API_BASE}/channels`, {
-    params: { ...params, part: "snippet", key },
-    timeout: YOUTUBE_HTTP_TIMEOUT_MS,
-  });
-  const item = res.data?.items?.[0];
-  if (!item) return null;
-  return {
-    youtubeChannelId: item.id,
-    youtubeChannelTitle: item.snippet?.title || item.id,
-  };
+  const url = new URL(`${API_BASE}/channels`);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
+  }
+  url.searchParams.set("part", "snippet");
+  url.searchParams.set("key", key);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), YOUTUBE_HTTP_TIMEOUT_MS);
+  try {
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const item = data?.items?.[0];
+    if (!item) return null;
+    return {
+      youtubeChannelId: item.id,
+      youtubeChannelTitle: item.snippet?.title || item.id,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Scraping fallback: YouTube exposes no cheap API for legacy /c/ custom URLs.
 // Also used as a fallback if the official API fails or is quota-exhausted.
 async function resolveFromPageHtml(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), YOUTUBE_HTTP_TIMEOUT_MS);
   try {
-    const res = await axios.get(url, {
+    const res = await fetch(url, {
       timeout: YOUTUBE_HTTP_TIMEOUT_MS,
       headers: { "User-Agent": "Mozilla/5.0" },
+      signal: controller.signal,
     });
-    const html = res.data || "";
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
 
     // Try multiple patterns — YouTube markup shifts periodically
     const match =
@@ -91,6 +108,8 @@ async function resolveFromPageHtml(url) {
   } catch (err) {
     logger.warning(`Page scrape resolve failed for ${url}: ${err.message}`);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

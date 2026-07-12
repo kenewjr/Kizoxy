@@ -1,5 +1,3 @@
-const axios = require("axios");
-
 const BASE_URL = "https://api.jikan.moe/v4";
 
 const SCHEDULE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -38,8 +36,17 @@ async function getSchedule(filter, { bypassCache = false } = {}) {
         : `${BASE_URL}/schedules?page=${page}&kids=${kids}`;
 
       console.warn(`   fetching page ${page}...`);
-      const response = await axios.get(url);
-      const { data, pagination } = response.data;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      let response;
+      try {
+        response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      } finally {
+        clearTimeout(timer);
+      }
+      const resJson = await response.json();
+      const { data, pagination } = resJson;
 
       if (data && Array.isArray(data)) {
         allAnime.push(...data);

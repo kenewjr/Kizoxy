@@ -1,4 +1,4 @@
-const sendmsg = require("../src/commands/slash/owner/sendmsg");
+const sendmsg = require("../../../src/commands/slash/owner/sendmsg");
 
 describe("owner sendmsg command", () => {
   let mockClient;

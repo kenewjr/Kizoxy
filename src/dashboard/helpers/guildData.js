@@ -49,6 +49,22 @@ async function getBotMeta(client) {
   const clientReady = require("../../events/client/clientReady");
   const presence = client.user?.presence;
 
+  const fs = require("fs");
+  const path = require("path");
+  const overridesPath = path.join(
+    __dirname,
+    "../../../data/config_overrides.json",
+  );
+  let custom_activities = [];
+  if (fs.existsSync(overridesPath)) {
+    try {
+      const overrides = JSON.parse(fs.readFileSync(overridesPath, "utf8"));
+      if (overrides.custom_activities) {
+        custom_activities = overrides.custom_activities;
+      }
+    } catch (_) {}
+  }
+
   return {
     bot_name: client.user?.username ?? "Kizoxy",
     bot_tag: client.user?.tag ?? "Kizoxy#0000",
@@ -67,6 +83,7 @@ async function getBotMeta(client) {
     presence_status: presence?.status ?? "online",
     presence_activity: presence?.activities?.[0]?.name ?? null,
     presence_activity_type: presence?.activities?.[0]?.type ?? 0,
+    custom_activities,
   };
 }
 
@@ -107,6 +124,49 @@ async function getGuildList(client) {
 async function getGuildDetail(client, guildId) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return null;
+
+  // Ensure members are fetched/cached
+  if (
+    guild.members &&
+    guild.members.cache &&
+    typeof guild.members.fetch === "function"
+  ) {
+    if (guild.members.cache.size < (guild.memberCount || 0)) {
+      await guild.members.fetch().catch(() => {});
+    }
+  }
+
+  const channels = guild.channels?.cache
+    ? [...guild.channels.cache.values()]
+        .filter((c) => typeof c.isTextBased === "function" && c.isTextBased())
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : [];
+
+  const roles = guild.roles?.cache
+    ? [...guild.roles.cache.values()]
+        .filter((r) => r.name !== "@everyone")
+        .map((r) => ({
+          id: r.id,
+          name: r.name,
+          color: r.hexColor,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : [];
+
+  const members = guild.members?.cache
+    ? [...guild.members.cache.values()]
+        .map((m) => ({
+          id: m.id,
+          name: m.displayName,
+          tag: m.user?.tag || "",
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : [];
 
   if (!client.levelStorage) {
     const LevelStorage = require("../../persistence/levelStorage");
@@ -163,6 +223,9 @@ async function getGuildDetail(client, guildId) {
     },
     alarms,
     level_top10: lb.slice(0, 10),
+    channels,
+    roles,
+    members,
   };
 }
 

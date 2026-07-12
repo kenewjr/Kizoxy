@@ -8,7 +8,7 @@ const {
   formatAlarmDate,
   recurringLabel,
   alarmStatus,
-} = require("../src/features/alarm/alarmFormatterHelper");
+} = require("../../../src/features/alarm/alarmFormatterHelper");
 
 describe("alarmFormatterHelper", () => {
   describe("constants", () => {
