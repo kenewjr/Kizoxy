@@ -16,7 +16,7 @@ function classifyLogLine(line) {
   }
   // Pretty format (dev): emoji prefixes
   if (line.includes("❌")) return "error";
-  if (line.includes("⚠")) return "warn";
+  if (line.includes("⚠") || line.includes("⚠️")) return "warn";
   if (line.includes("✅")) return "success";
   if (line.includes("🐛")) return "debug";
   return "info";
@@ -103,15 +103,15 @@ function renderSearchableSelect(
           None / Belum diatur
         </div>
         ${items
-          .map(
-            (item) => `
+      .map(
+        (item) => `
           <div class="dropdown-option" data-value="${item.id}" data-search="${escAttr(item.name)}" onclick="selectDropdownOption('${id}', '${item.id}', '${escAttr(item.name)}')" style="padding:8px 12px; cursor:pointer; color:var(--text-1); border-bottom:1px solid var(--border-light)" onmouseenter="this.style.background='var(--bg-3)'" onmouseleave="this.style.background=''">
             ${item.color ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${item.color}; margin-right:8px"></span>` : ""}
             ${esc(item.name)}
           </div>
         `,
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </div>
   `;
@@ -167,3 +167,74 @@ document.addEventListener("click", function (e) {
     });
   }
 });
+
+window.renderDiscordPreview = function(mountEl, options = {}) {
+  if (!mountEl) return;
+  const {
+    botName = "Kizoxy",
+    botAvatarUrl = "",
+    content = "",
+    imageUrl = "",
+    embed = null, // { title, description, imageUrl, color, footer }
+    memberCache = null
+  } = options;
+
+  const formatContent = (text) => {
+    if (!text) return "";
+    let formatted = esc(text);
+    formatted = formatted.replace(/&lt;@(\d+)&gt;/g, (match, id) => {
+      const name = memberCache && typeof memberCache.get === "function"
+        ? memberCache.get(id)
+        : null;
+      const label = name ? esc(name) : id;
+      return `<span class="discord-preview-mention" data-id="${id}">@${label}</span>`;
+    });
+    return formatted;
+  };
+
+  const getEmbedColor = (col) => {
+    if (!col) return "var(--accent)";
+    if (col.startsWith("#")) return col;
+    if (col.startsWith("var(")) return col;
+    return `#${col}`;
+  };
+
+  const hasContent = !!content && content !== "(empty message content)";
+  const hasEmbed = !!embed;
+  const hasPlainImage = !embed && !!imageUrl;
+
+  const embedHtml = hasEmbed ? `
+    <div class="discord-preview-embed" style="border-left-color: ${getEmbedColor(embed.color)}">
+      ${embed.title ? `<div class="discord-preview-embed-title">${formatContent(embed.title)}</div>` : ""}
+      <div class="discord-preview-embed-desc">${formatContent(embed.description)}</div>
+      ${embed.imageUrl ? `<img src="${esc(embed.imageUrl)}" class="discord-preview-image" onerror="this.style.display='none'">` : ""}
+      <div class="discord-preview-embed-footer">
+        <span>${esc(embed.footer || "Sent from Web Dashboard")}</span>
+        <span>•</span>
+        <span>Today at 12:00 PM</span>
+      </div>
+    </div>
+  ` : "";
+
+  const plainImageHtml = hasPlainImage ? `
+    <img src="${esc(imageUrl)}" class="discord-preview-image" onerror="this.style.display='none'">
+  ` : "";
+
+  mountEl.innerHTML = `
+    <div class="discord-preview-container">
+      <div style="display:flex; gap:16px;">
+        <img class="discord-preview-avatar" src="${esc(botAvatarUrl)}" onerror="this.style.display='none'">
+        <div style="flex:1;">
+          <div class="discord-preview-header">
+            <span class="discord-preview-botname">${esc(botName)}</span>
+            <span class="discord-preview-botbadge">BOT</span>
+            <span class="discord-preview-timestamp">Today at 12:00 PM</span>
+          </div>
+          ${hasContent ? `<div class="discord-preview-text">${formatContent(content)}</div>` : ""}
+          ${embedHtml}
+          ${plainImageHtml}
+        </div>
+      </div>
+    </div>
+  `;
+};

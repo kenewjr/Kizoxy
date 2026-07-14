@@ -5,14 +5,59 @@
 let logsAutoTail = true;
 let logsAutoTimer = null;
 let logsCurrentFile = null;
-let activeLogLevels = {
-  error: true,
-  warn: true,
-  success: true,
-  info: true,
-  debug: true,
-};
 let logsRawContent = "";
+
+function getLevelFromLine(line) {
+  const cls = classifyLogLine(line);
+  return cls === "warn" ? "WARN" : cls.toUpperCase();
+}
+
+window.logFilterState = function() {
+  return {
+    levels: [
+      { id: "ERROR", color: "var(--red)" },
+      { id: "WARN", color: "var(--yellow)" },
+      { id: "SUCCESS", color: "var(--green)" },
+      { id: "INFO", color: "var(--text-2)" },
+      { id: "DEBUG", color: "var(--blue)" }
+    ],
+    activeLevels: new Set(["ERROR", "WARN", "SUCCESS", "INFO", "DEBUG"]),
+    searchText: "",
+    counts: {},
+    visibleCount: 0,
+    totalCount: 0,
+    init() {
+      // Listen to log data updates
+      window.addEventListener("log-data-updated", (e) => {
+        this.counts = e.detail.level_counts || {};
+        this.totalCount = this.counts.TOTAL || 0;
+        this.applyFilter();
+      });
+    },
+    get allActive() {
+      return this.activeLevels.size === this.levels.length;
+    },
+    toggleLevel(id) {
+      if (id === "ALL") {
+        if (this.allActive) {
+          // keep at least one active
+        } else {
+          this.levels.forEach(l => this.activeLevels.add(l.id));
+        }
+      } else if (this.allActive) {
+        this.activeLevels = new Set([id]);
+      } else if (this.activeLevels.has(id)) {
+        if (this.activeLevels.size > 1) this.activeLevels.delete(id);
+      } else {
+        this.activeLevels.add(id);
+      }
+      this.$nextTick(() => this.applyFilter());
+    },
+    applyFilter() {
+      applyLogFilter(this.searchText, this.activeLevels);
+    }
+  };
+};
 
 async function renderLogs() {
   const content = document.getElementById("content");
@@ -21,15 +66,6 @@ async function renderLogs() {
     clearInterval(logsAutoTimer);
     logsAutoTimer = null;
   }
-
-  // Reset levels on fresh load
-  activeLogLevels = {
-    error: true,
-    warn: true,
-    success: true,
-    info: true,
-    debug: true,
-  };
 
   state.pageCleanup = () => {
     if (logsAutoTimer) {
@@ -58,23 +94,30 @@ async function renderLogs() {
                   ' <span class="badge badge--yellow" style="font-size:9px;padding:1px 3px;margin-left:4px;">⚠️ Large</span>';
               }
               return `<div class="logs-filelist-item" data-name="${esc(f.name)}" onclick="selectLogFile('${esc(f.name)}')">
-              ${esc(f.name)}
-              <div style="font-size:11px;color:${sizeColor};display:flex;align-items:center;">${esc(f.size_formatted || "0 B")}${sizeLabel}</div>
-            </div>`;
+                  ${esc(f.name)}
+                  <div style="font-size:11px;color:${sizeColor};display:flex;align-items:center;">${esc(f.size_formatted || "0 B")}${sizeLabel}</div>
+                </div>`;
             })
             .join("")}
           ${files.length === 0 ? '<div style="color:var(--text-3);padding:8px">No log files.</div>' : ""}
         </div>
         <div class="logs-content">
-          <div class="log-toolbar" id="log-toolbar" style="display:none">
-            <div style="display:flex;gap:4px;align-items:center;" id="log-level-filters">
-              <button class="btn btn--primary btn--sm" onclick="toggleLogLevelFilter('error', this)">Error</button>
-              <button class="btn btn--primary btn--sm" onclick="toggleLogLevelFilter('warn', this)">Warn</button>
-              <button class="btn btn--primary btn--sm" onclick="toggleLogLevelFilter('success', this)">Success</button>
-              <button class="btn btn--primary btn--sm" onclick="toggleLogLevelFilter('info', this)">Info</button>
-              <button class="btn btn--primary btn--sm" onclick="toggleLogLevelFilter('debug', this)">Debug</button>
+          <div x-data="logFilterState()" class="log-toolbar" id="log-toolbar" style="display:none">
+            <div class="log-level-filters" style="display:flex;gap:4px;align-items:center;">
+              <button @click="toggleLevel('ALL')"
+                      :class="{'btn--primary': allActive, 'btn--ghost': !allActive}"
+                      class="btn btn--sm">ALL</button>
+              <template x-for="level in levels" :key="level.id">
+                <button @click="toggleLevel(level.id)"
+                        :class="{'btn--primary': activeLevels.has(level.id), 'btn--ghost': !activeLevels.has(level.id)}"
+                        class="btn btn--sm"
+                        x-text="level.id + ' (' + (counts[level.id] ?? 0) + ')'">
+                </button>
+              </template>
             </div>
-            <input class="search-input" id="log-search" placeholder="Search..." oninput="applyLogFilter()" style="width:200px">
+            <input type="text" x-model.debounce.150ms="searchText"
+                   @input="applyFilter()" placeholder="Search logs..."
+                   class="search-input" style="width:200px">
             <select class="select" id="log-lines" style="width:100px" onchange="reloadLogFile()">
               <option value="200">200 lines</option>
               <option value="500">500 lines</option>
@@ -83,28 +126,22 @@ async function renderLogs() {
             <label style="font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:4px">
               Auto-tail ${toggleHtml("", logsAutoTail, 'id="log-autotail" onchange="toggleAutoTail(this.checked)"')}
             </label>
-            <span id="log-line-count" style="font-size:12px;color:var(--text-3);margin-left:auto"></span>
+            <span class="log-count" style="font-size:12px;color:var(--text-3);margin-left:auto" x-text="\`Showing \${visibleCount} / \${totalCount}\``"></span>
             <span id="log-paused" class="badge badge--yellow" style="display:none">⏸ Paused</span>
           </div>
           <div id="log-viewer-wrap"><div style="padding:20px;color:var(--text-3)">Select a log file to view.</div></div>
         </div>
       </div>`;
 
+    if (window.Alpine) {
+      window.Alpine.initTree(content);
+    }
+
     if (files.length > 0) selectLogFile(files[0].name);
   } catch {
     content.innerHTML =
       '<div class="card" style="color:var(--red)">Failed to load log files.</div>';
   }
-}
-
-function toggleLogLevelFilter(level, btn) {
-  activeLogLevels[level] = !activeLogLevels[level];
-  if (activeLogLevels[level]) {
-    btn.className = "btn btn--primary btn--sm";
-  } else {
-    btn.className = "btn btn--ghost btn--sm";
-  }
-  applyLogFilter();
 }
 
 async function selectLogFile(name) {
@@ -128,7 +165,11 @@ async function reloadLogFile() {
       `/logs/${encodeURIComponent(logsCurrentFile)}?tail=${tail}`,
     );
     logsRawContent = data.content || "";
-    applyLogFilter();
+    
+    const event = new CustomEvent("log-data-updated", {
+      detail: { level_counts: data.level_counts }
+    });
+    window.dispatchEvent(event);
   } catch {
     const wrap = document.getElementById("log-viewer-wrap");
     if (wrap)
@@ -137,20 +178,39 @@ async function reloadLogFile() {
   }
 }
 
-function applyLogFilter() {
-  const search =
-    document.getElementById("log-search")?.value?.toLowerCase() || "";
+function applyLogFilter(searchText = "", activeLevels = null) {
+  if (!activeLevels) {
+    const el = document.getElementById("log-toolbar");
+    if (el && window.Alpine) {
+      try {
+        const data = window.Alpine.$data(el);
+        if (data) {
+          activeLevels = data.activeLevels;
+          searchText = data.searchText;
+        }
+      } catch (_) {}
+    }
+  }
+
+  const search = (searchText || "").toLowerCase();
   const lines = logsRawContent.split("\n");
 
   const filtered = lines.filter((line) => {
-    const cls = classifyLogLine(line);
-    if (!activeLogLevels[cls]) return false;
+    if (!line.trim()) return false;
+    const lvl = getLevelFromLine(line);
+    if (activeLevels && !activeLevels.has(lvl)) return false;
     if (search && !line.toLowerCase().includes(search)) return false;
     return true;
   });
 
-  const lineCount = document.getElementById("log-line-count");
-  if (lineCount) lineCount.textContent = `Showing ${filtered.length} lines`;
+  const el = document.getElementById("log-toolbar");
+  if (el && window.Alpine) {
+    try {
+      const data = window.Alpine.$data(el);
+      if (data) data.visibleCount = filtered.length;
+    } catch (_) {}
+  }
+
   const html = filtered
     .map((line) => {
       const cls = classifyLogLine(line);
@@ -162,9 +222,8 @@ function applyLogFilter() {
   if (!wrap) return;
   const wasAtBottom = wrap.firstElementChild
     ? wrap.firstElementChild.scrollHeight -
-        wrap.firstElementChild.scrollTop -
-        wrap.firstElementChild.clientHeight <
-      80
+      wrap.firstElementChild.scrollTop -
+      wrap.firstElementChild.clientHeight < 80
     : true;
 
   wrap.innerHTML = `<div class="log-viewer">${html}</div>`;

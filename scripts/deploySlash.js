@@ -490,11 +490,16 @@ async function verifyDeployment(clientId, mode, guildId) {
   }
 }
 
-// ============================================
-// RUN THE SCRIPT
-// ============================================
+module.exports = {
+  loadAndValidateCommands,
+  cleanupExistingCommands,
+  deployCommands,
+  verifyDeployment
+};
 
-deploySlashCommands().catch((error) => {
-  console.error("💥 Fatal error:", error);
-  process.exit(1);
-});
+if (require.main === module) {
+  deploySlashCommands().catch((error) => {
+    console.error("💥 Fatal error:", error);
+    process.exit(1);
+  });
+}

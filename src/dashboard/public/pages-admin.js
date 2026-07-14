@@ -246,6 +246,52 @@ async function renderConfig() {
               </tbody>
             </table>
           </div>
+
+          <!-- Card: Deploy Slash Commands -->
+          <div x-data="deployPanel()" class="card mt-16" style="margin-top:16px;">
+            <div class="card-header" style="font-weight:600; font-size:14px; margin-bottom:12px;">Slash Commands Deploy</div>
+            <p style="font-size:12px; color:var(--text-3); margin-bottom:12px;">
+              Deploy slash commands to Discord. Use Guild scope for instant
+              updates during development, Global scope for production.
+            </p>
+
+            <div class="form-row" style="display:flex; gap:16px; margin-bottom:12px;">
+              <div class="form-group" style="flex:1;">
+                <label>Scope</label>
+                <select x-model="scope" class="select">
+                  <option value="global">Global (all servers, ~1h delay)</option>
+                  <option value="guild">Guild (instant, dev only)</option>
+                </select>
+              </div>
+              <div class="form-group" x-show="scope === 'guild'" style="flex:1;">
+                <label>Guild ID</label>
+                <input x-model="guildId" class="input" placeholder="Server ID">
+              </div>
+            </div>
+
+            <label class="checkbox-row" style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+              <input type="checkbox" x-model="clearFirst">
+              <span style="font-size:12px; color:var(--text-2);">Clear existing commands first</span>
+            </label>
+
+            <div x-show="clearFirst" class="warning-banner" style="margin-top:8px; background:rgba(240,178,50,0.1); color:var(--yellow); border-radius:var(--radius); padding:8px 12px; font-size:12px;">
+              ⚠️ Clear will temporarily remove all slash commands until re-deploy completes.
+            </div>
+
+            <button class="btn btn--primary mt-12" @click="deploy()" style="margin-top:12px;"
+                    :disabled="loading || (scope === 'guild' && !guildId)">
+              <span x-show="!loading">🚀 Deploy Commands</span>
+              <span x-show="loading">Deploying to Discord...</span>
+            </button>
+
+            <div x-show="result" class="result-banner mt-12" style="margin-top:12px;"
+                 :class="result?.error ? 'result-banner--error' : 'result-banner--success'">
+              <span x-show="!result?.error"
+                    x-text="\`✅ \${result?.deployed} commands deployed to \${result?.scope}\`'">
+              </span>
+              <span x-show="result?.error" x-text="'❌ ' + result?.error"></span>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -362,10 +408,15 @@ async function renderConfig() {
       }
     };
 
+    if (window.Alpine) {
+      window.Alpine.initTree(content);
+    }
+
     state.pageCleanup = () => {
       delete window.revealField;
       delete window.toggleConfigEdit;
       delete window.saveConfigField;
+      delete window.deployPanel;
     };
   } catch (err) {
     content.innerHTML =
@@ -373,251 +424,287 @@ async function renderConfig() {
   }
 }
 
+window.deployPanel = function() {
+  return {
+    scope: "global",
+    guildId: "",
+    clearFirst: false,
+    loading: false,
+    result: null,
+    async deploy() {
+      this.loading = true;
+      this.result = null;
+      try {
+        const res = await api.post("/deploy/slash", {
+          scope: this.scope,
+          guild_id: this.guildId,
+          clear: this.clearFirst
+        });
+        this.result = res;
+        showToast("Deployment finished successfully", "success");
+      } catch(e) {
+        const body = await e.json?.().catch(() => ({}));
+        this.result = { error: body?.error || "Failed to deploy commands." };
+        showToast("Deployment failed", "error");
+      } finally {
+        this.loading = false;
+      }
+    }
+  };
+};
+
 // ── Global Tab: Send Message ──
 async function renderSendMsg() {
   const content = document.getElementById("content");
   content.innerHTML = '<div class="skeleton" style="height:300px"></div>';
 
-  window.loadSendMsgChannels = async function (guildId) {
-    const sel = document.getElementById("sendmsg-channel-select");
-    if (!sel) return;
-    sel.innerHTML = '<option value="">-- Loading Channels... --</option>';
-    sel.disabled = true;
-    if (!guildId) {
-      sel.innerHTML = '<option value="">-- Select Channel --</option>';
-      return;
-    }
-    try {
-      const channels = await api.get(`/sendmsg/channels/${guildId}`);
-      sel.innerHTML =
-        '<option value="">-- Select Channel --</option>' +
-        channels
-          .map((c) => `<option value="${c.id}"># ${esc(c.name)}</option>`)
-          .join("");
-      sel.disabled = false;
-    } catch (err) {
-      sel.innerHTML = '<option value="">-- Failed to load channels --</option>';
-      showToast("Failed to load channels", "error");
-    }
-  };
-
-  window.updateSendMsgPreview = function () {
-    const isEmbed = document.getElementById("sendmsg-embed-toggle").checked;
-    const msg = document.getElementById("sendmsg-message-input").value;
-    const image = document.getElementById("sendmsg-image-input").value.trim();
-
-    const charLen = msg.length;
-    document.getElementById("sendmsg-char-counter").textContent =
-      `${charLen} / 2000 characters`;
-    const warning = document.getElementById("sendmsg-char-warning");
-    const sendBtn = document.getElementById("sendmsg-submit-btn");
-
-    if (charLen > 2000) {
-      warning.style.display = "inline";
-      sendBtn.disabled = true;
-    } else {
-      warning.style.display = "none";
-      sendBtn.disabled = false;
-    }
-
-    if (state.meta) {
-      document.getElementById("sendmsg-preview-avatar").src =
-        state.meta.bot_avatar_url || "";
-      document.getElementById("sendmsg-preview-botname").textContent =
-        state.meta.bot_name;
-    }
-
-    const imgBox = document.getElementById("sendmsg-image-preview-box");
-    const imgEl = document.getElementById("sendmsg-image-preview-el");
-    const imgErr = document.getElementById("sendmsg-image-preview-error");
-
-    if (image) {
-      imgBox.style.display = "block";
-      imgEl.src = image;
-      imgEl.style.display = "block";
-      imgErr.style.display = "none";
-      imgEl.onerror = () => {
-        imgEl.style.display = "none";
-        imgErr.style.display = "block";
-        document.getElementById("sendmsg-preview-embed-image").style.display =
-          "none";
-        document.getElementById("sendmsg-preview-plain-image").style.display =
-          "none";
-      };
-    } else {
-      imgBox.style.display = "none";
-      imgEl.src = "";
-    }
-
-    const txtContent = document.getElementById("sendmsg-preview-text-content");
-    const embedBox = document.getElementById("sendmsg-preview-embed");
-    const embedDesc = document.getElementById("sendmsg-preview-embed-desc");
-    const embedImg = document.getElementById("sendmsg-preview-embed-image");
-    const plainImg = document.getElementById("sendmsg-preview-plain-image");
-
-    if (isEmbed) {
-      txtContent.style.display = "none";
-      embedBox.style.display = "block";
-      embedDesc.textContent = msg || "(empty embed description)";
-      if (image) {
-        embedImg.src = image;
-        embedImg.style.display = "block";
-      } else {
-        embedImg.style.display = "none";
-      }
-      plainImg.style.display = "none";
-    } else {
-      txtContent.style.display = "block";
-      txtContent.textContent = msg || "(empty message content)";
-      embedBox.style.display = "none";
-      if (image) {
-        plainImg.src = image;
-        plainImg.style.display = "block";
-      } else {
-        plainImg.style.display = "none";
-      }
-    }
-  };
-
-  window.submitSendMsg = async function () {
-    const guild_id = document.getElementById("sendmsg-guild-select").value;
-    const channel_id = document.getElementById("sendmsg-channel-select").value;
-    const message = document.getElementById("sendmsg-message-input").value;
-    const image_url =
-      document.getElementById("sendmsg-image-input").value.trim() || null;
-    const embed = document.getElementById("sendmsg-embed-toggle").checked;
-
-    if (!guild_id || !channel_id) {
-      showToast("Please select a server and channel", "error");
-      return;
-    }
-
-    const btn = document.getElementById("sendmsg-submit-btn");
-    btn.disabled = true;
-    btn.textContent = "Sending...";
-
-    try {
-      await api.post("/sendmsg", {
-        guild_id,
-        channel_id,
-        message,
-        image_url,
-        embed,
-      });
-      showToast("Message dispatched successfully!", "success");
-
-      document.getElementById("sendmsg-message-input").value = "";
-      document.getElementById("sendmsg-image-input").value = "";
-      updateSendMsgPreview();
-    } catch (err) {
-      const errBody = await err.json?.().catch(() => ({}));
-      showToast(errBody?.error || "Failed to send message", "error");
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Send Message";
-    }
-  };
-
   try {
     const guilds = state.guilds || (await api.get("/guilds"));
 
     content.innerHTML = `
-      <div class="config-layout" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:20px;max-width:1200px;margin:0 auto;">
-        
-        <!-- Left: Form -->
-        <div class="card" style="display:flex;flex-direction:column;gap:16px;">
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:4px;">Compose Broadcast</h3>
-          
+      <div x-data="sendMsgComposer(${JSON.stringify(guilds)})" class="sendmsg-layout">
+        <!-- Left: Compose Panel -->
+        <div class="card compose-panel" style="display:flex; flex-direction:column; gap:16px;">
+          <h3 style="font-size:14px; font-weight:600; margin-bottom:4px;">Compose Broadcast</h3>
+
+          <!-- Server select -->
           <div class="form-group">
-            <label>Target Server</label>
-            <select class="select" id="sendmsg-guild-select" onchange="loadSendMsgChannels(this.value)">
-              <option value="">-- Select Server --</option>
-              ${guilds.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join("")}
+            <label>Server</label>
+            <select x-model="selectedGuildId" @change="onGuildChange()" class="select">
+              <option value="">Select a server...</option>
+              <template x-for="guild in guilds" :key="guild.id">
+                <option :value="guild.id" x-text="guild.name"></option>
+              </template>
             </select>
           </div>
 
-          <div class="form-group">
-            <label>Target Channel</label>
-            <select class="select" id="sendmsg-channel-select" disabled>
-              <option value="">-- Select Channel --</option>
+          <!-- Channel select -->
+          <div class="form-group" x-show="selectedGuildId">
+            <label>Channel</label>
+            <select x-model="selectedChannelId" @change="updatePreview()" class="select">
+              <option value="">Select a channel...</option>
+              <template x-for="ch in channels" :key="ch.id">
+                <option :value="ch.id" x-text="'#' + ch.name"></option>
+              </template>
             </select>
           </div>
 
-          <div class="form-group">
-            <label style="display:flex;justify-content:space-between;align-items:center;">
-              <span>Send as Rich Embed</span>
-              <label class="toggle">
-                <input type="checkbox" id="sendmsg-embed-toggle" onchange="updateSendMsgPreview()">
-                <span class="slider"></span>
-              </label>
+          <!-- Send as Embed toggle -->
+          <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <label>Send as Embed</label>
+            <label class="toggle">
+              <input type="checkbox" x-model="asEmbed" @change="updatePreview()">
+              <span class="slider"></span>
             </label>
           </div>
 
+          <!-- Embed title (only when asEmbed) -->
+          <div class="form-group" x-show="asEmbed">
+            <label>Embed Title</label>
+            <input x-model="embedTitle" @input="updatePreview()"
+                   class="input" placeholder="Optional title">
+          </div>
+
+          <!-- Message textarea with @ mention toolbar -->
           <div class="form-group">
-            <label>Message Content</label>
-            <textarea class="input" id="sendmsg-message-input" rows="6" maxlength="2048" oninput="updateSendMsgPreview()" placeholder="Type your message here..."></textarea>
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);margin-top:4px;">
-              <span id="sendmsg-char-counter">0 / 2000 characters</span>
-              <span id="sendmsg-char-warning" style="color:var(--red);display:none;">⚠️ Exceeds limit</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label>Message</label>
+              <button class="btn btn--ghost btn--sm" style="padding: 2px 8px;"
+                      @click="showMentionSearch = !showMentionSearch; if(showMentionSearch) $nextTick(() => $refs.mentionInput.focus())"
+                      :class="{'btn--primary': showMentionSearch}">
+                @ Mention
+              </button>
+            </div>
+
+            <!-- Member search panel -->
+            <div x-show="showMentionSearch" class="mention-search-panel" style="margin-bottom:8px;">
+              <input type="text" x-ref="mentionInput"
+                     x-model.debounce.300ms="mentionQuery"
+                     @input="searchMembers()"
+                     placeholder="Search member by name..."
+                     class="input input--sm">
+              <div class="mention-results" style="margin-top:6px; max-height:150px; overflow-y:auto;" x-show="mentionResults.length">
+                <template x-for="member in mentionResults" :key="member.id">
+                  <div class="mention-result-row" @click="insertMention(member)" style="padding:4px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <div class="mention-avatar" style="width:24px; height:24px; border-radius:50%; overflow:hidden;">
+                      <img :src="member.avatar_url" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
+                    </div>
+                    <div class="mention-name" style="flex:1;">
+                      <strong x-text="member.display_name" style="font-size:12px;"></strong>
+                      <span class="text-3" x-text="'@' + member.username" style="font-size:11px; margin-left:4px;"></span>
+                    </div>
+                    <span class="mention-tag text-accent" style="font-size:10px;">@mention</span>
+                  </div>
+                </template>
+              </div>
+              <div x-show="mentionResults.length === 0 && mentionQuery.length > 1"
+                   class="mention-no-results text-3" style="font-size:11px; padding:4px;">No members found</div>
+            </div>
+
+            <textarea x-model="message" @input="updatePreview()"
+                      id="compose-textarea"
+                      class="textarea" rows="6" maxlength="2000"
+                      placeholder="Type your message... Use @ Mention to tag users."
+                      style="width:100%; min-height:100px; resize:vertical; font-family:inherit;"></textarea>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-3); margin-top:4px;">
+              <span :class="message.length > 1900 ? 'text-danger' : 'text-3'"
+                    x-text="message.length + ' / 2000 characters'"></span>
+              <span x-show="message.length > 2000" style="color:var(--red);">⚠️ Exceeds limit</span>
             </div>
           </div>
 
+          <!-- Image URL -->
           <div class="form-group">
-            <label>Image URL (optional)</label>
-            <input class="input" id="sendmsg-image-input" placeholder="https://example.com/image.png" oninput="updateSendMsgPreview()">
-            <div id="sendmsg-image-preview-box" style="margin-top:10px;display:none;max-width:200px;border:1px solid var(--border);border-radius:4px;overflow:hidden;background:var(--bg-mid);">
-              <img id="sendmsg-image-preview-el" style="max-width:100%;height:auto;display:block;">
-              <div id="sendmsg-image-preview-error" style="color:var(--red);font-size:11px;padding:4px;display:none;">Could not load image</div>
-            </div>
+            <label>Image / GIF URL <span class="text-3">(optional)</span></label>
+            <input x-model="imageUrl" @input="updatePreview()"
+                   class="input" placeholder="https://...">
+            <img x-show="imageUrl" :src="imageUrl"
+                 onerror="this.style.display='none'"
+                 style="max-height:80px; margin-top:6px; border-radius:4px; object-fit:contain;">
           </div>
 
-          <button class="btn btn--primary" id="sendmsg-submit-btn" onclick="submitSendMsg()">Send Message</button>
+          <!-- Send button -->
+          <button class="btn btn--primary w-full"
+                  @click="sendMessage()"
+                  :disabled="!canSend || sending">
+            <span x-show="!sending">📨 Send Message</span>
+            <span x-show="sending">Sending...</span>
+          </button>
         </div>
 
         <!-- Right: Live Preview -->
-        <div class="card" style="display:flex;flex-direction:column;gap:12px;">
-          <h3 style="font-size:14px;font-weight:600;">Real-time Discord Preview</h3>
-          
-          <div class="card" style="background:#313338;color:#dbdee1;font-family:sans-serif;padding:16px;border-radius:8px;border:none;">
-            <div style="display:flex;gap:16px;">
-              <img id="sendmsg-preview-avatar" src="" style="width:40px;height:40px;border-radius:50%;background:#5865F2;" onerror="this.style.display='none'">
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                  <span id="sendmsg-preview-botname" style="font-weight:600;color:#f2f3f5;">Bot</span>
-                  <span style="background:#5865f2;color:#ffffff;font-size:10px;font-weight:600;padding:1px 4px;border-radius:3px;letter-spacing:0.5px;">BOT</span>
-                  <span style="font-size:12px;color:#949ba4;">Today at 12:00 PM</span>
-                </div>
-                
-                <div id="sendmsg-preview-text-content" style="white-space:pre-wrap;line-height:1.375;font-size:15px;color:#dbdee1;">(empty message content)</div>
-                
-                <div id="sendmsg-preview-embed" style="margin-top:8px;border-left:4px solid var(--accent);background:#2b2d31;padding:8px 16px 16px;border-radius:4px;max-width:520px;display:none;">
-                  <div id="sendmsg-preview-embed-desc" style="white-space:pre-wrap;font-size:14px;line-height:1.375;color:#dbdee1;"></div>
-                  <img id="sendmsg-preview-embed-image" style="margin-top:16px;max-width:100%;border-radius:4px;display:none;max-height:220px;object-fit:contain;">
-                  <div style="margin-top:8px;font-size:12px;color:#949ba4;display:flex;align-items:center;gap:4px;">
-                    <span>Sent from Web Dashboard</span>
-                    <span>•</span>
-                    <span>Today at 12:00 PM</span>
-                  </div>
-                </div>
-                
-                <img id="sendmsg-preview-plain-image" style="margin-top:8px;max-width:100%;border-radius:4px;display:none;max-height:220px;object-fit:contain;">
-              </div>
-            </div>
+        <div class="card preview-panel">
+          <div class="preview-header" style="font-weight:600; font-size:14px; margin-bottom:12px;">Real-time Discord Preview</div>
+          <div id="discord-preview-mount">
+            <!-- renderDiscordPreview() will render here -->
           </div>
         </div>
-
       </div>
     `;
 
-    updateSendMsgPreview();
+    if (window.Alpine) {
+      window.Alpine.initTree(content);
+    }
 
     state.pageCleanup = () => {
-      delete window.loadSendMsgChannels;
-      delete window.updateSendMsgPreview;
-      delete window.submitSendMsg;
+      delete window.sendMsgComposer;
     };
   } catch (err) {
     content.innerHTML =
+      '<div class="card" style="color:var(--red)">Failed to load composition settings.</div>';
+  }
+}
+
+window.sendMsgComposer = function(guilds) {
+  return {
+    guilds,
+    channels: [],
+    selectedGuildId: "",
+    selectedChannelId: "",
+    asEmbed: false,
+    embedTitle: "",
+    message: "",
+    imageUrl: "",
+    sending: false,
+    showMentionSearch: false,
+    mentionQuery: "",
+    mentionResults: [],
+    memberCache: new Map(),
+    init() {
+      this.$nextTick(() => this.updatePreview());
+    },
+    get canSend() {
+      return (this.message.trim() || this.imageUrl.trim()) && this.selectedGuildId && this.selectedChannelId;
+    },
+    async onGuildChange() {
+      if (!this.selectedGuildId) {
+        this.channels = [];
+        this.selectedChannelId = "";
+        this.updatePreview();
+        return;
+      }
+      try {
+        const data = await api.get(`/sendmsg/channels/${this.selectedGuildId}`);
+        this.channels = data;
+        this.selectedChannelId = "";
+        this.updatePreview();
+      } catch (err) {
+        showToast("Failed to load channels", "error");
+      }
+    },
+    searchMembers() {
+      if (this.mentionQuery.length < 2 || !this.selectedGuildId) {
+        this.mentionResults = [];
+        return;
+      }
+      api.get(`/sendmsg/members/${this.selectedGuildId}?q=${encodeURIComponent(this.mentionQuery)}`)
+        .then(data => {
+          this.mentionResults = data;
+          data.forEach(m => this.memberCache.set(m.id, m.display_name));
+        });
+    },
+    insertMention(member) {
+      const ta = document.getElementById("compose-textarea");
+      if (!ta) return;
+      const pos = ta.selectionStart;
+      const before = this.message.slice(0, pos);
+      const after = this.message.slice(pos);
+      this.message = before + `<@${member.id}>` + after;
+      this.showMentionSearch = false;
+      this.mentionQuery = "";
+      this.mentionResults = [];
+      this.updatePreview();
+      this.$nextTick(() => {
+        ta.focus();
+        const newPos = pos + `<@${member.id}>`.length;
+        ta.setSelectionRange(newPos, newPos);
+      });
+    },
+    updatePreview() {
+      const mount = document.getElementById("discord-preview-mount");
+      if (!mount) return;
+
+      const embedData = this.asEmbed ? {
+        title: this.embedTitle || null,
+        description: this.message || "(empty embed description)",
+        imageUrl: this.imageUrl || null,
+        color: state.meta?.bot_color || "var(--accent)",
+        footer: "Sent from Web Dashboard"
+      } : null;
+
+      renderDiscordPreview(mount, {
+        botName: state.meta?.bot_name || "Kizoxy",
+        botAvatarUrl: state.meta?.bot_avatar_url || "",
+        content: this.asEmbed ? "" : (this.message || "(empty message content)"),
+        imageUrl: this.asEmbed ? "" : this.imageUrl,
+        embed: embedData,
+        memberCache: this.memberCache
+      });
+    },
+    async sendMessage() {
+      if (!this.canSend) return;
+      this.sending = true;
+      try {
+        await api.post("/sendmsg", {
+          guild_id: this.selectedGuildId,
+          channel_id: this.selectedChannelId,
+          message: this.message,
+          image_url: this.imageUrl || null,
+          embed: this.asEmbed
+        });
+        showToast("Message sent successfully!", "success");
+        this.message = "";
+        this.imageUrl = "";
+        this.updatePreview();
+      } catch (err) {
+        const body = await err.json?.().catch(() => ({}));
+        showToast(body?.error || "Failed to send message", "error");
+      } finally {
+        this.sending = false;
+      }
+    }
+  };
+};
       '<div class="card" style="color:var(--red)">Failed to load composition settings.</div>';
   }
 }

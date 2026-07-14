@@ -343,9 +343,56 @@ function renderAlarms(el, g) {
         }</tbody>
       </table>
     </div>`;
-}
+}// ── Guild Tab: Level ──
+window.xpManager = function(guildId) {
+  return {
+    guildId,
+    action: "add",
+    amount: null,
+    selectedUser: "",
+    loading: false,
+    result: null,
+    init() {
+      const members = state.currentGuild?.members || [];
+      const container = document.getElementById("xp-member-select");
+      if (container) {
+        container.innerHTML = renderSearchableSelect(
+          "xp-user",
+          members.map(m => ({ id: m.id, name: `${m.name} (${m.tag})` })),
+          "Search member...",
+          "",
+          "onXpUserChange(this.value)"
+        );
+        window.onXpUserChange = (val) => {
+          this.selectedUser = val;
+        };
+      }
+    },
+    async applyXp() {
+      if (!this.selectedUser || !this.amount) return;
+      this.loading = true;
+      this.result = null;
+      try {
+        const res = await api.post(`/guilds/${this.guildId}/level/xp`, {
+          user_id: this.selectedUser,
+          amount: Number(this.amount),
+          action: this.action
+        });
+        this.result = res;
+        showToast("XP updated successfully", "success");
+        if (typeof window.loadLevelData === "function") {
+          setTimeout(() => window.loadLevelData(false), 500);
+        }
+      } catch(e) {
+        const body = await e.json?.().catch(() => ({}));
+        showToast(body?.error || "Failed to apply XP", "error");
+      } finally {
+        this.loading = false;
+      }
+    }
+  };
+};
 
-// ── Guild Tab: Level ──
 function renderLevel(el, g) {
   let lastUpdated = Date.now();
   let intervalId = null;
@@ -382,6 +429,8 @@ function renderLevel(el, g) {
     }
   }
 
+  window.loadLevelData = loadData;
+
   function getRelativeTimeString(timeMs) {
     const diffSec = Math.floor((Date.now() - timeMs) / 1000);
     if (diffSec < 5) return "just now";
@@ -389,7 +438,6 @@ function renderLevel(el, g) {
     return `${Math.floor(diffSec / 60)}m ago`;
   }
 
-  // Time ticker label update
   function updateTimeLabel() {
     const label = document.getElementById("level-time-label");
     if (label) {
@@ -456,6 +504,54 @@ function renderLevel(el, g) {
               : '<tr><td colspan="6" style="color:var(--text-3);padding:16px">No level data.</td></tr>'
           }</tbody>
         </table>
+      </div>
+      
+      <!-- XP Management UI -->
+      <div x-data="xpManager('${g.id}')" class="card mt-16" style="margin-top:16px;">
+        <div class="card-header" style="font-weight:600; font-size:14px; margin-bottom:12px;">XP Management</div>
+
+        <div class="form-group">
+          <label>Member</label>
+          <div id="xp-member-select"></div>
+        </div>
+
+        <div class="form-row" style="display:flex; gap:16px; margin-top:12px;">
+          <div class="form-group" style="flex:1;">
+            <label>Action</label>
+            <select x-model="action" class="select">
+              <option value="add">Add XP</option>
+              <option value="remove">Remove XP</option>
+              <option value="set">Set XP to</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label x-text="action === 'set' ? 'Total XP' : 'XP Amount'"></label>
+            <input type="number" x-model.number="amount"
+                   min="1" max="100000" class="input"
+                   :placeholder="action === 'set' ? 'e.g. 5000' : 'e.g. 100'">
+          </div>
+        </div>
+
+        <button class="btn btn--primary mt-12" @click="applyXp()" style="margin-top:12px;"
+                :disabled="!selectedUser || !amount || loading">
+          <span x-show="!loading">Apply</span>
+          <span x-show="loading">Applying...</span>
+        </button>
+
+        <!-- Result card -->
+        <div x-show="result" class="xp-result-card mt-12" style="margin-top:12px;">
+          <div class="xp-result-row">
+            <span class="text-3">Previous XP</span>
+            <span x-text="result?.previous_xp?.toLocaleString()"></span>
+          </div>
+          <div class="xp-result-row">
+            <span class="text-3">New XP</span>
+            <span class="text-success" x-text="result?.new_xp?.toLocaleString()"></span>
+          </div>
+          <div x-show="result?.leveled_up" class="xp-level-up">
+            🎉 Level up! <span x-text="\`\${result?.previous_level} → \${result?.new_level}\`'"></span>
+          </div>
+        </div>
       </div>`;
 
     const btn = document.getElementById("level-refresh-btn");
@@ -466,17 +562,21 @@ function renderLevel(el, g) {
         await loadData(false);
       };
     }
+
+    if (window.Alpine) {
+      window.Alpine.initTree(el);
+    }
   }
 
-  // Initial load
   loadData(true);
 
-  // Set up 60s auto-refresh and time ticker
   const ticker = setInterval(updateTimeLabel, 5000);
   intervalId = setInterval(() => loadData(false), 60000);
 
   state.tabCleanup = () => {
     clearInterval(ticker);
     clearInterval(intervalId);
+    delete window.loadLevelData;
+    delete window.onXpUserChange;
   };
 }

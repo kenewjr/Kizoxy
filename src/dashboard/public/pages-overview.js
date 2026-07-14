@@ -66,6 +66,7 @@ async function renderOverview() {
 
     state.pageCleanup = () => {
       clearInterval(playersTimer);
+      delete window.applyPlayerFilterFromDashboard;
     };
 
     // Load recent logs.
@@ -92,6 +93,18 @@ async function renderOverview() {
   }
 }
 
+window.applyPlayerFilterFromDashboard = async function(guildId, filterType) {
+  if (!filterType) return;
+  try {
+    await api.patch(`/guilds/${guildId}/player/filters`, { type: filterType });
+    showToast(`Filter update dispatched`, "success");
+    await updateActivePlayersWidget();
+  } catch (err) {
+    const body = await err.json?.().catch(() => ({}));
+    showToast(body?.error || "Failed to update filter", "error");
+  }
+};
+
 async function updateActivePlayersWidget() {
   const container = document.getElementById("overview-players");
   if (!container) return;
@@ -111,8 +124,9 @@ async function updateActivePlayersWidget() {
               <th>Guild</th>
               <th>Voice Channel ID</th>
               <th>Status</th>
-              <th>Current Track</th>
+              <th>Current Track & Filters</th>
               <th>Queue</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -128,13 +142,36 @@ async function updateActivePlayersWidget() {
                   ? `<a href="${esc(p.current_track.uri)}" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:500">${esc(p.current_track.title)}</a> <span style="font-size:11px;color:var(--text-3)">by ${esc(p.current_track.author)}</span>`
                   : '<span style="color:var(--text-3)">None</span>';
 
+                const activeKeys = Object.keys(p.active_filters || {}).filter(k => p.active_filters[k]);
+                const filterBadgesHtml = activeKeys.length > 0
+                  ? `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+                       ${activeKeys.map(k => `<span class="badge badge--accent" style="font-size:9px;padding:1px 4px">${esc(k)}</span>`).join("")}
+                     </div>`
+                  : "";
+
                 return `
                 <tr>
                   <td><strong>${esc(p.guild_name)}</strong> <span style="font-size:11px;color:var(--text-3)">(${esc(p.guild_id)})</span></td>
                   <td style="font-family:var(--font-mono);font-size:12px">${esc(p.voice_channel_id || "N/A")}</td>
                   <td>${statusBadge}</td>
-                  <td>${trackHtml}</td>
+                  <td>
+                    ${trackHtml}
+                    ${filterBadgesHtml}
+                  </td>
                   <td>${p.queue_length} track(s)</td>
+                  <td>
+                    <select class="select select--sm" style="width:130px;padding:3px 6px;height:26px;display:inline-block" onchange="applyPlayerFilterFromDashboard('${p.guild_id}', this.value); this.value=''">
+                      <option value="">-- Audio Filters --</option>
+                      <option value="reset">Reset All</option>
+                      <option value="3d">Toggle 3D</option>
+                      <option value="bassboost">Toggle BassBoost</option>
+                      <option value="doubletime">Toggle DoubleTime</option>
+                      <option value="karaoke">Toggle Karaoke</option>
+                      <option value="nightcore">Toggle NightCore</option>
+                      <option value="slowmotion">Toggle SlowMotion</option>
+                      <option value="vibrato">Toggle Vibrato</option>
+                    </select>
+                  </td>
                 </tr>
               `;
               })

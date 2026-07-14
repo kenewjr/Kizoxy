@@ -44,6 +44,61 @@ router.get("/channels/:guildId", async (req, res) => {
   }
 });
 
+// GET /api/sendmsg/members/:guildId
+router.get("/members/:guildId", async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const q = req.query.q || "";
+    const client = req.app.locals.client;
+
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.json([]);
+    }
+
+    const filterFn = (m) => {
+      const u = m.user;
+      if (!u) return false;
+      if (u.bot && q !== "") return false;
+      if (!q) return true;
+      const term = q.toLowerCase();
+      return (
+        m.displayName.toLowerCase().includes(term) ||
+        u.username.toLowerCase().includes(term)
+      );
+    };
+
+    let matched = Array.from(guild.members.cache.values()).filter(filterFn);
+
+    if (matched.length < 10 && q.trim().length > 0) {
+      try {
+        const fetched = await guild.members.fetch({ query: q, limit: 10, withPresences: false });
+        for (const m of fetched.values()) {
+          if (!guild.members.cache.has(m.id)) {
+            guild.members.cache.set(m.id, m);
+          }
+        }
+        matched = Array.from(guild.members.cache.values()).filter(filterFn);
+      } catch (err) {
+        logger.debug(`Failed to fetch members for query ${q}: ${err.message}`);
+      }
+    }
+
+    const results = matched.slice(0, 20).map((m) => ({
+      id: m.id,
+      username: m.user.username,
+      display_name: m.displayName,
+      avatar_url: m.user.displayAvatarURL({ size: 64 }) || null,
+      bot: m.user.bot,
+    }));
+
+    res.json(results);
+  } catch (err) {
+    logger.error(`GET /api/sendmsg/members: ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch members" });
+  }
+});
+
 // POST /api/sendmsg
 router.post("/", async (req, res) => {
   try {

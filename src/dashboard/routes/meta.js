@@ -95,24 +95,25 @@ router.get("/players", (req, res) => {
     if (client.manager?.players) {
       for (const player of client.manager.players.values()) {
         try {
-          players.push({
-            guild_id: player.guildId,
-            guild_name:
-              client.guilds.cache.get(player.guildId)?.name || "Unknown",
-            is_playing: !!player.playing,
-            is_paused: !!player.paused,
-            current_track: player.queue?.current
-              ? {
-                  title: player.queue.current.title,
-                  author: player.queue.current.author,
-                  uri: player.queue.current.uri,
-                  duration_ms: player.queue.current.length,
-                  position_ms: player.position,
-                }
-              : null,
-            queue_length: player.queue?.length ?? 0,
-            voice_channel_id: player.voiceId || null,
-          });
+            players.push({
+              guild_id: player.guildId,
+              guild_name:
+                client.guilds.cache.get(player.guildId)?.name || "Unknown",
+              is_playing: !!player.playing,
+              is_paused: !!player.paused,
+              current_track: player.queue?.current
+                ? {
+                    title: player.queue.current.title,
+                    author: player.queue.current.author,
+                    uri: player.queue.current.uri,
+                    duration_ms: player.queue.current.length,
+                    position_ms: player.position,
+                  }
+                : null,
+              queue_length: player.queue?.length ?? 0,
+              voice_channel_id: player.voiceId || null,
+              active_filters: player.filtersState || {},
+            });
         } catch (playerErr) {
           logger.warning(
             `Failed to serialize player for guild ${player.guildId}: ${playerErr.message}`,
@@ -383,6 +384,55 @@ router.patch("/bot/presence/resume", async (req, res) => {
   } catch (err) {
     logger.error(`PATCH /api/bot/presence/resume: ${err.message}`);
     res.status(500).json({ error: "Failed to resume presence rotation" });
+  }
+});
+
+// POST /api/deploy/slash
+router.post("/deploy/slash", async (req, res) => {
+  try {
+    const { scope, guild_id, clear } = req.body;
+    const client = req.app.locals.client;
+
+    if (!client || !client.user) {
+      return res.status(503).json({ error: "Bot client is not ready yet." });
+    }
+
+    if (scope !== "global" && scope !== "guild") {
+      return res.status(400).json({ error: "Scope must be 'global' or 'guild'." });
+    }
+
+    if (scope === "guild" && (!guild_id || !/^\d{17,20}$/.test(guild_id))) {
+      return res.status(400).json({ error: "Valid Guild ID is required for guild scope." });
+    }
+
+    const { REST, Routes } = require("discord.js");
+    const rest = new REST({ version: "10" }).setToken(config.TOKEN);
+    const { loadAndValidateCommands } = require("../../../scripts/deploySlash");
+
+    const commands = await loadAndValidateCommands();
+
+    if (clear) {
+      if (scope === "global") {
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+      } else {
+        await rest.put(Routes.applicationGuildCommands(client.user.id, guild_id), { body: [] });
+      }
+    }
+
+    const route = scope === "guild"
+      ? Routes.applicationGuildCommands(client.user.id, guild_id)
+      : Routes.applicationCommands(client.user.id);
+
+    const result = await rest.put(route, { body: commands });
+
+    res.json({
+      deployed: result.length,
+      scope,
+      guild_id: scope === "guild" ? guild_id : null
+    });
+  } catch (err) {
+    logger.error(`POST /api/deploy/slash failed: ${err.message}`);
+    res.status(422).json({ error: err.message || "Failed to deploy slash commands." });
   }
 });
 

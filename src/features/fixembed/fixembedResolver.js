@@ -4,7 +4,7 @@ const RESOLVERS = require("./resolvers");
 
 const logger = new Logger("FIXEMBED");
 
-async function extractFixedLinks(content, viewMode = "normal") {
+async function extractFixedLinks(content, viewMode = "normal", platformsSettings = null) {
   const urls = [...(content.matchAll(URL_REGEX) || [])].map((m) => m[0]);
   const results = [];
   const seen = new Set();
@@ -16,6 +16,13 @@ async function extractFixedLinks(content, viewMode = "normal") {
 
     for (const resolver of RESOLVERS) {
       if (!resolver.match(cleanUrl)) continue;
+
+      if (platformsSettings) {
+        const platformKey = resolver.name.toLowerCase().replace(/\s+/g, "");
+        if (platformsSettings[platformKey] === false) {
+          break;
+        }
+      }
 
       try {
         const res = await resolver.resolve(cleanUrl, viewMode);

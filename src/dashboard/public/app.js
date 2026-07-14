@@ -84,41 +84,6 @@ function buildMessagePreview(customMessage, mentionRoleId, defaultPrefix) {
   return out.trim().slice(0, 2000);
 }
 
-function renderDiscordPreview(content, type, title, authorName, color) {
-  const parsedContent = content
-    ? content.replace(
-        /@Role/g,
-        `<span style="background:rgba(88,101,242,0.3); color:#c9cdfb; padding:0 4px; border-radius:3px; font-weight:500;">@Role</span>`,
-      )
-    : "";
-
-  return `
-    <div style="background:#313338; color:#dbdee1; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding:16px; border-radius:8px; margin:10px 0; border:1px solid #232428; text-align:left;">
-      <div style="display:flex; gap:16px;">
-        <div style="width:40px; height:40px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; flex-shrink:0;">K</div>
-        <div style="flex:1; min-width:0;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <span style="font-weight:600; color:#f2f3f5; font-size:15px;">Kizoxy</span>
-            <span style="background:#5865f2; color:#fff; font-size:10px; padding:2px 4px; border-radius:3px; font-weight:600; text-transform:uppercase; line-height:1;">BOT</span>
-            <span style="color:#949ba4; font-size:12px;">Hari ini pukul 16:42</span>
-          </div>
-          <div style="white-space:pre-wrap; margin-bottom:8px; font-size:15px; color:#dbdee1;">${parsedContent || `<span style="color:var(--text-3); font-style:italic">(No text content)</span>`}</div>
-          <div style="display:flex; max-width:520px; border-left:4px solid ${color}; background:#2b2d31; border-radius:4px; padding:12px 16px 12px 12px; margin-top:8px;">
-            <div style="flex:1;">
-              <div style="font-size:12px; font-weight:600; color:#f2f3f5; margin-bottom:8px;">${esc(authorName)}</div>
-              <div style="font-size:16px; font-weight:600; color:#00a8fc; text-decoration:none; margin-bottom:8px; cursor:pointer;">${esc(title)}</div>
-              <div style="font-size:14px; color:#dbdee1; margin-bottom:8px;"><b>Creator Name</b> just posted on ${type === "youtube" ? "YouTube" : "TikTok"}.</div>
-              <div style="margin-top:8px; border-radius:4px; overflow:hidden; max-width:400px;">
-                <svg width="400" height="225" style="background:#1e1f22; display:block; border-radius:4px;"><rect width="400" height="225" fill="#1e1f22"/><polygon points="180,90 180,135 225,112.5" fill="#6d6f78"/></svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function updateMsgPreview(msgId, roleId, targetId, defaultPrefix) {
   const target = document.getElementById(targetId);
   if (!target) return;
@@ -127,20 +92,35 @@ function updateMsgPreview(msgId, roleId, targetId, defaultPrefix) {
   const rendered = buildMessagePreview(msg, roleVal || null, defaultPrefix);
 
   const isYoutube = targetId.startsWith("yt-");
-  const type = isYoutube ? "youtube" : "tiktok";
   const color = isYoutube ? "#ff0000" : "#00f2fe";
   const authorName = isYoutube
     ? "🎬 NEW VIDEO • Creator Name"
     : "🎵 NEW POST • Creator Name";
   const title = isYoutube ? "Sample Video Title" : "Sample TikTok Post Title";
 
-  target.innerHTML = renderDiscordPreview(
-    rendered,
-    type,
-    title,
-    authorName,
-    color,
-  );
+  const memberCache = new Map();
+  if (roleVal) {
+    const select = document.getElementById(roleId);
+    const selectedOption = select?.options[select.selectedIndex];
+    if (selectedOption) {
+      memberCache.set(roleVal, selectedOption.text);
+    }
+  }
+
+  const content = roleVal ? rendered.replace(/@Role/g, `<@${roleVal}>`) : rendered;
+
+  window.renderDiscordPreview(target, {
+    botName: state.meta?.bot_name || "Kizoxy",
+    botAvatarUrl: state.meta?.bot_avatar_url || "",
+    content: content,
+    embed: {
+      title: title,
+      description: `**Creator Name** just posted on ${isYoutube ? "YouTube" : "TikTok"}.`,
+      color: color,
+      footer: authorName
+    },
+    memberCache: memberCache
+  });
 }
 
 function formatUptime(ms) {
@@ -237,7 +217,15 @@ function navigate(hash) {
   }
   document.getElementById("page-title").textContent = route.title;
   setActiveNav(hash);
-  route.render();
+  
+  const res = route.render();
+  if (res instanceof Promise) {
+    res.then(() => {
+      if (window.Alpine) window.Alpine.initTree(document.getElementById("content"));
+    }).catch(() => {});
+  } else {
+    if (window.Alpine) window.Alpine.initTree(document.getElementById("content"));
+  }
 }
 
 function setActiveNav(hash) {

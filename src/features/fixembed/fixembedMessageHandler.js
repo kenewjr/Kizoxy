@@ -66,6 +66,7 @@ async function handleFixembedMessage(message) {
   const fixedLinks = await extractFixedLinks(
     message.content,
     settings.viewMode,
+    settings.platforms,
   );
   if (fixedLinks.length === 0) return;
 

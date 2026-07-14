@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   ignoredKeywords: [],
   baseMessageAction: "remove_embed", // 'nothing' | 'remove_embed' | 'delete_message'
   viewMode: "normal", // 'normal' | 'direct' | 'gallery' | 'text'
+  platforms: {},
 };
 
 class FixEmbedStorage {

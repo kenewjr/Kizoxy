@@ -34,21 +34,32 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id/fixembed", (req, res) => {
   try {
     const { id } = req.params;
-    const { enabled, view_mode } = req.body;
+    const { enabled, view_mode, viewMode, platforms } = req.body;
+
+    const finalViewMode = view_mode !== undefined ? view_mode : viewMode;
 
     if (enabled !== undefined && typeof enabled !== "boolean") {
       return res.status(400).json({ error: "enabled must be a boolean" });
     }
-    if (view_mode !== undefined && !VALID_VIEW_MODES.includes(view_mode)) {
+    if (finalViewMode !== undefined && !VALID_VIEW_MODES.includes(finalViewMode)) {
       return res.status(400).json({
         error: `view_mode must be one of: ${VALID_VIEW_MODES.join(", ")}`,
       });
     }
+    if (platforms !== undefined && typeof platforms !== "object") {
+      return res.status(400).json({ error: "platforms must be an object" });
+    }
 
-    if (enabled !== undefined) fixembedStorage.setEnabled(id, enabled);
-    if (view_mode !== undefined) fixembedStorage.setViewMode(id, view_mode);
+    const updates = {};
+    if (enabled !== undefined) updates.enabled = enabled;
+    if (finalViewMode !== undefined) updates.viewMode = finalViewMode;
+    if (platforms !== undefined) {
+      const current = fixembedStorage.getSettings(id);
+      updates.platforms = { ...(current.platforms || {}), ...platforms };
+    }
 
-    res.json(fixembedStorage.getSettings(id));
+    const updated = fixembedStorage.saveSettings(id, updates);
+    res.json(updated);
   } catch (err) {
     logger.error(`PATCH /api/guilds/${req.params.id}/fixembed: ${err.message}`);
     res.status(500).json({ error: "Failed to update fixembed settings" });
@@ -485,7 +496,7 @@ router.get("/:id/level", async (req, res) => {
               server_name = u.globalName ?? u.username;
               global_name = u.username;
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         const next_xp = nextLevelXp(user.level, user.xp);
@@ -512,6 +523,62 @@ router.get("/:id/level", async (req, res) => {
   }
 });
 
+// POST /api/guilds/:id/level/xp
+router.post("/:id/level/xp", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id, amount, action } = req.body;
+    const client = req.app.locals.client;
+
+    const guild = client.guilds.cache.get(id);
+    if (!guild) return res.status(404).json({ error: "Guild not found" });
+
+    if (!user_id || !/^\d{17,20}$/.test(user_id)) {
+      return res.status(400).json({ error: "Invalid user_id. Must be a 17-20 digit snowflake." });
+    }
+    if (amount === undefined || typeof amount !== "number" || amount < 1 || amount > 100000 || !Number.isInteger(amount)) {
+      return res.status(400).json({ error: "Invalid amount. Must be an integer between 1 and 100,000." });
+    }
+    const allowedActions = ["add", "set", "remove"];
+    if (!action || !allowedActions.includes(action)) {
+      return res.status(400).json({ error: "Invalid action. Must be 'add', 'set', or 'remove'." });
+    }
+
+    if (!client.levelStorage) {
+      const LevelStorage = require("../../persistence/levelStorage");
+      client.levelStorage = new LevelStorage();
+    }
+
+    let userBefore = await client.levelStorage.getUser(user_id, id);
+    const previous_xp = userBefore ? userBefore.xp : 0;
+    const previous_level = userBefore ? userBefore.level : 0;
+
+    let delta = amount;
+    if (action === "add") {
+      delta = amount;
+    } else if (action === "remove") {
+      // Clamp to prevent negative XP in current level
+      delta = -Math.min(amount, previous_xp);
+    } else if (action === "set") {
+      delta = amount - previous_xp;
+    }
+
+    const { user: userAfter } = await client.levelStorage.addXp(user_id, id, delta);
+
+    res.json({
+      user_id,
+      previous_xp,
+      new_xp: userAfter.xp,
+      previous_level,
+      new_level: userAfter.level,
+      leveled_up: userAfter.level > previous_level,
+    });
+  } catch (err) {
+    logger.error(`POST /api/guilds/${req.params.id}/level/xp: ${err.message}`);
+    res.status(500).json({ error: "Failed to modify level XP" });
+  }
+});
+
 // GET /api/guilds/:id/tempvc
 router.get("/:id/tempvc", async (req, res) => {
   try {
@@ -532,19 +599,116 @@ router.get("/:id/tempvc", async (req, res) => {
         : 0,
       active_channels: tempvcData?.tempChannels
         ? Object.values(tempvcData.tempChannels).map((ch) => {
-            const channelObj = guild.channels?.cache?.get(ch.id);
-            return {
-              id: ch.id,
-              ownerId: ch.ownerId,
-              createdAt: ch.createdAt,
-              memberCount: channelObj ? (channelObj.members?.size ?? "—") : "—",
-            };
-          })
+          const channelObj = guild.channels?.cache?.get(ch.id);
+          return {
+            id: ch.id,
+            ownerId: ch.ownerId,
+            createdAt: ch.createdAt,
+            memberCount: channelObj ? (channelObj.members?.size ?? "—") : "—",
+          };
+        })
         : [],
     });
   } catch (err) {
     logger.error(`GET /api/guilds/${req.params.id}/tempvc: ${err.message}`);
     res.status(500).json({ error: "Failed to fetch TempVC data" });
+  }
+});
+
+// GET /api/guilds/:id/player/filters
+router.get("/:id/player/filters", (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = req.app.locals.client;
+    const player = client.manager?.players?.get(id);
+
+    if (!player) {
+      return res.json({ active_filters: {} });
+    }
+
+    res.json({ active_filters: player.filtersState || {} });
+  } catch (err) {
+    logger.error(`GET /api/guilds/${req.params.id}/player/filters: ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch player filters" });
+  }
+});
+
+// PATCH /api/guilds/:id/player/filters
+router.patch("/:id/player/filters", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, amount } = req.body;
+    const client = req.app.locals.client;
+    const player = client.manager?.players?.get(id);
+
+    if (!player) {
+      return res.status(404).json({ error: "No active music player in this server. Start playing music first!" });
+    }
+
+    if (!client.applyPlayerFilter) {
+      client.applyPlayerFilter = async function(guildId, filterType, amt = null) {
+        const p = client.manager.players.get(guildId);
+        if (!p) throw new Error("No player found");
+        if (!p.filtersState) p.filtersState = {};
+
+        if (filterType === "reset") {
+          p.filtersState = {};
+          await p.shoukaku.setFilters({});
+          await p.setVolume(100);
+          return p.filtersState;
+        }
+
+        if (filterType === "3d") {
+          if (p.filtersState.rotation) delete p.filtersState.rotation;
+          else p.filtersState.rotation = { rotationHz: 0.2 };
+        } else if (filterType === "bassboost") {
+          if (p.filtersState.equalizer) delete p.filtersState.equalizer;
+          else {
+            const val = amt !== null ? amt : 5;
+            p.filtersState.equalizer = [
+              { band: 0, gain: val / 10 },
+              { band: 1, gain: val / 10 },
+              { band: 2, gain: val / 10 },
+              { band: 3, gain: val / 10 },
+              { band: 4, gain: val / 10 },
+              { band: 5, gain: val / 10 },
+              { band: 6, gain: val / 10 },
+              { band: 7, gain: 0 },
+              { band: 8, gain: 0 },
+              { band: 9, gain: 0 },
+              { band: 10, gain: 0 },
+              { band: 11, gain: 0 },
+              { band: 12, gain: 0 },
+              { band: 13, gain: 0 },
+            ];
+          }
+        } else if (filterType === "doubletime") {
+          if (p.filtersState.timescale) delete p.filtersState.timescale;
+          else p.filtersState.timescale = { speed: 1.5, pitch: 1.0, rate: 1.0 };
+        } else if (filterType === "slowmotion") {
+          if (p.filtersState.timescale) delete p.filtersState.timescale;
+          else p.filtersState.timescale = { speed: 0.7, pitch: 1.0, rate: 1.0 };
+        } else if (filterType === "nightcore") {
+          if (p.filtersState.timescale) delete p.filtersState.timescale;
+          else p.filtersState.timescale = { speed: 1.165, pitch: 1.125, rate: 1.05 };
+        } else if (filterType === "karaoke") {
+          if (p.filtersState.karaoke) delete p.filtersState.karaoke;
+          else p.filtersState.karaoke = { level: 1.0, monoLevel: 1.0, filterBand: 220.0, filterWidth: 100.0 };
+        } else if (filterType === "vibrato") {
+          if (p.filtersState.vibrato) delete p.filtersState.vibrato;
+          else p.filtersState.vibrato = { frequency: 2.0, depth: 0.5 };
+        }
+
+        await p.shoukaku.setFilters(p.filtersState);
+        return p.filtersState;
+      };
+    }
+
+    const updatedState = await client.applyPlayerFilter(id, type, amount);
+    res.json({ active_filters: updatedState });
+  } catch (err) {
+    logger.error(`PATCH /api/guilds/${req.params.id}/player/filters: ${err.message}`);
+    res.status(500).json({ error: err.message || "Failed to update player filters" });
   }
 });
 

@@ -881,3 +881,140 @@ body {
   color: var(--text-2);
   display: inline-block;
 }
+
+/* ── Discord Preview Overhaul ── */
+.discord-preview-container {
+  background: #313338;
+  color: #dbdee1;
+  font-family: "gg sans", "Noto Sans", sans-serif;
+  padding: 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+}
+.discord-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.discord-preview-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #5865F2;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.discord-preview-botname {
+  font-weight: 600;
+  color: #f2f3f5;
+}
+.discord-preview-botbadge {
+  background: #5865f2;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+.discord-preview-timestamp {
+  font-size: 12px;
+  color: #949ba4;
+}
+.discord-preview-text {
+  white-space: pre-wrap;
+  line-height: 1.375;
+  font-size: 15px;
+  color: #dbdee1;
+}
+.discord-preview-embed {
+  margin-top: 8px;
+  border-left: 4px solid var(--accent);
+  background: #2b2d31;
+  padding: 8px 16px 16px;
+  border-radius: 4px;
+  max-width: 520px;
+}
+.discord-preview-embed-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+.discord-preview-embed-desc {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.375;
+  color: #dbdee1;
+}
+.discord-preview-embed-footer {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #949ba4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.discord-preview-image {
+  margin-top: 8px;
+  max-width: 100%;
+  border-radius: 4px;
+  max-height: 220px;
+  object-fit: contain;
+}
+.discord-preview-mention {
+  color: #e4b9f6;
+  background: rgba(228, 185, 246, 0.1);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.discord-preview-mention:hover {
+  color: #ffffff;
+  background: #9b59b6;
+}
+
+/* ── FixEmbed Layout ── */
+.platforms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+}
+.platform-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+.platform-row:last-child {
+  border-bottom: none;
+}
+.platform-emoji {
+  font-size: 18px;
+  width: 24px;
+  display: inline-block;
+  text-align: center;
+}
+.platform-label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ── Searchable Select tag ── */
+.mention-search-panel {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.mention-result-row:hover {
+  background: rgba(var(--accent-rgb), 0.1);
+}
