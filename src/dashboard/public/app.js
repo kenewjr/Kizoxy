@@ -107,7 +107,9 @@ function updateMsgPreview(msgId, roleId, targetId, defaultPrefix) {
     }
   }
 
-  const content = roleVal ? rendered.replace(/@Role/g, `<@${roleVal}>`) : rendered;
+  const content = roleVal
+    ? rendered.replace(/@Role/g, `<@${roleVal}>`)
+    : rendered;
 
   window.renderDiscordPreview(target, {
     botName: state.meta?.bot_name || "Kizoxy",
@@ -117,9 +119,9 @@ function updateMsgPreview(msgId, roleId, targetId, defaultPrefix) {
       title: title,
       description: `**Creator Name** just posted on ${isYoutube ? "YouTube" : "TikTok"}.`,
       color: color,
-      footer: authorName
+      footer: authorName,
     },
-    memberCache: memberCache
+    memberCache: memberCache,
   });
 }
 
@@ -217,14 +219,18 @@ function navigate(hash) {
   }
   document.getElementById("page-title").textContent = route.title;
   setActiveNav(hash);
-  
+
   const res = route.render();
   if (res instanceof Promise) {
-    res.then(() => {
-      if (window.Alpine) window.Alpine.initTree(document.getElementById("content"));
-    }).catch(() => {});
+    res
+      .then(() => {
+        if (window.Alpine)
+          window.Alpine.initTree(document.getElementById("content"));
+      })
+      .catch(() => {});
   } else {
-    if (window.Alpine) window.Alpine.initTree(document.getElementById("content"));
+    if (window.Alpine)
+      window.Alpine.initTree(document.getElementById("content"));
   }
 }
 

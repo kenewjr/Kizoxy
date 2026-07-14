@@ -34,6 +34,7 @@ Quick Start | Features | Commands | Dashboard | Config
     <td width="50%" valign="top">
 
 #### 🎵 Music
+
 - High-quality Lavalink v4 playback.
 - YouTube, SoundCloud + plugin sources (Spotify, Deezer, Apple Music via compatible Lavalink plugins).
 - Custom audio filters (Nightcore, Bassboost, 3D, Vibrato, reset, doubletime, karaoke, slowmotion).
@@ -42,12 +43,14 @@ Quick Start | Features | Commands | Dashboard | Config
 - Full queue management: skip, loop, shuffle, forward, remove, volume.
 
 #### 🔔 Notifications
+
 - YouTube channel notifications (new video, live, Shorts, upcoming) via RSS polling — no API quota usage.
 - TikTok account notifications (new posts, live detection) via TikWM scraper.
 - Per-type toggle (video/shorts/live/upcoming on/off per subscription).
 - Custom notification message templates with dynamic tokens.
 
 #### 📊 Engagement
+
 - XP & leveling system with ranking cards.
 - Server leaderboards.
 - Anime schedule via Jikan API.
@@ -56,18 +59,21 @@ Quick Start | Features | Commands | Dashboard | Config
     <td width="50%" valign="top">
 
 #### 🏠 Temp Voice Channels
+
 - Auto-created voice channels from a generator channel.
 - Full in-channel control panel (15 buttons: lock, unlock, hide, show, reset, allow, ban, kick, transfer, claim, rename, limit, muteall, unbanall, pininfo).
 - Voice roles, channel templates, name patterns with tokens.
 - Bitrate and region settings per generator.
 
 #### ⚙️ Administration
+
 - Dashboard: browser-based admin panel (per-guild settings, log viewer with level filters, YouTube/TikTok subscription manager, active player monitor, bot presence editor, update checker).
 - Social media embed fixer (Twitter/X, Instagram, TikTok, Reddit, Threads, Bluesky, Facebook, Tumblr, Mastodon).
 - Alarm system (single/recurring, timezone-aware, countdown auto-updates).
 - Per-guild log channels.
 
 #### 🛠️ Developer Experience
+
 - Slash AND prefix command support (prefix: `k`).
 - AutoComplete suggestions on `/play`.
 - PM2-ready ecosystem config.
@@ -77,6 +83,7 @@ Quick Start | Features | Commands | Dashboard | Config
 
     </td>
   </tr>
+
 </table>
 
 ---
@@ -114,12 +121,12 @@ npm run start:pm2      # Production (recommended)
 
 ## 📋 Requirements
 
-| Tool | Version | Purpose |
-| :--- | :--- | :--- |
-| Node.js | ≥ 18.0.0 | Runtime |
-| Lavalink | v4 | Audio streaming backend |
-| Discord Bot | — | [Discord Developer Portal](https://discord.com/developers/applications) |
-| PM2 (optional) | latest | Production process manager |
+| Tool           | Version  | Purpose                                                                 |
+| :------------- | :------- | :---------------------------------------------------------------------- |
+| Node.js        | ≥ 18.0.0 | Runtime                                                                 |
+| Lavalink       | v4       | Audio streaming backend                                                 |
+| Discord Bot    | —        | [Discord Developer Portal](https://discord.com/developers/applications) |
+| PM2 (optional) | latest   | Production process manager                                              |
 
 ---
 
@@ -180,57 +187,57 @@ DASHBOARD_PORT=4040         # Dashboard bind port
 <details open>
 <summary><b>🎶 Slash Music Commands</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/play <song\|url>` | Play a song or playlist from supported sources |
-| `/search <query>` | Search tracks and choose which one to play |
-| `/nowplaying` | View details of the currently playing track |
-| `/queue [page]` | View the list of tracks in the queue |
-| `/skip` | Skip the current track |
-| `/pause` | Pause the music playback |
-| `/lofi` | Stream Lofi radio non-stop |
-| `/filter <type>` | Apply audio filter (types: `reset`, `3d`, `bassboost`, `doubletime`, `karaoke`, `nightcore`, `slowmotion`, `vibrato`) |
+| Command             | Description                                                                                                           |
+| :------------------ | :-------------------------------------------------------------------------------------------------------------------- |
+| `/play <song\|url>` | Play a song or playlist from supported sources                                                                        |
+| `/search <query>`   | Search tracks and choose which one to play                                                                            |
+| `/nowplaying`       | View details of the currently playing track                                                                           |
+| `/queue [page]`     | View the list of tracks in the queue                                                                                  |
+| `/skip`             | Skip the current track                                                                                                |
+| `/pause`            | Pause the music playback                                                                                              |
+| `/lofi`             | Stream Lofi radio non-stop                                                                                            |
+| `/filter <type>`    | Apply audio filter (types: `reset`, `3d`, `bassboost`, `doubletime`, `karaoke`, `nightcore`, `slowmotion`, `vibrato`) |
 
 </details>
 
 <details>
 <summary><b>🎵 Music Subcommands (/music)</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/music forward <seconds>` | Fast forward by a set amount of seconds |
-| `/music leave` | Disconnect the bot from the voice channel |
-| `/music loop` | Toggle loop mode (off, track, queue) |
-| `/music lyric` | Look up track lyrics with Romaji translation |
+| Command                    | Description                                   |
+| :------------------------- | :-------------------------------------------- |
+| `/music forward <seconds>` | Fast forward by a set amount of seconds       |
+| `/music leave`             | Disconnect the bot from the voice channel     |
+| `/music loop`              | Toggle loop mode (off, track, queue)          |
+| `/music lyric`             | Look up track lyrics with Romaji translation  |
 | `/music remove <position>` | Remove a track at a specific index from queue |
-| `/music resume` | Resume music playback |
-| `/music shuffle` | Shuffle the queue tracks |
-| `/music twentyfourseven` | Toggle 24/7 stay-in-voice mode |
-| `/music volume <1-100>` | Adjust the bot playback volume |
+| `/music resume`            | Resume music playback                         |
+| `/music shuffle`           | Shuffle the queue tracks                      |
+| `/music twentyfourseven`   | Toggle 24/7 stay-in-voice mode                |
+| `/music volume <1-100>`    | Adjust the bot playback volume                |
 
 </details>
 
 <details>
 <summary><b>🎵 Prefix Music Commands</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `kplay <query\|url>` | Play a song or playlist |
-| `kskip` | Skip the current track |
-| `kstop` | Stop and clear queue |
-| `kpause` | Pause playback |
-| `kresume` | Resume playback |
-| `kloop` | Toggle loop mode |
-| `kshuffle` | Shuffle the queue |
-| `kremove <pos>` | Remove track at position |
-| `kqueue [page]` | View the queue |
-| `knp` | Now playing |
-| `klyrics` | Fetch lyrics |
-| `kvolume <1-100>` | Set volume |
-| `kforward <sec>` | Skip forward |
-| `kleave` | Disconnect |
-| `klofi` | Start Lofi stream |
-| `k247` | Toggle 24/7 mode |
+| Command              | Description              |
+| :------------------- | :----------------------- |
+| `kplay <query\|url>` | Play a song or playlist  |
+| `kskip`              | Skip the current track   |
+| `kstop`              | Stop and clear queue     |
+| `kpause`             | Pause playback           |
+| `kresume`            | Resume playback          |
+| `kloop`              | Toggle loop mode         |
+| `kshuffle`           | Shuffle the queue        |
+| `kremove <pos>`      | Remove track at position |
+| `kqueue [page]`      | View the queue           |
+| `knp`                | Now playing              |
+| `klyrics`            | Fetch lyrics             |
+| `kvolume <1-100>`    | Set volume               |
+| `kforward <sec>`     | Skip forward             |
+| `kleave`             | Disconnect               |
+| `klofi`              | Start Lofi stream        |
+| `k247`               | Toggle 24/7 mode         |
 
 > [!NOTE]
 > Prefix commands are for quick access in channels where slash commands may be slower. Replace `k` with your configured `PREFIX`.
@@ -240,14 +247,15 @@ DASHBOARD_PORT=4040         # Dashboard bind port
 <details>
 <summary><b>🏠 Temp Voice Channels</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/vcsetup` | Configure a generator voice channel |
+| Command        | Description                           |
+| :------------- | :------------------------------------ |
+| `/vcsetup`     | Configure a generator voice channel   |
 | `/vc <action>` | Manage your active temp voice channel |
-| `/vcrole` | Configure voice-specific roles |
-| `/vctemplate` | Manage channel name templates |
+| `/vcrole`      | Configure voice-specific roles        |
+| `/vctemplate`  | Manage channel name templates         |
 
 #### Available Actions for `/vc` Option:
+
 - `lock` / `unlock`: Prevent or allow users to join.
 - `hide` / `show`: Set channel visibility.
 - `rename`: Edit channel name.
@@ -262,44 +270,44 @@ DASHBOARD_PORT=4040         # Dashboard bind port
 <details>
 <summary><b>📺 YouTube Notifications</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/youtube add <url> <channel>` | Subscribe a YouTube channel for announcement alerts |
-| `/youtube remove <url>` | Unsubscribe from a YouTube channel |
-| `/youtube list` | List all YouTube notification subscriptions in this server |
+| Command                        | Description                                                |
+| :----------------------------- | :--------------------------------------------------------- |
+| `/youtube add <url> <channel>` | Subscribe a YouTube channel for announcement alerts        |
+| `/youtube remove <url>`        | Unsubscribe from a YouTube channel                         |
+| `/youtube list`                | List all YouTube notification subscriptions in this server |
 
 </details>
 
 <details>
 <summary><b>📱 TikTok Notifications</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/tiktok add <url> <channel>` | Subscribe a TikTok account for announcement alerts |
-| `/tiktok remove <url>` | Unsubscribe from a TikTok account |
-| `/tiktok list` | List all TikTok notification subscriptions in this server |
-| `/tiktok status <url>` | Show current scraping monitor status for an account |
-| `/tiktok test` | Send a test TikTok notification alert to the server |
+| Command                       | Description                                               |
+| :---------------------------- | :-------------------------------------------------------- |
+| `/tiktok add <url> <channel>` | Subscribe a TikTok account for announcement alerts        |
+| `/tiktok remove <url>`        | Unsubscribe from a TikTok account                         |
+| `/tiktok list`                | List all TikTok notification subscriptions in this server |
+| `/tiktok status <url>`        | Show current scraping monitor status for an account       |
+| `/tiktok test`                | Send a test TikTok notification alert to the server       |
 
 </details>
 
 <details>
 <summary><b>⏰ Alarms</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/alarm` | Open the unified alarm scheduler interface (view, create, edit, cancel, toggle) |
-| `/alarmadmin` | View all active alarms across this server (Admin only) |
+| Command       | Description                                                                     |
+| :------------ | :------------------------------------------------------------------------------ |
+| `/alarm`      | Open the unified alarm scheduler interface (view, create, edit, cancel, toggle) |
+| `/alarmadmin` | View all active alarms across this server (Admin only)                          |
 
 </details>
 
 <details>
 <summary><b>🏆 Leveling</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/rank [user]` | View level, XP, and rank progress card |
-| `/leaderboard` | Show the server's top leveling ranks |
+| Command                      | Description                            |
+| :--------------------------- | :------------------------------------- |
+| `/rank [user]`               | View level, XP, and rank progress card |
+| `/leaderboard`               | Show the server's top leveling ranks   |
 | `/level add <user> <amount>` | Add XP to a server member (Owner only) |
 
 </details>
@@ -307,21 +315,21 @@ DASHBOARD_PORT=4040         # Dashboard bind port
 <details>
 <summary><b>⚙️ Settings & Misc</b></summary>
 
-| Command | Description |
-| :--- | :--- |
-| `/fixembed` | Configure social-media URL auto-embed settings |
-| `/setlog <channel>` | Set the logs channel for server updates |
-| `/anime` | Search anime information or check release schedules |
-| `/donate` | Send the donation link to support Kizoxy's development |
-| `/help` | Open the help menu interface |
+| Command             | Description                                            |
+| :------------------ | :----------------------------------------------------- |
+| `/fixembed`         | Configure social-media URL auto-embed settings         |
+| `/setlog <channel>` | Set the logs channel for server updates                |
+| `/anime`            | Search anime information or check release schedules    |
+| `/donate`           | Send the donation link to support Kizoxy's development |
+| `/help`             | Open the help menu interface                           |
 
 </details>
 
 <details>
 <summary><b>👑 Owner</b></summary>
 
-| Command | Description |
-| :--- | :--- |
+| Command                             | Description                                            |
+| :---------------------------------- | :----------------------------------------------------- |
 | `/owner sendmsg <guild> <ch> <msg>` | Send messages to a specific guild channel (Owner only) |
 
 </details>
@@ -336,16 +344,16 @@ Kizoxy includes a built-in web admin panel, accessible at `http://127.0.0.1:4040
 
 **What you can do from the dashboard:**
 
-| Feature | Description |
-| :--- | :--- |
-| **Overview** | View bot stats, uptime, memory usage, Lavalink node connection status, and active player statistics. |
-| **Guild Settings** | Configure per-guild FixEmbed modes, log channels, and notification alerts. |
-| **YouTube / TikTok** | Add, remove, and edit video subscription trackers per guild. |
-| **Log Viewer** | Browse, live-tail, search, and filter bot logs by level (ERROR, WARN, INFO, DEBUG). |
-| **Config** | Edit runtime configurations (bot color, prefix) without restart. |
-| **Send Message** | Compose and send messages to any server text channel from the browser. |
-| **Update Checker** | Check which packages in `package.json` have newer updates available. |
-| **Commands** | View slash commands structure and customize command display aliases. |
+| Feature              | Description                                                                                          |
+| :------------------- | :--------------------------------------------------------------------------------------------------- |
+| **Overview**         | View bot stats, uptime, memory usage, Lavalink node connection status, and active player statistics. |
+| **Guild Settings**   | Configure per-guild FixEmbed modes, log channels, and notification alerts.                           |
+| **YouTube / TikTok** | Add, remove, and edit video subscription trackers per guild.                                         |
+| **Log Viewer**       | Browse, live-tail, search, and filter bot logs by level (ERROR, WARN, INFO, DEBUG).                  |
+| **Config**           | Edit runtime configurations (bot color, prefix) without restart.                                     |
+| **Send Message**     | Compose and send messages to any server text channel from the browser.                               |
+| **Update Checker**   | Check which packages in `package.json` have newer updates available.                                 |
+| **Commands**         | View slash commands structure and customize command display aliases.                                 |
 
 > [!TIP]
 > The dashboard binds to localhost only (`127.0.0.1`) and has no authentication — access requires direct server access. Use an SSH tunnel if you need remote access.
@@ -360,6 +368,7 @@ Kizoxy includes a built-in web admin panel, accessible at `http://127.0.0.1:4040
 </p>
 
 #### Sources requiring a Lavalink plugin:
+
 - 🔌 **Spotify** (via `spotify-source` Lavalink plugin)
 - 🔌 **Deezer** (via `deezer-source` Lavalink plugin)
 - 🔌 **Apple Music** (via `apple-music` Lavalink plugin)

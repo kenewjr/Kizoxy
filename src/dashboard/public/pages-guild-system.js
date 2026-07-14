@@ -343,8 +343,8 @@ function renderAlarms(el, g) {
         }</tbody>
       </table>
     </div>`;
-}// ── Guild Tab: Level ──
-window.xpManager = function(guildId) {
+} // ── Guild Tab: Level ──
+window.xpManager = function (guildId) {
   return {
     guildId,
     action: "add",
@@ -358,10 +358,10 @@ window.xpManager = function(guildId) {
       if (container) {
         container.innerHTML = renderSearchableSelect(
           "xp-user",
-          members.map(m => ({ id: m.id, name: `${m.name} (${m.tag})` })),
+          members.map((m) => ({ id: m.id, name: `${m.name} (${m.tag})` })),
           "Search member...",
           "",
-          "onXpUserChange(this.value)"
+          "onXpUserChange(this.value)",
         );
         window.onXpUserChange = (val) => {
           this.selectedUser = val;
@@ -376,20 +376,20 @@ window.xpManager = function(guildId) {
         const res = await api.post(`/guilds/${this.guildId}/level/xp`, {
           user_id: this.selectedUser,
           amount: Number(this.amount),
-          action: this.action
+          action: this.action,
         });
         this.result = res;
         showToast("XP updated successfully", "success");
         if (typeof window.loadLevelData === "function") {
           setTimeout(() => window.loadLevelData(false), 500);
         }
-      } catch(e) {
+      } catch (e) {
         const body = await e.json?.().catch(() => ({}));
         showToast(body?.error || "Failed to apply XP", "error");
       } finally {
         this.loading = false;
       }
-    }
+    },
   };
 };
 

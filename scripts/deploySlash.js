@@ -494,7 +494,7 @@ module.exports = {
   loadAndValidateCommands,
   cleanupExistingCommands,
   deployCommands,
-  verifyDeployment
+  verifyDeployment,
 };
 
 if (require.main === module) {

@@ -424,7 +424,7 @@ async function renderConfig() {
   }
 }
 
-window.deployPanel = function() {
+window.deployPanel = function () {
   return {
     scope: "global",
     guildId: "",
@@ -438,18 +438,18 @@ window.deployPanel = function() {
         const res = await api.post("/deploy/slash", {
           scope: this.scope,
           guild_id: this.guildId,
-          clear: this.clearFirst
+          clear: this.clearFirst,
         });
         this.result = res;
         showToast("Deployment finished successfully", "success");
-      } catch(e) {
+      } catch (e) {
         const body = await e.json?.().catch(() => ({}));
         this.result = { error: body?.error || "Failed to deploy commands." };
         showToast("Deployment failed", "error");
       } finally {
         this.loading = false;
       }
-    }
+    },
   };
 };
 
@@ -595,7 +595,7 @@ async function renderSendMsg() {
   }
 }
 
-window.sendMsgComposer = function(guilds) {
+window.sendMsgComposer = function (guilds) {
   return {
     guilds,
     channels: [],
@@ -614,7 +614,11 @@ window.sendMsgComposer = function(guilds) {
       this.$nextTick(() => this.updatePreview());
     },
     get canSend() {
-      return (this.message.trim() || this.imageUrl.trim()) && this.selectedGuildId && this.selectedChannelId;
+      return (
+        (this.message.trim() || this.imageUrl.trim()) &&
+        this.selectedGuildId &&
+        this.selectedChannelId
+      );
     },
     async onGuildChange() {
       if (!this.selectedGuildId) {
@@ -637,10 +641,13 @@ window.sendMsgComposer = function(guilds) {
         this.mentionResults = [];
         return;
       }
-      api.get(`/sendmsg/members/${this.selectedGuildId}?q=${encodeURIComponent(this.mentionQuery)}`)
-        .then(data => {
+      api
+        .get(
+          `/sendmsg/members/${this.selectedGuildId}?q=${encodeURIComponent(this.mentionQuery)}`,
+        )
+        .then((data) => {
           this.mentionResults = data;
-          data.forEach(m => this.memberCache.set(m.id, m.display_name));
+          data.forEach((m) => this.memberCache.set(m.id, m.display_name));
         });
     },
     insertMention(member) {
@@ -664,21 +671,23 @@ window.sendMsgComposer = function(guilds) {
       const mount = document.getElementById("discord-preview-mount");
       if (!mount) return;
 
-      const embedData = this.asEmbed ? {
-        title: this.embedTitle || null,
-        description: this.message || "(empty embed description)",
-        imageUrl: this.imageUrl || null,
-        color: state.meta?.bot_color || "var(--accent)",
-        footer: "Sent from Web Dashboard"
-      } : null;
+      const embedData = this.asEmbed
+        ? {
+            title: this.embedTitle || null,
+            description: this.message || "(empty embed description)",
+            imageUrl: this.imageUrl || null,
+            color: state.meta?.bot_color || "var(--accent)",
+            footer: "Sent from Web Dashboard",
+          }
+        : null;
 
       renderDiscordPreview(mount, {
         botName: state.meta?.bot_name || "Kizoxy",
         botAvatarUrl: state.meta?.bot_avatar_url || "",
-        content: this.asEmbed ? "" : (this.message || "(empty message content)"),
+        content: this.asEmbed ? "" : this.message || "(empty message content)",
         imageUrl: this.asEmbed ? "" : this.imageUrl,
         embed: embedData,
-        memberCache: this.memberCache
+        memberCache: this.memberCache,
       });
     },
     async sendMessage() {
@@ -690,7 +699,7 @@ window.sendMsgComposer = function(guilds) {
           channel_id: this.selectedChannelId,
           message: this.message,
           image_url: this.imageUrl || null,
-          embed: this.asEmbed
+          embed: this.asEmbed,
         });
         showToast("Message sent successfully!", "success");
         this.message = "";
@@ -702,12 +711,9 @@ window.sendMsgComposer = function(guilds) {
       } finally {
         this.sending = false;
       }
-    }
+    },
   };
 };
-      '<div class="card" style="color:var(--red)">Failed to load composition settings.</div>';
-  }
-}
 
 // ── Global Tab: Updates ──
 async function renderUpdates() {

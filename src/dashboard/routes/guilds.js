@@ -41,7 +41,10 @@ router.patch("/:id/fixembed", (req, res) => {
     if (enabled !== undefined && typeof enabled !== "boolean") {
       return res.status(400).json({ error: "enabled must be a boolean" });
     }
-    if (finalViewMode !== undefined && !VALID_VIEW_MODES.includes(finalViewMode)) {
+    if (
+      finalViewMode !== undefined &&
+      !VALID_VIEW_MODES.includes(finalViewMode)
+    ) {
       return res.status(400).json({
         error: `view_mode must be one of: ${VALID_VIEW_MODES.join(", ")}`,
       });
@@ -496,7 +499,7 @@ router.get("/:id/level", async (req, res) => {
               server_name = u.globalName ?? u.username;
               global_name = u.username;
             }
-          } catch (_) { }
+          } catch (_) {}
         }
 
         const next_xp = nextLevelXp(user.level, user.xp);
@@ -534,14 +537,26 @@ router.post("/:id/level/xp", async (req, res) => {
     if (!guild) return res.status(404).json({ error: "Guild not found" });
 
     if (!user_id || !/^\d{17,20}$/.test(user_id)) {
-      return res.status(400).json({ error: "Invalid user_id. Must be a 17-20 digit snowflake." });
+      return res
+        .status(400)
+        .json({ error: "Invalid user_id. Must be a 17-20 digit snowflake." });
     }
-    if (amount === undefined || typeof amount !== "number" || amount < 1 || amount > 100000 || !Number.isInteger(amount)) {
-      return res.status(400).json({ error: "Invalid amount. Must be an integer between 1 and 100,000." });
+    if (
+      amount === undefined ||
+      typeof amount !== "number" ||
+      amount < 1 ||
+      amount > 100000 ||
+      !Number.isInteger(amount)
+    ) {
+      return res.status(400).json({
+        error: "Invalid amount. Must be an integer between 1 and 100,000.",
+      });
     }
     const allowedActions = ["add", "set", "remove"];
     if (!action || !allowedActions.includes(action)) {
-      return res.status(400).json({ error: "Invalid action. Must be 'add', 'set', or 'remove'." });
+      return res
+        .status(400)
+        .json({ error: "Invalid action. Must be 'add', 'set', or 'remove'." });
     }
 
     if (!client.levelStorage) {
@@ -563,7 +578,11 @@ router.post("/:id/level/xp", async (req, res) => {
       delta = amount - previous_xp;
     }
 
-    const { user: userAfter } = await client.levelStorage.addXp(user_id, id, delta);
+    const { user: userAfter } = await client.levelStorage.addXp(
+      user_id,
+      id,
+      delta,
+    );
 
     res.json({
       user_id,
@@ -599,14 +618,14 @@ router.get("/:id/tempvc", async (req, res) => {
         : 0,
       active_channels: tempvcData?.tempChannels
         ? Object.values(tempvcData.tempChannels).map((ch) => {
-          const channelObj = guild.channels?.cache?.get(ch.id);
-          return {
-            id: ch.id,
-            ownerId: ch.ownerId,
-            createdAt: ch.createdAt,
-            memberCount: channelObj ? (channelObj.members?.size ?? "—") : "—",
-          };
-        })
+            const channelObj = guild.channels?.cache?.get(ch.id);
+            return {
+              id: ch.id,
+              ownerId: ch.ownerId,
+              createdAt: ch.createdAt,
+              memberCount: channelObj ? (channelObj.members?.size ?? "—") : "—",
+            };
+          })
         : [],
     });
   } catch (err) {
@@ -628,7 +647,9 @@ router.get("/:id/player/filters", (req, res) => {
 
     res.json({ active_filters: player.filtersState || {} });
   } catch (err) {
-    logger.error(`GET /api/guilds/${req.params.id}/player/filters: ${err.message}`);
+    logger.error(
+      `GET /api/guilds/${req.params.id}/player/filters: ${err.message}`,
+    );
     res.status(500).json({ error: "Failed to fetch player filters" });
   }
 });
@@ -642,11 +663,18 @@ router.patch("/:id/player/filters", async (req, res) => {
     const player = client.manager?.players?.get(id);
 
     if (!player) {
-      return res.status(404).json({ error: "No active music player in this server. Start playing music first!" });
+      return res.status(404).json({
+        error:
+          "No active music player in this server. Start playing music first!",
+      });
     }
 
     if (!client.applyPlayerFilter) {
-      client.applyPlayerFilter = async function(guildId, filterType, amt = null) {
+      client.applyPlayerFilter = async function (
+        guildId,
+        filterType,
+        amt = null,
+      ) {
         const p = client.manager.players.get(guildId);
         if (!p) throw new Error("No player found");
         if (!p.filtersState) p.filtersState = {};
@@ -690,10 +718,21 @@ router.patch("/:id/player/filters", async (req, res) => {
           else p.filtersState.timescale = { speed: 0.7, pitch: 1.0, rate: 1.0 };
         } else if (filterType === "nightcore") {
           if (p.filtersState.timescale) delete p.filtersState.timescale;
-          else p.filtersState.timescale = { speed: 1.165, pitch: 1.125, rate: 1.05 };
+          else
+            p.filtersState.timescale = {
+              speed: 1.165,
+              pitch: 1.125,
+              rate: 1.05,
+            };
         } else if (filterType === "karaoke") {
           if (p.filtersState.karaoke) delete p.filtersState.karaoke;
-          else p.filtersState.karaoke = { level: 1.0, monoLevel: 1.0, filterBand: 220.0, filterWidth: 100.0 };
+          else
+            p.filtersState.karaoke = {
+              level: 1.0,
+              monoLevel: 1.0,
+              filterBand: 220.0,
+              filterWidth: 100.0,
+            };
         } else if (filterType === "vibrato") {
           if (p.filtersState.vibrato) delete p.filtersState.vibrato;
           else p.filtersState.vibrato = { frequency: 2.0, depth: 0.5 };
@@ -707,8 +746,12 @@ router.patch("/:id/player/filters", async (req, res) => {
     const updatedState = await client.applyPlayerFilter(id, type, amount);
     res.json({ active_filters: updatedState });
   } catch (err) {
-    logger.error(`PATCH /api/guilds/${req.params.id}/player/filters: ${err.message}`);
-    res.status(500).json({ error: err.message || "Failed to update player filters" });
+    logger.error(
+      `PATCH /api/guilds/${req.params.id}/player/filters: ${err.message}`,
+    );
+    res
+      .status(500)
+      .json({ error: err.message || "Failed to update player filters" });
   }
 });
 

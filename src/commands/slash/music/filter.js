@@ -48,7 +48,7 @@ module.exports = {
       return interaction.editReply(`I'm not in the same voice channel as you!`);
 
     if (!client.applyPlayerFilter) {
-      client.applyPlayerFilter = async function(guildId, type, amt = null) {
+      client.applyPlayerFilter = async function (guildId, type, amt = null) {
         const p = client.manager.players.get(guildId);
         if (!p) throw new Error("No player found");
         if (!p.filtersState) p.filtersState = {};
@@ -92,10 +92,21 @@ module.exports = {
           else p.filtersState.timescale = { speed: 0.7, pitch: 1.0, rate: 1.0 };
         } else if (type === "nightcore") {
           if (p.filtersState.timescale) delete p.filtersState.timescale;
-          else p.filtersState.timescale = { speed: 1.165, pitch: 1.125, rate: 1.05 };
+          else
+            p.filtersState.timescale = {
+              speed: 1.165,
+              pitch: 1.125,
+              rate: 1.05,
+            };
         } else if (type === "karaoke") {
           if (p.filtersState.karaoke) delete p.filtersState.karaoke;
-          else p.filtersState.karaoke = { level: 1.0, monoLevel: 1.0, filterBand: 220.0, filterWidth: 100.0 };
+          else
+            p.filtersState.karaoke = {
+              level: 1.0,
+              monoLevel: 1.0,
+              filterBand: 220.0,
+              filterWidth: 100.0,
+            };
         } else if (type === "vibrato") {
           if (p.filtersState.vibrato) delete p.filtersState.vibrato;
           else p.filtersState.vibrato = { frequency: 2.0, depth: 0.5 };
@@ -107,14 +118,21 @@ module.exports = {
     }
 
     try {
-      const state = await client.applyPlayerFilter(interaction.guild.id, subcommand, amount);
-      const active = Object.keys(state).filter(k => state[k]);
+      const state = await client.applyPlayerFilter(
+        interaction.guild.id,
+        subcommand,
+        amount,
+      );
+      const active = Object.keys(state).filter((k) => state[k]);
       const embed = Embeds.brand(client, {
-        description: `💠 | **Filters Updated!**\nActive Filters: ${active.length > 0 ? active.map(a => `\`${a}\``).join(", ") : "`None`"}`
+        description: `💠 | **Filters Updated!**\nActive Filters: ${active.length > 0 ? active.map((a) => `\`${a}\``).join(", ") : "`None`"}`,
       });
-      setTimeout(() => interaction.editReply({ content: " ", embeds: [embed] }), 2000);
+      setTimeout(
+        () => interaction.editReply({ content: " ", embeds: [embed] }),
+        2000,
+      );
     } catch (err) {
       await interaction.editReply(`❌ Failed to update filter: ${err.message}`);
     }
-  }
+  },
 };

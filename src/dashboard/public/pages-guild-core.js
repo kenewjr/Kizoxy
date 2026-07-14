@@ -99,7 +99,7 @@ function renderGuildOverview(el, g) {
 }
 
 // ── Guild Tab: FixEmbed ──
-window.fixEmbedSettings = function(guildId, initialData) {
+window.fixEmbedSettings = function (guildId, initialData) {
   return {
     guildId,
     settings: { platforms: {}, ...initialData },
@@ -127,7 +127,7 @@ window.fixEmbedSettings = function(guildId, initialData) {
       { key: "e621", label: "e621", emoji: "🦄" },
       { key: "moebooru", label: "Moebooru", emoji: "🎐" },
       { key: "derpibooru", label: "Derpibooru", emoji: "🐎" },
-      { key: "rule34", label: "Rule34", emoji: "🔞" }
+      { key: "rule34", label: "Rule34", emoji: "🔞" },
     ],
     saving: false,
     saved: false,
@@ -139,17 +139,20 @@ window.fixEmbedSettings = function(guildId, initialData) {
       this.saving = true;
       this.saved = false;
       try {
-        const result = await api.patch(`/guilds/${this.guildId}/fixembed`, this.settings);
+        const result = await api.patch(
+          `/guilds/${this.guildId}/fixembed`,
+          this.settings,
+        );
         this.settings = { platforms: {}, ...result };
         state.currentGuild.fixembed = result;
         this.saved = true;
-        setTimeout(() => this.saved = false, 2000);
-      } catch(e) {
+        setTimeout(() => (this.saved = false), 2000);
+      } catch (e) {
         showToast("Failed to save FixEmbed settings", "error");
       } finally {
         this.saving = false;
       }
-    }
+    },
   };
 };
 

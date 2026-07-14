@@ -72,7 +72,11 @@ router.get("/members/:guildId", async (req, res) => {
 
     if (matched.length < 10 && q.trim().length > 0) {
       try {
-        const fetched = await guild.members.fetch({ query: q, limit: 10, withPresences: false });
+        const fetched = await guild.members.fetch({
+          query: q,
+          limit: 10,
+          withPresences: false,
+        });
         for (const m of fetched.values()) {
           if (!guild.members.cache.has(m.id)) {
             guild.members.cache.set(m.id, m);

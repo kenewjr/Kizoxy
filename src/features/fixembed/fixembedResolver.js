@@ -4,7 +4,11 @@ const RESOLVERS = require("./resolvers");
 
 const logger = new Logger("FIXEMBED");
 
-async function extractFixedLinks(content, viewMode = "normal", platformsSettings = null) {
+async function extractFixedLinks(
+  content,
+  viewMode = "normal",
+  platformsSettings = null,
+) {
   const urls = [...(content.matchAll(URL_REGEX) || [])].map((m) => m[0]);
   const results = [];
   const seen = new Set();

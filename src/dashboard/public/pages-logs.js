@@ -12,14 +12,14 @@ function getLevelFromLine(line) {
   return cls === "warn" ? "WARN" : cls.toUpperCase();
 }
 
-window.logFilterState = function() {
+window.logFilterState = function () {
   return {
     levels: [
       { id: "ERROR", color: "var(--red)" },
       { id: "WARN", color: "var(--yellow)" },
       { id: "SUCCESS", color: "var(--green)" },
       { id: "INFO", color: "var(--text-2)" },
-      { id: "DEBUG", color: "var(--blue)" }
+      { id: "DEBUG", color: "var(--blue)" },
     ],
     activeLevels: new Set(["ERROR", "WARN", "SUCCESS", "INFO", "DEBUG"]),
     searchText: "",
@@ -42,7 +42,7 @@ window.logFilterState = function() {
         if (this.allActive) {
           // keep at least one active
         } else {
-          this.levels.forEach(l => this.activeLevels.add(l.id));
+          this.levels.forEach((l) => this.activeLevels.add(l.id));
         }
       } else if (this.allActive) {
         this.activeLevels = new Set([id]);
@@ -55,7 +55,7 @@ window.logFilterState = function() {
     },
     applyFilter() {
       applyLogFilter(this.searchText, this.activeLevels);
-    }
+    },
   };
 };
 
@@ -126,7 +126,7 @@ async function renderLogs() {
             <label style="font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:4px">
               Auto-tail ${toggleHtml("", logsAutoTail, 'id="log-autotail" onchange="toggleAutoTail(this.checked)"')}
             </label>
-            <span class="log-count" style="font-size:12px;color:var(--text-3);margin-left:auto" x-text="\`Showing \${visibleCount} / \${totalCount}\``"></span>
+            <span class="log-count" style="font-size:12px;color:var(--text-3);margin-left:auto" x-text="'Showing ' + visibleCount + ' / ' + totalCount"></span>
             <span id="log-paused" class="badge badge--yellow" style="display:none">⏸ Paused</span>
           </div>
           <div id="log-viewer-wrap"><div style="padding:20px;color:var(--text-3)">Select a log file to view.</div></div>
@@ -165,9 +165,9 @@ async function reloadLogFile() {
       `/logs/${encodeURIComponent(logsCurrentFile)}?tail=${tail}`,
     );
     logsRawContent = data.content || "";
-    
+
     const event = new CustomEvent("log-data-updated", {
-      detail: { level_counts: data.level_counts }
+      detail: { level_counts: data.level_counts },
     });
     window.dispatchEvent(event);
   } catch {
@@ -222,8 +222,9 @@ function applyLogFilter(searchText = "", activeLevels = null) {
   if (!wrap) return;
   const wasAtBottom = wrap.firstElementChild
     ? wrap.firstElementChild.scrollHeight -
-      wrap.firstElementChild.scrollTop -
-      wrap.firstElementChild.clientHeight < 80
+        wrap.firstElementChild.scrollTop -
+        wrap.firstElementChild.clientHeight <
+      80
     : true;
 
   wrap.innerHTML = `<div class="log-viewer">${html}</div>`;

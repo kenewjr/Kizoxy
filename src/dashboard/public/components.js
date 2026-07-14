@@ -103,15 +103,15 @@ function renderSearchableSelect(
           None / Belum diatur
         </div>
         ${items
-      .map(
-        (item) => `
+          .map(
+            (item) => `
           <div class="dropdown-option" data-value="${item.id}" data-search="${escAttr(item.name)}" onclick="selectDropdownOption('${id}', '${item.id}', '${escAttr(item.name)}')" style="padding:8px 12px; cursor:pointer; color:var(--text-1); border-bottom:1px solid var(--border-light)" onmouseenter="this.style.background='var(--bg-3)'" onmouseleave="this.style.background=''">
             ${item.color ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${item.color}; margin-right:8px"></span>` : ""}
             ${esc(item.name)}
           </div>
         `,
-      )
-      .join("")}
+          )
+          .join("")}
       </div>
     </div>
   `;
@@ -168,7 +168,7 @@ document.addEventListener("click", function (e) {
   }
 });
 
-window.renderDiscordPreview = function(mountEl, options = {}) {
+window.renderDiscordPreview = function (mountEl, options = {}) {
   if (!mountEl) return;
   const {
     botName = "Kizoxy",
@@ -176,16 +176,17 @@ window.renderDiscordPreview = function(mountEl, options = {}) {
     content = "",
     imageUrl = "",
     embed = null, // { title, description, imageUrl, color, footer }
-    memberCache = null
+    memberCache = null,
   } = options;
 
   const formatContent = (text) => {
     if (!text) return "";
     let formatted = esc(text);
     formatted = formatted.replace(/&lt;@(\d+)&gt;/g, (match, id) => {
-      const name = memberCache && typeof memberCache.get === "function"
-        ? memberCache.get(id)
-        : null;
+      const name =
+        memberCache && typeof memberCache.get === "function"
+          ? memberCache.get(id)
+          : null;
       const label = name ? esc(name) : id;
       return `<span class="discord-preview-mention" data-id="${id}">@${label}</span>`;
     });
@@ -203,7 +204,8 @@ window.renderDiscordPreview = function(mountEl, options = {}) {
   const hasEmbed = !!embed;
   const hasPlainImage = !embed && !!imageUrl;
 
-  const embedHtml = hasEmbed ? `
+  const embedHtml = hasEmbed
+    ? `
     <div class="discord-preview-embed" style="border-left-color: ${getEmbedColor(embed.color)}">
       ${embed.title ? `<div class="discord-preview-embed-title">${formatContent(embed.title)}</div>` : ""}
       <div class="discord-preview-embed-desc">${formatContent(embed.description)}</div>
@@ -214,11 +216,14 @@ window.renderDiscordPreview = function(mountEl, options = {}) {
         <span>Today at 12:00 PM</span>
       </div>
     </div>
-  ` : "";
+  `
+    : "";
 
-  const plainImageHtml = hasPlainImage ? `
+  const plainImageHtml = hasPlainImage
+    ? `
     <img src="${esc(imageUrl)}" class="discord-preview-image" onerror="this.style.display='none'">
-  ` : "";
+  `
+    : "";
 
   mountEl.innerHTML = `
     <div class="discord-preview-container">
