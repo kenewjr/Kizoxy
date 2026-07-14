@@ -1,3 +1,4 @@
+const { ChannelType, PermissionFlagsBits } = require("discord.js");
 const youtubeStorage = require("../../persistence/youtubeStorage");
 const tiktokStorage = require("../../persistence/tiktokStorage");
 const fixembedStorage = require("../../persistence/fixembedStorage");
@@ -136,14 +137,41 @@ async function getGuildDetail(client, guildId) {
     }
   }
 
+  const sendableTypes = [
+    ChannelType.GuildText,
+    ChannelType.GuildAnnouncement,
+    ChannelType.PublicThread,
+    ChannelType.PrivateThread,
+    ChannelType.AnnouncementThread,
+  ];
   const channels = guild.channels?.cache
     ? [...guild.channels.cache.values()]
-        .filter((c) => typeof c.isTextBased === "function" && c.isTextBased())
-        .map((c) => ({
-          id: c.id,
-          name: c.name,
-          type: c.type,
-        }))
+        .filter((c) => {
+          try {
+            if (!sendableTypes.includes(c.type)) return false;
+            if (c.archived) return false;
+            const perms = c.permissionsFor(client.user);
+            return (
+              perms &&
+              perms.has(PermissionFlagsBits.ViewChannel) &&
+              perms.has(PermissionFlagsBits.SendMessages)
+            );
+          } catch (_) {
+            return false;
+          }
+        })
+        .map((c) => {
+          const perms = c.permissionsFor(client.user);
+          return {
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            parentName: c.parent ? c.parent.name : null,
+            mentionEveryoneAllowed: !!(
+              perms && perms.has(PermissionFlagsBits.MentionEveryone)
+            ),
+          };
+        })
         .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 

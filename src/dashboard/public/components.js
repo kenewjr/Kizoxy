@@ -127,23 +127,29 @@ window.toggleDropdown = function (id) {
   }
 };
 
+let filterDebounceTimers = {};
 window.filterDropdown = function (id) {
-  const searchInput = document.getElementById(`${id}-search`);
-  if (!searchInput) return;
-  const filter = searchInput.value.toLowerCase();
-  const optionsContainer = document.getElementById(`${id}-options`);
-  if (optionsContainer) {
-    optionsContainer.style.display = "block";
-    const options = optionsContainer.getElementsByClassName("dropdown-option");
-    for (let i = 0; i < options.length; i++) {
-      const txtValue = options[i].getAttribute("data-search") || "";
-      if (txtValue.toLowerCase().indexOf(filter) > -1) {
-        options[i].style.display = "";
-      } else {
-        options[i].style.display = "none";
+  if (filterDebounceTimers[id]) clearTimeout(filterDebounceTimers[id]);
+  filterDebounceTimers[id] = setTimeout(() => {
+    const searchInput = document.getElementById(`${id}-search`);
+    if (!searchInput) return;
+    const filter = searchInput.value.toLowerCase();
+    const optionsContainer = document.getElementById(`${id}-options`);
+    if (optionsContainer) {
+      optionsContainer.style.display = "block";
+      const options =
+        optionsContainer.getElementsByClassName("dropdown-option");
+      for (let i = 0; i < options.length; i++) {
+        const txtValue = options[i].getAttribute("data-search") || "";
+        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+          options[i].style.display = "";
+        } else {
+          options[i].style.display = "none";
+          options[i].classList.remove("highlighted");
+        }
       }
     }
-  }
+  }, 150);
 };
 
 window.selectDropdownOption = function (id, value, name) {
@@ -151,9 +157,13 @@ window.selectDropdownOption = function (id, value, name) {
   const hiddenInput = document.getElementById(id);
   const optionsContainer = document.getElementById(`${id}-options`);
   if (searchInput && hiddenInput && optionsContainer) {
-    searchInput.value = name;
+    searchInput.value = name === "None / Belum diatur" ? "" : name;
     hiddenInput.value = value;
     optionsContainer.style.display = "none";
+    const options = optionsContainer.getElementsByClassName("dropdown-option");
+    for (let i = 0; i < options.length; i++) {
+      options[i].classList.remove("highlighted");
+    }
 
     const event = new Event("change", { bubbles: true });
     hiddenInput.dispatchEvent(event);
@@ -164,7 +174,55 @@ document.addEventListener("click", function (e) {
   if (!e.target.closest(".searchable-select")) {
     document.querySelectorAll(".dropdown-options").forEach((el) => {
       el.style.display = "none";
+      const options = el.getElementsByClassName("dropdown-option");
+      for (let i = 0; i < options.length; i++) {
+        options[i].classList.remove("highlighted");
+      }
     });
+  }
+});
+
+document.addEventListener("keydown", function (e) {
+  const activeInput = document.activeElement;
+  if (!activeInput || !activeInput.id || !activeInput.id.endsWith("-search"))
+    return;
+
+  const id = activeInput.id.slice(0, -7);
+  const optionsContainer = document.getElementById(`${id}-options`);
+  if (!optionsContainer || optionsContainer.style.display === "none") return;
+
+  const options = Array.from(
+    optionsContainer.getElementsByClassName("dropdown-option"),
+  ).filter((opt) => opt.style.display !== "none");
+
+  if (!options.length) return;
+
+  let currentIndex = options.findIndex((opt) =>
+    opt.classList.contains("highlighted"),
+  );
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (currentIndex !== -1)
+      options[currentIndex].classList.remove("highlighted");
+    currentIndex = (currentIndex + 1) % options.length;
+    options[currentIndex].classList.add("highlighted");
+    options[currentIndex].scrollIntoView({ block: "nearest" });
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (currentIndex !== -1)
+      options[currentIndex].classList.remove("highlighted");
+    currentIndex = (currentIndex - 1 + options.length) % options.length;
+    options[currentIndex].classList.add("highlighted");
+    options[currentIndex].scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (currentIndex !== -1) {
+      options[currentIndex].click();
+    }
+  } else if (e.key === "Escape") {
+    optionsContainer.style.display = "none";
+    activeInput.blur();
   }
 });
 

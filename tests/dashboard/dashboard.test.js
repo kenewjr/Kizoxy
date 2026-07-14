@@ -26,6 +26,10 @@ const mockGuild = {
   joinedAt: new Date("2024-01-01"),
   channels: { cache: new Map([["channel-1", mockChannel]]) },
   roles: { cache: new Map() },
+  members: {
+    cache: new Map(),
+    fetch: jest.fn().mockResolvedValue(new Map()),
+  },
 };
 
 const mockClient = {
@@ -399,27 +403,36 @@ describe("New Dashboard Endpoints", () => {
 
   describe("Send Message & Updates & Bot & Config Tab Extensions", () => {
     // Send Msg GET
-    it("GET /api/sendmsg/channels/:guildId returns text channels with bot permissions", async () => {
+    it("GET /api/guilds/:guildId/send-message/members returns member search results", async () => {
+      // Mock a member
+      mockGuild.members.cache.set("member-123", {
+        id: "member-123",
+        displayName: "John Doe",
+        user: {
+          username: "johndoe",
+          bot: false,
+          displayAvatarURL: () => "avatar-url",
+        },
+      });
+
       const res = await request(app)
-        .get("/api/sendmsg/channels/guild-test-1")
+        .get("/api/guilds/guild-test-1/send-message/members?q=John")
         .expect(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body[0]).toHaveProperty("id", "channel-1");
-      expect(res.body[0]).toHaveProperty("name", "general");
+      expect(res.body[0]).toHaveProperty("id", "member-123");
+      expect(res.body[0]).toHaveProperty("username", "johndoe");
     });
 
     // Send Msg POST
-    it("POST /api/sendmsg dispatches message content to Discord text channel", async () => {
+    it("POST /api/guilds/:guildId/send-message dispatches message content to Discord text channel", async () => {
       const res = await request(app)
-        .post("/api/sendmsg")
+        .post("/api/guilds/guild-test-1/send-message")
         .send({
-          guild_id: "guild-test-1",
-          channel_id: "channel-1",
+          channelId: "channel-1",
           message: "Test message from dashboard",
-          embed: false,
         })
         .expect(200);
-      expect(res.body).toEqual({ success: true, message_id: "msg-123" });
+      expect(res.body).toEqual({ success: true, messageId: "msg-123" });
     });
 
     // Updates GET

@@ -6,7 +6,7 @@ const logger = new Logger("DASHBOARD");
 
 function createDashboard(client) {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: "15mb" }));
   app.locals.client = client;
   // no-cache: dashboard assets change frequently; avoid serving a stale
   // pages.js/app.js from the browser cache.
@@ -26,7 +26,7 @@ function createDashboard(client) {
   app.use("/api/guilds", require("./routes/tiktok"));
   app.use("/api/logs", require("./routes/logs"));
   app.use("/api/commands", require("./routes/commands"));
-  app.use("/api/sendmsg", require("./routes/sendmsg"));
+  app.use("/api/guilds", require("./routes/sendmsg"));
 
   // SPA catch-all: any GET not matched by /api/* returns index.html.
   // Express v5 requires named wildcard params.

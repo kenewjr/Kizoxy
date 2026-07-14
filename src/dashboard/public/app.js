@@ -176,10 +176,7 @@ const routes = {
     title: "Commands",
     render: () => typeof renderCommands === "function" && renderCommands(),
   },
-  "#sendmsg": {
-    title: "Send Message",
-    render: () => typeof renderSendMsg === "function" && renderSendMsg(),
-  },
+
   "#updates": {
     title: "Check for Updates",
     render: () => typeof renderUpdates === "function" && renderUpdates(),
@@ -282,7 +279,6 @@ function renderSidebar(meta) {
     { hash: "#overview", icon: "🏠", label: "Overview" },
     { hash: "#guilds", icon: "⚙️", label: "Guilds" },
     { hash: "#commands", icon: "📖", label: "Commands" },
-    { hash: "#sendmsg", icon: "✉️", label: "Send Msg" },
     { hash: "#updates", icon: "🚀", label: "Updates" },
     { hash: "#config", icon: "🔧", label: "Config" },
     { hash: "#logs", icon: "📋", label: "Logs" },
