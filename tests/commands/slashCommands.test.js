@@ -34,7 +34,7 @@ jest.mock("../../src/persistence/fixembedStorage", () => ({
   toggleKeyword: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock("../../src/persistence/tempvcStorage", () => ({
+jest.mock("../../src/persistence/tempVcStorage", () => ({
   getSettings: jest.fn().mockReturnValue({}),
   saveSettings: jest.fn(),
 }));
