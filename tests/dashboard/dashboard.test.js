@@ -403,31 +403,21 @@ describe("New Dashboard Endpoints", () => {
 
   describe("Send Message & Updates & Bot & Config Tab Extensions", () => {
     // Send Msg GET
-    it("GET /api/guilds/:guildId/send-message/members returns member search results", async () => {
-      // Mock a member
-      mockGuild.members.cache.set("member-123", {
-        id: "member-123",
-        displayName: "John Doe",
-        user: {
-          username: "johndoe",
-          bot: false,
-          displayAvatarURL: () => "avatar-url",
-        },
-      });
-
+    it("GET /api/sendmsg/channels/:guildId returns text channels", async () => {
       const res = await request(app)
-        .get("/api/guilds/guild-test-1/send-message/members?q=John")
+        .get("/api/sendmsg/channels/guild-test-1")
         .expect(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body[0]).toHaveProperty("id", "member-123");
-      expect(res.body[0]).toHaveProperty("username", "johndoe");
+      expect(res.body[0]).toHaveProperty("id", "channel-1");
+      expect(res.body[0]).toHaveProperty("name", "general");
     });
 
     // Send Msg POST
-    it("POST /api/guilds/:guildId/send-message dispatches message content to Discord text channel", async () => {
+    it("POST /api/sendmsg dispatches message content to Discord text channel", async () => {
       const res = await request(app)
-        .post("/api/guilds/guild-test-1/send-message")
+        .post("/api/sendmsg")
         .send({
+          guildId: "guild-test-1",
           channelId: "channel-1",
           message: "Test message from dashboard",
         })

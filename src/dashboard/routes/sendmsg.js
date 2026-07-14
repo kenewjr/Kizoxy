@@ -8,11 +8,10 @@ const Logger = require("../../lib/logger");
 
 const logger = new Logger("DASHBOARD-SENDMSG");
 
-// GET /api/guilds/:guildId/send-message/members
-router.get("/:guildId/send-message/members", async (req, res) => {
+// GET /api/sendmsg/channels/:guildId
+router.get("/channels/:guildId", async (req, res) => {
   try {
     const { guildId } = req.params;
-    const q = req.query.q || "";
     const client = req.app.locals.client;
 
     const guild = client.guilds.cache.get(guildId);
@@ -20,72 +19,56 @@ router.get("/:guildId/send-message/members", async (req, res) => {
       return res.status(404).json({ error: "Guild not found" });
     }
 
-    const filterFn = (m) => {
-      const u = m.user;
-      if (!u) return false;
-      if (u.bot) return false; // Exclude bots
-      if (!q) return true;
-      const term = q.toLowerCase();
-      return (
-        m.displayName.toLowerCase().includes(term) ||
-        u.username.toLowerCase().includes(term) ||
-        m.id.includes(term)
-      );
-    };
+    const sendableTypes = [
+      ChannelType.GuildText,
+      ChannelType.GuildAnnouncement,
+      ChannelType.PublicThread,
+      ChannelType.PrivateThread,
+      ChannelType.AnnouncementThread,
+    ];
 
-    let matched = Array.from(guild.members.cache.values()).filter(filterFn);
-
-    if (matched.length < 15 && q.trim().length > 0) {
-      try {
-        const fetched = await guild.members.fetch({
-          query: q,
-          limit: 15,
-          withPresences: false,
-        });
-        for (const m of fetched.values()) {
-          if (!guild.members.cache.has(m.id)) {
-            guild.members.cache.set(m.id, m);
-          }
+    const channels = [...guild.channels.cache.values()]
+      .filter((c) => {
+        try {
+          if (!sendableTypes.includes(c.type)) return false;
+          if (c.archived) return false;
+          const perms = c.permissionsFor(client.user);
+          return perms && perms.has(PermissionFlagsBits.ViewChannel) && perms.has(PermissionFlagsBits.SendMessages);
+        } catch (_) {
+          return false;
         }
-        matched = Array.from(guild.members.cache.values()).filter(filterFn);
-      } catch (err) {
-        logger.debug(`Failed to fetch members for query ${q}: ${err.message}`);
-      }
-    }
+      })
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        parentName: c.parent ? c.parent.name : null,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-    const results = matched.slice(0, 20).map((m) => ({
-      id: m.id,
-      username: m.user.username,
-      display_name: m.displayName,
-      avatar_url: m.user.displayAvatarURL({ size: 64 }) || null,
-    }));
-
-    res.json(results);
+    res.json(channels);
   } catch (err) {
-    logger.error(
-      `GET /api/guilds/:guildId/send-message/members: ${err.message}`,
-    );
+    logger.error(`GET /api/sendmsg/channels/:guildId: ${err.message}`);
     res.json([]);
   }
 });
 
-// POST /api/guilds/:guildId/send-message
-router.post("/:guildId/send-message", async (req, res) => {
+// POST /api/sendmsg
+router.post("/", async (req, res) => {
   try {
-    const { guildId } = req.params;
     const client = req.app.locals.client;
     const {
+      guildId,
       channelId,
       message,
-      mentionUsers = [],
-      mentionRoles = [],
-      mentionEveryone = false,
-      mentionHere = false,
       messageType = "plain",
       embed = null,
       attachments = [],
     } = req.body;
 
+    if (!guildId) {
+      return res.status(400).json({ error: "guildId is required." });
+    }
     if (!channelId) {
       return res.status(400).json({ error: "channelId is required." });
     }
@@ -109,9 +92,7 @@ router.post("/:guildId/send-message", async (req, res) => {
       ChannelType.AnnouncementThread,
     ];
     if (!sendableTypes.includes(channel.type)) {
-      return res
-        .status(400)
-        .json({ error: "Channel is not a text channel or compatible thread." });
+      return res.status(400).json({ error: "Channel is not a text channel or compatible thread." });
     }
     if (channel.archived) {
       return res.status(400).json({ error: "Channel is archived." });
@@ -119,73 +100,22 @@ router.post("/:guildId/send-message", async (req, res) => {
 
     // Permission check
     const perms = channel.permissionsFor(client.user);
-    if (
-      !perms ||
-      !perms.has(PermissionFlagsBits.ViewChannel) ||
-      !perms.has(PermissionFlagsBits.SendMessages)
-    ) {
+    if (!perms || !perms.has(PermissionFlagsBits.ViewChannel) || !perms.has(PermissionFlagsBits.SendMessages)) {
       return res.status(403).json({
-        error:
-          "Bot does not have View Channel or Send Messages permissions in this channel.",
+        error: "Bot does not have View Channel or Send Messages permissions in this channel.",
       });
     }
 
-    if (messageType === "embed" && !perms.has(PermissionFlagsBits.EmbedLinks)) {
+    if (messageType === "embed" && (!perms.has(PermissionFlagsBits.EmbedLinks))) {
       return res.status(403).json({
         error: "Bot does not have Embed Links permission in this channel.",
       });
     }
 
-    if (
-      attachments &&
-      attachments.length > 0 &&
-      !perms.has(PermissionFlagsBits.AttachFiles)
-    ) {
+    if (attachments && attachments.length > 0 && !perms.has(PermissionFlagsBits.AttachFiles)) {
       return res.status(403).json({
         error: "Bot does not have Attach Files permission in this channel.",
       });
-    }
-
-    // Mention permission check
-    if (
-      (mentionEveryone || mentionHere) &&
-      !perms.has(PermissionFlagsBits.MentionEveryone)
-    ) {
-      return res.status(403).json({
-        error: "Bot does not have Mention Everyone permission in this channel.",
-      });
-    }
-
-    // Validate users are in the guild
-    if (mentionUsers && Array.isArray(mentionUsers)) {
-      for (const userId of mentionUsers) {
-        if (typeof userId !== "string" || !/^\d{17,20}$/.test(userId)) {
-          return res.status(400).json({ error: `Invalid user ID: ${userId}` });
-        }
-        if (!guild.members.cache.has(userId)) {
-          try {
-            await guild.members.fetch(userId);
-          } catch (_) {
-            return res.status(400).json({
-              error: `Member ${userId} does not belong to this guild.`,
-            });
-          }
-        }
-      }
-    }
-
-    // Validate roles are in the guild
-    if (mentionRoles && Array.isArray(mentionRoles)) {
-      for (const roleId of mentionRoles) {
-        if (typeof roleId !== "string" || !/^\d{17,20}$/.test(roleId)) {
-          return res.status(400).json({ error: `Invalid role ID: ${roleId}` });
-        }
-        if (!guild.roles.cache.has(roleId)) {
-          return res
-            .status(400)
-            .json({ error: `Role ${roleId} does not belong to this guild.` });
-        }
-      }
     }
 
     // Build files / attachments
@@ -206,57 +136,38 @@ router.post("/:guildId/send-message", async (req, res) => {
         });
       }
       if (totalSize > 8 * 1024 * 1024) {
-        return res
-          .status(400)
-          .json({ error: "Attachments exceed size limit of 8MB." });
+        return res.status(400).json({ error: "Attachments exceed size limit of 8MB." });
       }
     }
 
     // Check message length limit
     const cleanMsg = (message || "").trim();
     if (cleanMsg.length > 2000) {
-      return res
-        .status(400)
-        .json({ error: "Message content cannot exceed 2000 characters." });
+      return res.status(400).json({ error: "Message content cannot exceed 2000 characters." });
     }
 
     if (!cleanMsg && files.length === 0 && messageType !== "embed") {
-      return res
-        .status(400)
-        .json({ error: "Message content or attachments are required." });
+      return res.status(400).json({ error: "Message content or attachments are required." });
     }
 
-    // Generate final content with mentions
-    // Order: Everyone/Here -> Users -> Roles -> Message
-    const prefixLines = [];
-    if (mentionEveryone) prefixLines.push("@everyone");
-    if (mentionHere) prefixLines.push("@here");
-    if (mentionUsers && mentionUsers.length) {
-      prefixLines.push(mentionUsers.map((id) => `<@${id}>`).join(" "));
+    // Mention safety: extract every <@USER_ID> token present in cleanMsg via regex
+    const userMentionRegex = /<@!?(\d+)>/g;
+    const extractedIds = [];
+    let match;
+    while ((match = userMentionRegex.exec(cleanMsg)) !== null) {
+      extractedIds.push(match[1]);
     }
-    if (mentionRoles && mentionRoles.length) {
-      prefixLines.push(mentionRoles.map((id) => `<@&${id}>`).join(" "));
-    }
-
-    let finalContent = "";
-    if (prefixLines.length) {
-      finalContent = prefixLines.join("\n") + "\n" + cleanMsg;
-    } else {
-      finalContent = cleanMsg;
-    }
-    finalContent = finalContent.trim();
+    const uniqueUserIds = [...new Set(extractedIds)];
 
     // Construct allowedMentions
     const allowedMentions = {
       parse: [],
-      users: mentionUsers,
-      roles: mentionRoles,
+      users: uniqueUserIds,
+      roles: [],
     };
-    if (mentionEveryone) allowedMentions.parse.push("everyone");
-    if (mentionHere) allowedMentions.parse.push("everyone");
 
     const payload = {
-      content: finalContent || undefined,
+      content: cleanMsg || undefined,
       allowedMentions,
       files: files.length ? files : undefined,
     };
@@ -266,30 +177,24 @@ router.post("/:guildId/send-message", async (req, res) => {
       if (embed.title) embedBuilder.setTitle(embed.title);
       if (embed.description) {
         if (embed.description.length > 4096) {
-          return res
-            .status(400)
-            .json({ error: "Embed description exceeds 4096 characters." });
+          return res.status(400).json({ error: "Embed description exceeds 4096 characters." });
         }
         embedBuilder.setDescription(embed.description);
       }
       if (embed.color) {
         if (!/^#[0-9A-Fa-f]{6}$/.test(embed.color)) {
-          return res
-            .status(400)
-            .json({ error: "Embed color must be a valid hex code." });
+          return res.status(400).json({ error: "Embed color must be a valid hex code." });
         }
         embedBuilder.setColor(embed.color);
       }
       if (embed.footer) embedBuilder.setFooter({ text: embed.footer });
-
+      
       if (embed.thumbnail) {
         try {
           new URL(embed.thumbnail);
           embedBuilder.setThumbnail(embed.thumbnail);
         } catch (_) {
-          return res
-            .status(400)
-            .json({ error: "Invalid embed thumbnail URL." });
+          return res.status(400).json({ error: "Invalid embed thumbnail URL." });
         }
       }
       if (embed.image) {
@@ -310,13 +215,12 @@ router.post("/:guildId/send-message", async (req, res) => {
       const sent = await channel.send(payload);
       res.json({ success: true, messageId: sent.id });
     } catch (sendErr) {
-      res
-        .status(500)
-        .json({ error: sendErr.message || "Failed to send message." });
+      logger.error(`Failed to send message: ${sendErr.message}`);
+      res.status(500).json({ error: "Failed to send message." });
     }
   } catch (err) {
-    logger.error(`POST /api/guilds/:guildId/send-message: ${err.message}`);
-    res.status(500).json({ error: err.message || "Internal server error." });
+    logger.error(`POST /api/sendmsg: ${err.message}`);
+    res.status(500).json({ error: "Internal server error." });
   }
 });
 
