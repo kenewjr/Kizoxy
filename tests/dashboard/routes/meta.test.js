@@ -51,13 +51,11 @@ describe("GET /api/stats", () => {
 describe("PATCH /api/bot/presence", () => {
   it("sets presence and returns rotation_paused true", async () => {
     const { app, client } = createTestApp();
-    const res = await request(app)
-      .patch("/api/bot/presence")
-      .send({
-        status: "idle",
-        activity_text: "Testing",
-        activity_type: "playing",
-      });
+    const res = await request(app).patch("/api/bot/presence").send({
+      status: "idle",
+      activity_text: "Testing",
+      activity_type: "playing",
+    });
     expect(res.status).toBe(200);
     expect(res.body.rotation_paused).toBe(true);
     expect(client.user.setPresence).toHaveBeenCalled();

@@ -76,27 +76,23 @@ describe("Send Message Route Tests", () => {
 
   describe("POST /api/sendmsg", () => {
     it("sends simple message successfully", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guild_id: guild.id,
-          channel_id: channel.id,
-          message: "Hello World!",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guild_id: guild.id,
+        channel_id: channel.id,
+        message: "Hello World!",
+      });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(channel.send).toHaveBeenCalled();
     });
 
     it("sends message with embed options successfully", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guild_id: guild.id,
-          channel_id: channel.id,
-          message: "Embed text",
-          embed: true,
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guild_id: guild.id,
+        channel_id: channel.id,
+        message: "Embed text",
+        embed: true,
+      });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(channel.send).toHaveBeenCalledWith(
@@ -126,13 +122,11 @@ describe("Send Message Route Tests", () => {
 
     it("returns 422 if channel.send throws permissions error", async () => {
       channel.send.mockRejectedValueOnce(new Error("Missing Access"));
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guild_id: guild.id,
-          channel_id: channel.id,
-          message: "Hello!",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guild_id: guild.id,
+        channel_id: channel.id,
+        message: "Hello!",
+      });
       expect(res.status).toBe(422);
       expect(res.body.error).toBe("Missing Access");
     });
