@@ -417,12 +417,12 @@ describe("New Dashboard Endpoints", () => {
       const res = await request(app)
         .post("/api/sendmsg")
         .send({
-          guildId: "guild-test-1",
-          channelId: "channel-1",
+          guild_id: "guild-test-1",
+          channel_id: "channel-1",
           message: "Test message from dashboard",
         })
         .expect(200);
-      expect(res.body).toEqual({ success: true, messageId: "msg-123" });
+      expect(res.body).toEqual({ sent: true, message_id: "msg-123" });
     });
 
     // Updates GET

@@ -32,6 +32,7 @@ describe("Send Message Route Tests", () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body[0].id).toBe(channel.id);
+      expect(res.body[0]).toHaveProperty("position");
     });
 
     it("returns 404 if guild not found", async () => {
@@ -40,29 +41,51 @@ describe("Send Message Route Tests", () => {
     });
   });
 
+  describe("GET /api/sendmsg/members/:guildId", () => {
+    it("returns matching members of a guild", async () => {
+      guild.members.cache.set("member-1", {
+        id: "member-1",
+        displayName: "Ken",
+        user: { username: "ken" },
+      });
+      const res = await request(app).get(
+        `/api/sendmsg/members/${guild.id}?q=ken`,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body[0]).toEqual({
+        id: "member-1",
+        username: "ken",
+        display_name: "Ken",
+      });
+    });
+  });
+
   describe("POST /api/sendmsg", () => {
     it("sends simple message successfully", async () => {
       const res = await request(app).post("/api/sendmsg").send({
-        guildId: guild.id,
-        channelId: channel.id,
+        guild_id: guild.id,
+        channel_id: channel.id,
         message: "Hello World!",
       });
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
+      expect(res.body.sent).toBe(true);
       expect(channel.send).toHaveBeenCalled();
     });
 
-    it("extracts <@id> tokens and sets allowedMentions.users strictly", async () => {
-      const res = await request(app).post("/api/sendmsg").send({
-        guildId: guild.id,
-        channelId: channel.id,
-        message: "Hello <@111111111111111111> and <@!222222222222222222>",
-      });
+    it("extracts mentions and sets allowedMentions.users strictly", async () => {
+      const res = await request(app)
+        .post("/api/sendmsg")
+        .send({
+          guild_id: guild.id,
+          channel_id: channel.id,
+          message: "Hello",
+          mentions: ["111111111111111111", "222222222222222222"],
+        });
 
       expect(res.status).toBe(200);
       expect(channel.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: "Hello <@111111111111111111> and <@!222222222222222222>",
+          content: "<@111111111111111111> <@222222222222222222>\nHello",
           allowedMentions: {
             parse: [],
             users: ["111111111111111111", "222222222222222222"],
@@ -74,8 +97,8 @@ describe("Send Message Route Tests", () => {
 
     it("sets allowedMentions.users empty when no mention tokens are present", async () => {
       const res = await request(app).post("/api/sendmsg").send({
-        guildId: guild.id,
-        channelId: channel.id,
+        guild_id: guild.id,
+        channel_id: channel.id,
         message: "Hello world without any pings",
       });
 
@@ -92,61 +115,36 @@ describe("Send Message Route Tests", () => {
       );
     });
 
-    it("returns 403 if bot lacks SendMessages or ViewChannel permissions", async () => {
-      channel.permissionsFor.mockReturnValueOnce({
-        has: jest.fn().mockReturnValue(false),
-      });
+    it("returns 422 if discord send fails", async () => {
+      channel.send.mockRejectedValueOnce(new Error("Discord API Error"));
 
       const res = await request(app).post("/api/sendmsg").send({
-        guildId: guild.id,
-        channelId: channel.id,
+        guild_id: guild.id,
+        channel_id: channel.id,
         message: "Hello",
       });
 
-      expect(res.status).toBe(403);
-      expect(res.body.error).toContain(
-        "Bot does not have View Channel or Send Messages permissions",
-      );
+      expect(res.status).toBe(422);
+      expect(res.body.error).toBe("Discord API Error");
     });
 
-    it("returns 400 for non-text channels", async () => {
-      channel.type = 2; // GuildVoice
+    it("returns 400 if message and image_url are both missing", async () => {
       const res = await request(app).post("/api/sendmsg").send({
-        guildId: guild.id,
-        channelId: channel.id,
-        message: "Hello",
+        guild_id: guild.id,
+        channel_id: channel.id,
       });
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain(
-        "Channel is not a text channel or compatible thread",
-      );
-    });
-
-    it("returns 400 if message content is empty and no attachments exist", async () => {
-      const res = await request(app).post("/api/sendmsg").send({
-        guildId: guild.id,
-        channelId: channel.id,
-        message: "",
-      });
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain(
-        "Message content or attachments are required",
-      );
+      expect(res.body.error).toContain("message or image_url is required");
     });
 
     it("sends embed successfully", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          messageType: "embed",
-          embed: {
-            title: "Announce Title",
-            description: "Some description content",
-            color: "#ff0000",
-          },
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guild_id: guild.id,
+        channel_id: channel.id,
+        as_embed: true,
+        embed_title: "Announce Title",
+        message: "Some description content",
+      });
 
       expect(res.status).toBe(200);
       expect(channel.send).toHaveBeenCalledWith(
@@ -154,25 +152,6 @@ describe("Send Message Route Tests", () => {
           embeds: expect.any(Array),
         }),
       );
-    });
-
-    it("returns 400 if base64 attachments exceed 8MB", async () => {
-      const largeBase64 = "a".repeat(12 * 1024 * 1024); // approx 9MB buffer
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "Too big",
-          attachments: [
-            {
-              name: "big.txt",
-              data: largeBase64,
-            },
-          ],
-        });
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain("Attachments exceed size limit of 8MB");
     });
   });
 });

@@ -189,6 +189,10 @@ const routes = {
     title: "Logs",
     render: () => typeof renderLogs === "function" && renderLogs(),
   },
+  "#sendmsg": {
+    title: "Send Message",
+    render: () => typeof renderSendMsg === "function" && renderSendMsg(),
+  },
 };
 
 function navigate(hash) {
@@ -278,6 +282,7 @@ function renderSidebar(meta) {
   nav.innerHTML = [
     { hash: "#overview", icon: "🏠", label: "Overview" },
     { hash: "#guilds", icon: "⚙️", label: "Guilds" },
+    { hash: "#sendmsg", icon: "📨", label: "Send Message" },
     { hash: "#commands", icon: "📖", label: "Commands" },
     { hash: "#updates", icon: "🚀", label: "Updates" },
     { hash: "#config", icon: "🔧", label: "Config" },
@@ -302,6 +307,7 @@ async function boot() {
 
   try {
     state.meta = await api.get("/meta");
+    window._appState = state;
     if (state.meta.bot_color) {
       document.documentElement.style.setProperty(
         "--accent",

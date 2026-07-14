@@ -18,7 +18,6 @@ async function renderGuild(guildId, initialTab) {
       "TempVC",
       "Alarms",
       "Level",
-      "Send Message",
     ];
     const activeTab = initialTab || "Overview";
 
@@ -81,9 +80,6 @@ function switchGuildTab(guildId, tab) {
       break;
     case "Level":
       renderLevel(container, g);
-      break;
-    case "Send Message":
-      renderGuildSendMsg(container, g);
       break;
   }
 }
