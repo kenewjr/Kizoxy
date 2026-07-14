@@ -132,18 +132,29 @@ router.get("/players", (req, res) => {
 
 let updatesCache = null;
 
+function stripRange(v) {
+  return v.replace(/^[\^~]/, "");
+}
+
 function isOutdated(current, latest) {
-  if (!current || !latest) return false;
-  const cleanCurrent = current.replace(/^[\^~]/, "");
-  const c = cleanCurrent.split(".").map(Number);
+  if (!latest) return false;
+  const c = stripRange(current).split(".").map(Number);
   const l = latest.split(".").map(Number);
   for (let i = 0; i < 3; i++) {
-    const cv = c[i] || 0;
-    const lv = l[i] || 0;
-    if (lv > cv) return true;
-    if (lv < cv) return false;
+    if ((l[i] ?? 0) > (c[i] ?? 0)) return true;
+    if ((l[i] ?? 0) < (c[i] ?? 0)) return false;
   }
   return false;
+}
+
+async function fetchInChunks(items, fn, chunkSize = 5) {
+  const results = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const res = await Promise.allSettled(chunk.map(fn));
+    results.push(...res);
+  }
+  return results;
 }
 
 // GET /api/updates
@@ -156,7 +167,8 @@ router.get("/updates", async (req, res) => {
       return res.json(updatesCache.data);
     }
 
-    const pkg = require("../../../package.json");
+    const path = require("path");
+    const pkg = require(path.join(__dirname, "..", "..", "..", "package.json"));
     const dependencies = {
       ...(pkg.dependencies || {}),
       ...(pkg.devDependencies || {}),
@@ -172,10 +184,11 @@ router.get("/updates", async (req, res) => {
       }),
     );
 
-    const results = await Promise.allSettled(
-      packagesList.map(async (p) => {
+    const results = await fetchInChunks(
+      packagesList,
+      async (p) => {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 5000);
+        const timer = setTimeout(() => controller.abort(), 10000);
         try {
           const registryRes = await fetch(
             `https://registry.npmjs.org/${encodeURIComponent(p.name)}/latest`,
@@ -204,7 +217,8 @@ router.get("/updates", async (req, res) => {
         } finally {
           clearTimeout(timer);
         }
-      }),
+      },
+      5,
     );
 
     const packages = results.map((r, i) => {

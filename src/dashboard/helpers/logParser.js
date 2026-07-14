@@ -34,12 +34,19 @@ const EMOJI_MAP = [
   { emoji: "ℹ️", id: "INFO" },
 ];
 
+const ANSI_STRIP = /\x1B\[[0-9;]*m/g;
+function stripAnsi(str) {
+  return str.replace(ANSI_STRIP, "");
+}
+
 function getLevelFromLine(line) {
   if (!line) return "INFO";
 
+  const clean = stripAnsi(line);
+
   // JSON format: try to extract the "level" field. PM2 may prepend a date
   // prefix before the JSON, so search for the level key rather than JSON.parse.
-  const jsonMatch = line.match(/"level"\s*:\s*"(\w+)"/);
+  const jsonMatch = clean.match(/"level"\s*:\s*"(\w+)"/);
   if (jsonMatch) {
     const mapped = JSON_LEVEL_MAP[jsonMatch[1].toLowerCase()];
     if (mapped) return mapped;
@@ -47,10 +54,16 @@ function getLevelFromLine(line) {
 
   // Pretty format: detect by emoji prefix.
   for (const { emoji, id } of EMOJI_MAP) {
-    if (line.includes(emoji)) return id;
+    if (clean.includes(emoji)) return id;
   }
 
   return "INFO";
 }
 
-module.exports = { getLevelFromLine, LOG_LEVELS, JSON_LEVEL_MAP, EMOJI_MAP };
+module.exports = {
+  getLevelFromLine,
+  LOG_LEVELS,
+  JSON_LEVEL_MAP,
+  EMOJI_MAP,
+  stripAnsi,
+};

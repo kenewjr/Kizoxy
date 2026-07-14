@@ -3,25 +3,29 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 // ── SECTION 1: API client ──
+async function apiRequest(method, path, body) {
+  try {
+    const res = await fetch("/api" + path, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (e) {
+    showToast(e.message || String(e), "error");
+    throw e;
+  }
+}
+
 const api = {
-  get: (path) =>
-    fetch("/api" + path).then((r) => (r.ok ? r.json() : Promise.reject(r))),
-  post: (path, body) =>
-    fetch("/api" + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).then((r) => (r.ok ? r.json() : Promise.reject(r))),
-  patch: (path, body) =>
-    fetch("/api" + path, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).then((r) => (r.ok ? r.json() : Promise.reject(r))),
-  del: (path) =>
-    fetch("/api" + path, { method: "DELETE" }).then((r) =>
-      r.ok ? r.json() : Promise.reject(r),
-    ),
+  get: (path) => apiRequest("GET", path),
+  post: (path, body) => apiRequest("POST", path, body),
+  patch: (path, body) => apiRequest("PATCH", path, body),
+  del: (path) => apiRequest("DELETE", path),
 };
 
 // ── SECTION 2: State ──

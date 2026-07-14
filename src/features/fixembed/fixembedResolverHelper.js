@@ -1,4 +1,4 @@
-const URL_REGEX = /https?:\/\/[^\s<>"\])\\']+/gi;
+const URL_REGEX = /https?:\/\/[^\s<>"\])\\'|]+/gi;
 async function resolveEmbedEZ(url) {
   const targetUrl = new URL("https://embedez.com/api/v1/providers/combined");
   targetUrl.searchParams.set("q", url);

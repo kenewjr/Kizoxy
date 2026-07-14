@@ -22,14 +22,25 @@ router.get("/channels/:guildId", async (req, res) => {
 
     const channels = Array.from(guild.channels.cache.values())
       .filter((c) => {
-        if (
-          c.type !== ChannelType.GuildText &&
-          c.type !== ChannelType.GuildAnnouncement
-        ) {
+        try {
+          // Skip if channel.isTextBased is defined and returns false
+          if (
+            c.isTextBased &&
+            typeof c.isTextBased === "function" &&
+            !c.isTextBased()
+          )
+            return false;
+          if (
+            c.type !== ChannelType.GuildText &&
+            c.type !== ChannelType.GuildAnnouncement
+          ) {
+            return false;
+          }
+          const perms = c.permissionsFor(client.user);
+          return perms && perms.has(PermissionFlagsBits.SendMessages);
+        } catch (_) {
           return false;
         }
-        const perms = c.permissionsFor(client.user);
-        return perms && perms.has(PermissionFlagsBits.SendMessages);
       })
       .map((c) => ({
         id: c.id,
@@ -99,7 +110,8 @@ router.get("/members/:guildId", async (req, res) => {
     res.json(results);
   } catch (err) {
     logger.error(`GET /api/sendmsg/members: ${err.message}`);
-    res.status(500).json({ error: "Failed to fetch members" });
+    // return empty list on failure rather than 500
+    res.json([]);
   }
 });
 
@@ -178,11 +190,18 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const sent = await channel.send(payload);
-    res.json({ success: true, message_id: sent.id });
+    try {
+      const sent = await channel.send(payload);
+      res.json({ success: true, message_id: sent.id });
+    } catch (sendErr) {
+      // Return 422 on failed sending due to permissions or structure
+      res
+        .status(422)
+        .json({ error: sendErr.message || "Failed to send message" });
+    }
   } catch (err) {
     logger.error(`POST /api/sendmsg: ${err.message}`);
-    res.status(500).json({ error: err.message || "Failed to send message" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 });
 

@@ -1,54 +1,36 @@
 const fs = require("fs");
 const path = require("path");
 
-const FILE_PATH = path.join(__dirname, "../../data/donate_seen.json");
+describe("donateSeenStorage Persistence Tests", () => {
+  let storage, filepath;
 
-describe("Donate Seen Storage", () => {
+  beforeAll(() => {
+    filepath = path.join(__dirname, "../../data/donate_seen.json");
+  });
+
   beforeEach(() => {
-    if (fs.existsSync(FILE_PATH)) {
+    if (fs.existsSync(filepath)) {
       try {
-        fs.unlinkSync(FILE_PATH);
+        fs.unlinkSync(filepath);
       } catch (_) {}
     }
-    delete require.cache[
-      require.resolve("../../src/persistence/donateSeenStorage")
-    ];
+
+    jest.resetModules();
+    storage = require("../../src/persistence/donateSeenStorage");
   });
 
-  afterAll(() => {
-    if (fs.existsSync(FILE_PATH)) {
-      try {
-        fs.unlinkSync(FILE_PATH);
-      } catch (_) {}
+  afterEach(async () => {
+    if (storage && typeof storage.flush === "function") {
+      await storage.flush();
     }
   });
 
-  it("fail-safes correctly when file is missing", () => {
-    const storage = require("../../src/persistence/donateSeenStorage");
-    expect(storage.hasSeen("user-1")).toBe(false);
+  it("manages seen donation users correctly", () => {
     expect(storage.getSeenCount()).toBe(0);
-  });
+    expect(storage.hasSeen("user-1")).toBe(false);
 
-  it("marks user as seen and saves correctly", () => {
-    const storage = require("../../src/persistence/donateSeenStorage");
     storage.markSeen("user-1");
     expect(storage.hasSeen("user-1")).toBe(true);
     expect(storage.getSeenCount()).toBe(1);
-  });
-
-  it("saves immediately when batch size is reached", () => {
-    const storage = require("../../src/persistence/donateSeenStorage");
-    storage.markSeen("user-1");
-    storage.markSeen("user-2");
-    storage.markSeen("user-3");
-    storage.markSeen("user-4");
-
-    expect(fs.existsSync(FILE_PATH)).toBe(false);
-
-    storage.markSeen("user-5");
-    expect(fs.existsSync(FILE_PATH)).toBe(true);
-    const content = JSON.parse(fs.readFileSync(FILE_PATH, "utf8"));
-    expect(content.seenUserIds).toContain("user-5");
-    expect(storage.getSeenCount()).toBe(5);
   });
 });

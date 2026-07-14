@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { MAX_LOG_LINES, LOG_SEARCH_MAX } = require("../../config/constants");
 
-const LOGS_DIR = path.join(process.cwd(), "logs");
+const LOGS_DIR = path.join(__dirname, "..", "..", "..", "logs");
 const VALID_NAME = /^[\w.\-]+$/;
 
 function validateName(name) {

@@ -24,6 +24,9 @@ router.get("/:name", (req, res) => {
   try {
     const { name } = req.params;
     const { tail, search } = req.query;
+    const parsedTail = tail ? parseInt(tail, 10) : undefined;
+    const tailLines =
+      isNaN(parsedTail) || parsedTail < 0 ? undefined : parsedTail;
 
     if (search) {
       const lines = searchLogFile(name, search);
@@ -31,7 +34,7 @@ router.get("/:name", (req, res) => {
       return res.json({ lines, level_counts: levelCounts });
     }
 
-    const content = readLogFile(name, tail ? parseInt(tail, 10) : undefined);
+    const content = readLogFile(name, tailLines);
     const levelCounts = getLogLevelCounts(name);
     res.json({ content, level_counts: levelCounts });
   } catch (err) {

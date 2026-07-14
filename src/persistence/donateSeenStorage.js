@@ -92,4 +92,5 @@ module.exports = {
   hasSeen,
   markSeen,
   getSeenCount,
+  flush: saveNow,
 };

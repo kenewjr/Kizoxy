@@ -1,28 +1,60 @@
 const router = require("express").Router();
+const fs = require("fs");
+const path = require("path");
 const Logger = require("../../lib/logger");
 const config = require("../../config/config");
 const constants = require("../../config/constants");
 
 const logger = new Logger("DASHBOARD-API");
 
+const OVERRIDES_PATH = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "data",
+  "config_overrides.json",
+);
+
+function readOverrides() {
+  try {
+    if (!fs.existsSync(OVERRIDES_PATH)) return {};
+    const raw = fs.readFileSync(OVERRIDES_PATH, "utf8").trim();
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function writeOverrides(overrides) {
+  const dir = path.dirname(OVERRIDES_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const tempPath = OVERRIDES_PATH + ".tmp";
+  fs.writeFileSync(tempPath, JSON.stringify(overrides, null, 2), "utf8");
+  fs.renameSync(tempPath, OVERRIDES_PATH);
+}
+
 // GET /api/config
 router.get("/", (req, res) => {
   try {
     const client = req.app.locals.client;
 
-    const parts = (config.NODES?.[0]?.url || "").split(":");
+    const parts = (config?.NODES?.[0]?.url || "").split(":");
     const lHost = parts[0] || "localhost";
     const lPort = parseInt(parts[1], 10) || 5555;
-    const lSecure = config.NODES?.[0]?.secure ?? false;
+    const lSecure = config?.NODES?.[0]?.secure ?? false;
 
     const safeConfig = {
       bot: {
         client_id: client?.user?.id ?? null,
-        guild_id: config.DEV_GUILD_ID ?? null,
-        owner_id: config.OWNER_ID ?? null,
-        prefix: config.PREFIX ?? "k",
-        bot_color: config.BOT_COLOR ?? "#5865F2",
-        log_format: config.LOG_FORMAT ?? "pretty",
+        guild_id: config?.DEV_GUILD_ID ?? null,
+        owner_id: config?.OWNER_ID ?? null,
+        prefix: config?.PREFIX ?? "k",
+        bot_color: config?.BOT_COLOR ?? "#5865F2",
+        log_format: config?.LOG_FORMAT ?? "pretty",
       },
       lavalink: {
         host: lHost,
@@ -30,17 +62,17 @@ router.get("/", (req, res) => {
         secure: lSecure,
       },
       youtube: {
-        api_key_set: !!config.YOUTUBE_API_KEY,
-        poll_interval_ms: constants.YOUTUBE_POLL_INTERVAL_MS ?? 60000,
-        short_max_seconds: constants.YOUTUBE_SHORT_MAX_SECONDS ?? 180,
+        api_key_set: !!config?.YOUTUBE_API_KEY,
+        poll_interval_ms: constants?.YOUTUBE_POLL_INTERVAL_MS ?? 60000,
+        short_max_seconds: constants?.YOUTUBE_SHORT_MAX_SECONDS ?? 180,
       },
       tiktok: {
-        api_base: config.TIKTOK_API_BASE ?? null,
-        poll_interval_ms: constants.TIKTOK_POLL_INTERVAL_MS ?? 45000,
+        api_base: config?.TIKTOK_API_BASE ?? null,
+        poll_interval_ms: constants?.TIKTOK_POLL_INTERVAL_MS ?? 45000,
       },
       dashboard: {
-        host: config.DASHBOARD_HOST ?? "127.0.0.1",
-        port: config.DASHBOARD_PORT ?? 4040,
+        host: config?.DASHBOARD_HOST ?? "127.0.0.1",
+        port: config?.DASHBOARD_PORT ?? 4040,
       },
     };
 
@@ -126,60 +158,36 @@ router.patch("/", (req, res) => {
     }
 
     if (hasUpdates) {
-      const fs = require("fs");
-      const path = require("path");
-      const overridesPath = path.join(
-        __dirname,
-        "../../../data/config_overrides.json",
-      );
-      const dir = path.dirname(overridesPath);
-
-      let currentOverrides = {};
-      if (fs.existsSync(overridesPath)) {
-        try {
-          currentOverrides = JSON.parse(fs.readFileSync(overridesPath, "utf8"));
-        } catch (_) {}
-      }
-
+      const currentOverrides = readOverrides();
       Object.assign(currentOverrides, overrides);
-
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const tempPath = overridesPath + ".tmp";
-      fs.writeFileSync(
-        tempPath,
-        JSON.stringify(currentOverrides, null, 2),
-        "utf8",
-      );
-      fs.renameSync(tempPath, overridesPath);
+      writeOverrides(currentOverrides);
 
       if (overrides.bot_color) {
-        config.BOT_COLOR = overrides.bot_color;
+        if (config) config.BOT_COLOR = overrides.bot_color;
         if (client) client.color = overrides.bot_color;
       }
       if (overrides.prefix) {
-        config.PREFIX = overrides.prefix;
+        if (config) config.PREFIX = overrides.prefix;
         if (client) client.prefix = overrides.prefix;
       }
       if (overrides.log_format) {
-        config.LOG_FORMAT = overrides.log_format;
+        if (config) config.LOG_FORMAT = overrides.log_format;
       }
     }
 
-    const parts = (config.NODES?.[0]?.url || "").split(":");
+    const parts = (config?.NODES?.[0]?.url || "").split(":");
     const lHost = parts[0] || "localhost";
     const lPort = parseInt(parts[1], 10) || 5555;
-    const lSecure = config.NODES?.[0]?.secure ?? false;
+    const lSecure = config?.NODES?.[0]?.secure ?? false;
 
     const safeConfig = {
       bot: {
         client_id: client?.user?.id ?? null,
-        guild_id: config.DEV_GUILD_ID ?? null,
-        owner_id: config.OWNER_ID ?? null,
-        prefix: config.PREFIX ?? "k",
-        bot_color: config.BOT_COLOR ?? "#5865F2",
-        log_format: config.LOG_FORMAT ?? "pretty",
+        guild_id: config?.DEV_GUILD_ID ?? null,
+        owner_id: config?.OWNER_ID ?? null,
+        prefix: config?.PREFIX ?? "k",
+        bot_color: config?.BOT_COLOR ?? "#5865F2",
+        log_format: config?.LOG_FORMAT ?? "pretty",
       },
       lavalink: {
         host: lHost,
@@ -187,17 +195,17 @@ router.patch("/", (req, res) => {
         secure: lSecure,
       },
       youtube: {
-        api_key_set: !!config.YOUTUBE_API_KEY,
-        poll_interval_ms: constants.YOUTUBE_POLL_INTERVAL_MS ?? 60000,
-        short_max_seconds: constants.YOUTUBE_SHORT_MAX_SECONDS ?? 180,
+        api_key_set: !!config?.YOUTUBE_API_KEY,
+        poll_interval_ms: constants?.YOUTUBE_POLL_INTERVAL_MS ?? 60000,
+        short_max_seconds: constants?.YOUTUBE_SHORT_MAX_SECONDS ?? 180,
       },
       tiktok: {
-        api_base: config.TIKTOK_API_BASE ?? null,
-        poll_interval_ms: constants.TIKTOK_POLL_INTERVAL_MS ?? 45000,
+        api_base: config?.TIKTOK_API_BASE ?? null,
+        poll_interval_ms: constants?.TIKTOK_POLL_INTERVAL_MS ?? 45000,
       },
       dashboard: {
-        host: config.DASHBOARD_HOST ?? "127.0.0.1",
-        port: config.DASHBOARD_PORT ?? 4040,
+        host: config?.DASHBOARD_HOST ?? "127.0.0.1",
+        port: config?.DASHBOARD_PORT ?? 4040,
       },
     };
 
