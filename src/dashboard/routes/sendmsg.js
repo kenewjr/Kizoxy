@@ -33,7 +33,11 @@ router.get("/channels/:guildId", async (req, res) => {
           if (!sendableTypes.includes(c.type)) return false;
           if (c.archived) return false;
           const perms = c.permissionsFor(client.user);
-          return perms && perms.has(PermissionFlagsBits.ViewChannel) && perms.has(PermissionFlagsBits.SendMessages);
+          return (
+            perms &&
+            perms.has(PermissionFlagsBits.ViewChannel) &&
+            perms.has(PermissionFlagsBits.SendMessages)
+          );
         } catch (_) {
           return false;
         }
@@ -92,7 +96,9 @@ router.post("/", async (req, res) => {
       ChannelType.AnnouncementThread,
     ];
     if (!sendableTypes.includes(channel.type)) {
-      return res.status(400).json({ error: "Channel is not a text channel or compatible thread." });
+      return res
+        .status(400)
+        .json({ error: "Channel is not a text channel or compatible thread." });
     }
     if (channel.archived) {
       return res.status(400).json({ error: "Channel is archived." });
@@ -100,19 +106,28 @@ router.post("/", async (req, res) => {
 
     // Permission check
     const perms = channel.permissionsFor(client.user);
-    if (!perms || !perms.has(PermissionFlagsBits.ViewChannel) || !perms.has(PermissionFlagsBits.SendMessages)) {
+    if (
+      !perms ||
+      !perms.has(PermissionFlagsBits.ViewChannel) ||
+      !perms.has(PermissionFlagsBits.SendMessages)
+    ) {
       return res.status(403).json({
-        error: "Bot does not have View Channel or Send Messages permissions in this channel.",
+        error:
+          "Bot does not have View Channel or Send Messages permissions in this channel.",
       });
     }
 
-    if (messageType === "embed" && (!perms.has(PermissionFlagsBits.EmbedLinks))) {
+    if (messageType === "embed" && !perms.has(PermissionFlagsBits.EmbedLinks)) {
       return res.status(403).json({
         error: "Bot does not have Embed Links permission in this channel.",
       });
     }
 
-    if (attachments && attachments.length > 0 && !perms.has(PermissionFlagsBits.AttachFiles)) {
+    if (
+      attachments &&
+      attachments.length > 0 &&
+      !perms.has(PermissionFlagsBits.AttachFiles)
+    ) {
       return res.status(403).json({
         error: "Bot does not have Attach Files permission in this channel.",
       });
@@ -136,18 +151,24 @@ router.post("/", async (req, res) => {
         });
       }
       if (totalSize > 8 * 1024 * 1024) {
-        return res.status(400).json({ error: "Attachments exceed size limit of 8MB." });
+        return res
+          .status(400)
+          .json({ error: "Attachments exceed size limit of 8MB." });
       }
     }
 
     // Check message length limit
     const cleanMsg = (message || "").trim();
     if (cleanMsg.length > 2000) {
-      return res.status(400).json({ error: "Message content cannot exceed 2000 characters." });
+      return res
+        .status(400)
+        .json({ error: "Message content cannot exceed 2000 characters." });
     }
 
     if (!cleanMsg && files.length === 0 && messageType !== "embed") {
-      return res.status(400).json({ error: "Message content or attachments are required." });
+      return res
+        .status(400)
+        .json({ error: "Message content or attachments are required." });
     }
 
     // Mention safety: extract every <@USER_ID> token present in cleanMsg via regex
@@ -177,24 +198,30 @@ router.post("/", async (req, res) => {
       if (embed.title) embedBuilder.setTitle(embed.title);
       if (embed.description) {
         if (embed.description.length > 4096) {
-          return res.status(400).json({ error: "Embed description exceeds 4096 characters." });
+          return res
+            .status(400)
+            .json({ error: "Embed description exceeds 4096 characters." });
         }
         embedBuilder.setDescription(embed.description);
       }
       if (embed.color) {
         if (!/^#[0-9A-Fa-f]{6}$/.test(embed.color)) {
-          return res.status(400).json({ error: "Embed color must be a valid hex code." });
+          return res
+            .status(400)
+            .json({ error: "Embed color must be a valid hex code." });
         }
         embedBuilder.setColor(embed.color);
       }
       if (embed.footer) embedBuilder.setFooter({ text: embed.footer });
-      
+
       if (embed.thumbnail) {
         try {
           new URL(embed.thumbnail);
           embedBuilder.setThumbnail(embed.thumbnail);
         } catch (_) {
-          return res.status(400).json({ error: "Invalid embed thumbnail URL." });
+          return res
+            .status(400)
+            .json({ error: "Invalid embed thumbnail URL." });
         }
       }
       if (embed.image) {

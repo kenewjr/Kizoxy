@@ -218,4 +218,4 @@ function renderFixEmbed(el, g) {
   if (window.Alpine) {
     window.Alpine.initTree(el);
   }
-
+}

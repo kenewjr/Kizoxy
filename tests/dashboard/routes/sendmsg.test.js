@@ -42,26 +42,22 @@ describe("Send Message Route Tests", () => {
 
   describe("POST /api/sendmsg", () => {
     it("sends simple message successfully", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "Hello World!",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guildId: guild.id,
+        channelId: channel.id,
+        message: "Hello World!",
+      });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(channel.send).toHaveBeenCalled();
     });
 
     it("extracts <@id> tokens and sets allowedMentions.users strictly", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "Hello <@111111111111111111> and <@!222222222222222222>",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guildId: guild.id,
+        channelId: channel.id,
+        message: "Hello <@111111111111111111> and <@!222222222222222222>",
+      });
 
       expect(res.status).toBe(200);
       expect(channel.send).toHaveBeenCalledWith(
@@ -72,18 +68,16 @@ describe("Send Message Route Tests", () => {
             users: ["111111111111111111", "222222222222222222"],
             roles: [],
           },
-        })
+        }),
       );
     });
 
     it("sets allowedMentions.users empty when no mention tokens are present", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "Hello world without any pings",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guildId: guild.id,
+        channelId: channel.id,
+        message: "Hello world without any pings",
+      });
 
       expect(res.status).toBe(200);
       expect(channel.send).toHaveBeenCalledWith(
@@ -94,7 +88,7 @@ describe("Send Message Route Tests", () => {
             users: [],
             roles: [],
           },
-        })
+        }),
       );
     });
 
@@ -103,41 +97,41 @@ describe("Send Message Route Tests", () => {
         has: jest.fn().mockReturnValue(false),
       });
 
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "Hello",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guildId: guild.id,
+        channelId: channel.id,
+        message: "Hello",
+      });
 
       expect(res.status).toBe(403);
-      expect(res.body.error).toContain("Bot does not have View Channel or Send Messages permissions");
+      expect(res.body.error).toContain(
+        "Bot does not have View Channel or Send Messages permissions",
+      );
     });
 
     it("returns 400 for non-text channels", async () => {
       channel.type = 2; // GuildVoice
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "Hello",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guildId: guild.id,
+        channelId: channel.id,
+        message: "Hello",
+      });
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain("Channel is not a text channel or compatible thread");
+      expect(res.body.error).toContain(
+        "Channel is not a text channel or compatible thread",
+      );
     });
 
     it("returns 400 if message content is empty and no attachments exist", async () => {
-      const res = await request(app)
-        .post("/api/sendmsg")
-        .send({
-          guildId: guild.id,
-          channelId: channel.id,
-          message: "",
-        });
+      const res = await request(app).post("/api/sendmsg").send({
+        guildId: guild.id,
+        channelId: channel.id,
+        message: "",
+      });
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain("Message content or attachments are required");
+      expect(res.body.error).toContain(
+        "Message content or attachments are required",
+      );
     });
 
     it("sends embed successfully", async () => {
@@ -158,7 +152,7 @@ describe("Send Message Route Tests", () => {
       expect(channel.send).toHaveBeenCalledWith(
         expect.objectContaining({
           embeds: expect.any(Array),
-        })
+        }),
       );
     });
 

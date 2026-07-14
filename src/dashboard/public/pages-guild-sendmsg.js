@@ -71,17 +71,39 @@ function renderGuildSendMsg(el, g) {
       </div>
     </div>`;
 
-  state.tabCleanup = () => { delete window.guildSendMsgComposer; };
-  if (window.Alpine) { window.Alpine.initTree(el); }
+  state.tabCleanup = () => {
+    delete window.guildSendMsgComposer;
+  };
+  if (window.Alpine) {
+    window.Alpine.initTree(el);
+  }
 }
 
 window.guildSendMsgComposer = function (guildId, channels, members) {
   return {
-    guildId, channels, members, selectedChannelId: "", taggedUsers: [], message: "", messageType: "plain",
-    embed: { title: "", description: "", color: "#5865F2", footer: "", thumbnail: "", image: "", author: "", timestamp: false },
-    attachments: [], sending: false,
+    guildId,
+    channels,
+    members,
+    selectedChannelId: "",
+    taggedUsers: [],
+    message: "",
+    messageType: "plain",
+    embed: {
+      title: "",
+      description: "",
+      color: "#5865F2",
+      footer: "",
+      thumbnail: "",
+      image: "",
+      author: "",
+      timestamp: false,
+    },
+    attachments: [],
+    sending: false,
     init() {
-      if (state.meta && state.meta.bot_color) { this.embed.color = state.meta.bot_color; }
+      if (state.meta && state.meta.bot_color) {
+        this.embed.color = state.meta.bot_color;
+      }
       this.$nextTick(() => this.updatePreview());
     },
     onSelectChange(e) {
@@ -92,8 +114,12 @@ window.guildSendMsgComposer = function (guildId, channels, members) {
         const userId = e.target.value;
         if (!userId) return;
         const member = this.members.find((m) => m.id === userId);
-        if (member) { this.insertUserMention(member); }
-        if (typeof selectDropdownOption === "function") { selectDropdownOption("mention-user-select", "", ""); }
+        if (member) {
+          this.insertUserMention(member);
+        }
+        if (typeof selectDropdownOption === "function") {
+          selectDropdownOption("mention-user-select", "", "");
+        }
       }
     },
     insertUserMention(member) {
@@ -131,7 +157,11 @@ window.guildSendMsgComposer = function (guildId, channels, members) {
         }
         const reader = new FileReader();
         reader.onload = (event) => {
-          this.attachments.push({ name: file.name, size: file.size, data: event.target.result });
+          this.attachments.push({
+            name: file.name,
+            size: file.size,
+            data: event.target.result,
+          });
           this.updatePreview();
         };
         reader.readAsDataURL(file);
@@ -150,11 +180,16 @@ window.guildSendMsgComposer = function (guildId, channels, members) {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
     get previewImageUrl() {
-      const imgFile = this.attachments.find((a) => /\.(png|jpe?g|gif|webp)$/i.test(a.name));
+      const imgFile = this.attachments.find((a) =>
+        /\.(png|jpe?g|gif|webp)$/i.test(a.name),
+      );
       return imgFile ? imgFile.data : "";
     },
     get canSend() {
-      const hasContent = this.message.trim() || this.attachments.length > 0 || (this.messageType === "embed" && this.embed.description.trim());
+      const hasContent =
+        this.message.trim() ||
+        this.attachments.length > 0 ||
+        (this.messageType === "embed" && this.embed.description.trim());
       return this.selectedChannelId && hasContent && !this.sending;
     },
     updatePreview() {
@@ -162,19 +197,25 @@ window.guildSendMsgComposer = function (guildId, channels, members) {
       if (!mount) return;
       const memberCache = new Map();
       this.taggedUsers.forEach((u) => memberCache.set(u.id, u.name));
-      const embedData = this.messageType === "embed"
-        ? {
-            title: this.embed.title || null,
-            description: this.embed.description || "(empty embed description)",
-            imageUrl: this.embed.image || null,
-            color: this.embed.color || state.meta?.bot_color || "var(--accent)",
-            footer: this.embed.footer || "Sent from Web Dashboard",
-          }
-        : null;
+      const embedData =
+        this.messageType === "embed"
+          ? {
+              title: this.embed.title || null,
+              description:
+                this.embed.description || "(empty embed description)",
+              imageUrl: this.embed.image || null,
+              color:
+                this.embed.color || state.meta?.bot_color || "var(--accent)",
+              footer: this.embed.footer || "Sent from Web Dashboard",
+            }
+          : null;
       renderDiscordPreview(mount, {
         botName: state.meta?.bot_name || "Kizoxy",
         botAvatarUrl: state.meta?.bot_avatar_url || "",
-        content: this.messageType === "embed" ? (this.message || "") : (this.message || "(empty message content)"),
+        content:
+          this.messageType === "embed"
+            ? this.message || ""
+            : this.message || "(empty message content)",
         imageUrl: this.messageType === "embed" ? "" : this.previewImageUrl,
         embed: embedData,
         memberCache: memberCache,
