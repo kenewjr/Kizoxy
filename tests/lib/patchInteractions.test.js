@@ -72,8 +72,12 @@ describe("patchInteractions", () => {
 
   test("should support custom TTL", async () => {
     jest.useFakeTimers();
-    await mockInteraction.reply({ content: "test", ephemeral: true, ttl: 5000 });
-    
+    await mockInteraction.reply({
+      content: "test",
+      ephemeral: true,
+      ttl: 5000,
+    });
+
     jest.advanceTimersByTime(4000);
     expect(mockInteraction.deleteReply).not.toHaveBeenCalled();
 
@@ -85,10 +89,10 @@ describe("patchInteractions", () => {
   test("should clear existing timeout on double reply", async () => {
     jest.useFakeTimers();
     await mockInteraction.reply({ content: "first", ephemeral: true });
-    
+
     // Reply again, clearing original timeout
     await mockInteraction.reply({ content: "second", ephemeral: true });
-    
+
     jest.advanceTimersByTime(15000);
     expect(mockInteraction.deleteReply).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
@@ -96,11 +100,14 @@ describe("patchInteractions", () => {
 
   test("should handle deleteReply throwing 10008 code errors gracefully", async () => {
     jest.useFakeTimers();
-    mockInteraction.deleteReply.mockRejectedValue({ code: 10008, message: "Unknown Message" });
+    mockInteraction.deleteReply.mockRejectedValue({
+      code: 10008,
+      message: "Unknown Message",
+    });
 
     await mockInteraction.reply({ content: "test", ephemeral: true });
     jest.advanceTimersByTime(15000);
-    
+
     // Should resolve without throwing
     jest.useRealTimers();
   });
@@ -111,7 +118,7 @@ describe("patchInteractions", () => {
 
     await mockInteraction.reply({ content: "test", ephemeral: true });
     jest.advanceTimersByTime(15000);
-    
+
     // Should handle error gracefully
     jest.useRealTimers();
   });
@@ -126,10 +133,10 @@ describe("patchInteractions", () => {
     const customInteraction = Object.create(customProto);
     customInteraction.id = "int-123";
     customInteraction.deleteReply = jest.fn().mockResolvedValue({});
-    
+
     await customInteraction.reply({ content: "test", ephemeral: true });
     jest.advanceTimersByTime(15000);
-    
+
     expect(customInteraction.deleteReply).toHaveBeenCalled();
     jest.useRealTimers();
   });

@@ -102,7 +102,7 @@ describe("FixEmbedStorage Persistence Tests", () => {
 
   it("supports toggle helpers", () => {
     const guildId = "guild-toggle";
-    
+
     // Toggle channel
     expect(storage.toggleChannel(guildId, "c1")).toBe(true);
     expect(storage.getSettings(guildId).ignoredChannels).toContain("c1");
@@ -135,7 +135,9 @@ describe("FixEmbedStorage Persistence Tests", () => {
     expect(storage.getSettings(guildId).enabled).toBe(false);
 
     storage.setBaseMessageAction(guildId, "delete_message");
-    expect(storage.getSettings(guildId).baseMessageAction).toBe("delete_message");
+    expect(storage.getSettings(guildId).baseMessageAction).toBe(
+      "delete_message",
+    );
     expect(storage.getSettings(guildId).deleteBehavior).toBe("delete");
 
     expect(() => storage.setBaseMessageAction(guildId, "invalid")).toThrow();

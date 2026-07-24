@@ -206,58 +206,58 @@ function renderTempVC(el, g) {
         return `
         <div class="card" style="margin-bottom:20px;">
           <div style="font-weight:600;font-size:14px;margin-bottom:12px;display:flex;justify-content:space-between;">
-            <span>Voice Channel: <code class="code-chip" style="font-size:13px;">\${esc(gen.id)}</code></span>
-            <span style="font-size:12px;color:var(--text-3);font-weight:normal;">\${gen.activeChannelCount || 0} active channels</span>
+            <span>Voice Channel: <code class="code-chip" style="font-size:13px;">${esc(gen.id)}</code></span>
+            <span style="font-size:12px;color:var(--text-3);font-weight:normal;">${gen.activeChannelCount || 0} active channels</span>
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:16px;margin-bottom:16px;">
             <div class="form-group">
               <label>Channel Name Mode</label>
-              <select class="select" id="tempvc-name-mode-\${gen.id}" onchange="toggleNameMode('\${gen.id}')">
-                <option value="default" \${initialMode === "default" ? "selected" : ""}>Use generator default name</option>
-                <option value="template" \${initialMode === "template" ? "selected" : ""}>Use template pattern</option>
-                <option value="custom" \${initialMode === "custom" ? "selected" : ""}>Custom pattern</option>
+              <select class="select" id="tempvc-name-mode-${gen.id}" onchange="toggleNameMode('${gen.id}')">
+                <option value="default" ${initialMode === "default" ? "selected" : ""}>Use generator default name</option>
+                <option value="template" ${initialMode === "template" ? "selected" : ""}>Use template pattern</option>
+                <option value="custom" ${initialMode === "custom" ? "selected" : ""}>Custom pattern</option>
               </select>
 
-              <div id="tempvc-template-container-\${gen.id}" style="\${templateSelectStyle}; margin-top:8px;">
+              <div id="tempvc-template-container-${gen.id}" style="${templateSelectStyle}; margin-top:8px;">
                 <label>Template Selector</label>
-                <select class="select" id="tempvc-template-select-\${gen.id}" onchange="updatePreview('\${gen.id}')">
+                <select class="select" id="tempvc-template-select-${gen.id}" onchange="updatePreview('${gen.id}')">
                   <option value="">-- Select Template --</option>
-                  \${templates.map((t) => \`<option value="\${t.id}" \${t.id === currentTemplateId ? "selected" : ""} data-pattern="\${escAttr(t.namePattern || t.channelName || "")}">\${esc(t.name)} (\${esc(t.namePattern || t.channelName || "")})</option>\`).join("")}
+                  ${templates.map((t) => `<option value="${t.id}" ${t.id === currentTemplateId ? "selected" : ""} data-pattern="${escAttr(t.namePattern || t.channelName || "")}">${esc(t.name)} (${esc(t.namePattern || t.channelName || "")})</option>`).join("")}
                 </select>
               </div>
 
-              <div id="tempvc-custom-container-\${gen.id}" style="\${customInputStyle}; margin-top:8px;">
+              <div id="tempvc-custom-container-${gen.id}" style="${customInputStyle}; margin-top:8px;">
                 <label>Custom Pattern</label>
-                <input class="input" id="tempvc-custom-input-\${gen.id}" value="\${escAttr(gen.defaultName || "")}" oninput="updatePreview('\${gen.id}')" placeholder="e.g. {owner}'s Room">
+                <input class="input" id="tempvc-custom-input-${gen.id}" value="${escAttr(gen.defaultName || "")}" oninput="updatePreview('${gen.id}')" placeholder="e.g. {owner}'s Room">
                 <div class="info-note">Available tokens: {owner} · {game} · {number} · {guild}</div>
               </div>
 
-              <div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;" id="tempvc-preview-\${gen.id}">Preview: \${esc(preview)}</div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;" id="tempvc-preview-${gen.id}">Preview: ${esc(preview)}</div>
             </div>
 
             <div class="form-group">
               <label>Bitrate (kbps)</label>
-              <input type="number" class="input" id="tempvc-bitrate-\${gen.id}" value="\${gen.bitrate || 64}" min="8" max="384" placeholder="64">
+              <input type="number" class="input" id="tempvc-bitrate-${gen.id}" value="${gen.bitrate || 64}" min="8" max="384" placeholder="64">
               <div class="info-note">Max bitrate depends on server boost level.</div>
             </div>
 
             <div class="form-group">
               <label>Voice Region</label>
-              <select class="select" id="tempvc-region-\${gen.id}">
-                <option value="auto" \${!gen.rtcRegion ? "selected" : ""}>Automatic (recommended)</option>
-                \${VOICE_REGIONS.map((r) => \`<option value="\${r.value}" \${gen.rtcRegion === r.value ? "selected" : ""}>\${r.name}</option>\`).join("")}
+              <select class="select" id="tempvc-region-${gen.id}">
+                <option value="auto" ${!gen.rtcRegion ? "selected" : ""}>Automatic (recommended)</option>
+                ${VOICE_REGIONS.map((r) => `<option value="${r.value}" ${gen.rtcRegion === r.value ? "selected" : ""}>${r.name}</option>`).join("")}
               </select>
             </div>
 
             <div class="form-group">
               <label>User Limit</label>
-              <input type="number" class="input" id="tempvc-limit-\${gen.id}" value="\${gen.limit ?? 0}" min="0" max="99" placeholder="0">
+              <input type="number" class="input" id="tempvc-limit-${gen.id}" value="${gen.limit ?? 0}" min="0" max="99" placeholder="0">
               <div class="info-note">0 = Unlimited</div>
             </div>
           </div>
 
-          <button class="btn btn--primary" id="tempvc-save-btn-\${gen.id}" onclick="saveGeneratorSettings('\${g.id}', '\${gen.id}')">Save Generator Settings</button>
+          <button class="btn btn--primary" id="tempvc-save-btn-${gen.id}" onclick="saveGeneratorSettings('${g.id}', '${gen.id}')">Save Generator Settings</button>
         </div>
       `;
       })
@@ -273,23 +273,23 @@ function renderTempVC(el, g) {
       </div>
       
       <div id="tempvc-generators-list">
-        \${gens.length ? cardsHtml : '<div class="card" style="color:var(--text-3)">No generators configured.</div>'}
+        ${gens.length ? cardsHtml : '<div class="card" style="color:var(--text-3)">No generators configured.</div>'}
       </div>
 
       <h3 style="font-size:14px;font-weight:600;margin-top:24px;margin-bottom:12px">Active Temporary Channels</h3>
       <div class="card" style="padding:0;overflow-x:auto;margin-bottom:16px">
         <table class="table">
           <thead><tr><th>Channel ID</th><th>Owner ID</th><th>Created At</th><th>Active Members</th></tr></thead>
-          <tbody>\${
+          <tbody>${
             activeChannels.length
               ? activeChannels
                   .map(
-                    (ch) => \`<tr>
-            <td><code class="code-chip">\${esc(ch.id)}</code></td>
-            <td><code class="code-chip">\${esc(ch.ownerId)}</code></td>
-            <td>\${ch.createdAt ? new Date(ch.createdAt).toLocaleString() : "N/A"}</td>
-            <td>\${esc(ch.memberCount)}</td>
-          </tr>\`,
+                    (ch) => `<tr>
+            <td><code class="code-chip">${esc(ch.id)}</code></td>
+            <td><code class="code-chip">${esc(ch.ownerId)}</code></td>
+            <td>${ch.createdAt ? new Date(ch.createdAt).toLocaleString() : "N/A"}</td>
+            <td>${esc(ch.memberCount)}</td>
+          </tr>`,
                   )
                   .join("")
               : '<tr><td colspan="4" style="color:var(--text-3);padding:16px">No active temporary voice channels.</td></tr>'

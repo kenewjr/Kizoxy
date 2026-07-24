@@ -375,7 +375,7 @@ function renderFixEmbed(el, g) {
               
               <div style="display:flex; gap:8px;">
                 <div style="flex:1;">
-                  \${renderSearchableSelect(
+                  ${renderSearchableSelect(
                     "ignoredChannelSelect",
                     g.channels.map((c) => ({ id: c.id, name: "#" + c.name })),
                     "Search channels...",
@@ -407,11 +407,11 @@ function renderFixEmbed(el, g) {
               
               <div style="display:flex; gap:8px;">
                 <div style="flex:1;">
-                  \${renderSearchableSelect(
+                  ${renderSearchableSelect(
                     "ignoredUserSelect",
                     g.members.map((m) => ({
                       id: m.id,
-                      name: \`\${m.name} (\${m.tag})\`,
+                      name: `${m.name} (${m.tag})`,
                     })),
                     "Search users...",
                     "",
@@ -442,7 +442,7 @@ function renderFixEmbed(el, g) {
               
               <div style="display:flex; gap:8px;">
                 <div style="flex:1;">
-                  \${renderSearchableSelect(
+                  ${renderSearchableSelect(
                     "ignoredRoleSelect",
                     g.roles.map((r) => ({ id: r.id, name: r.name })),
                     "Search roles...",
@@ -669,7 +669,7 @@ function renderFixEmbed(el, g) {
           <div x-show="saving" class="save-indicator" style="color:var(--text-3)">Saving...</div>
           <div x-show="saved" class="save-indicator save-indicator--success" style="color:var(--green)">✓ Saved</div>
         </div>
-      </div>\`;
+      </div>`;
 
       if (window.Alpine) {
         window.Alpine.initTree(el);

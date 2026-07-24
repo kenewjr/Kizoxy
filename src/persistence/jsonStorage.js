@@ -178,7 +178,9 @@ class JSONStorage {
       logger.debug(`Found ${items.length} items for guild: ${guildId}`);
       return items;
     } catch (error) {
-      logger.error(`Error finding items for guild ${guildId}: ${error.message}`);
+      logger.error(
+        `Error finding items for guild ${guildId}: ${error.message}`,
+      );
       return [];
     }
   }
@@ -186,7 +188,10 @@ class JSONStorage {
   async get(id) {
     await this._ensureLoaded();
     try {
-      const item = Object.values(this.data).flat().find((i) => i.id === id) || null;
+      const item =
+        Object.values(this.data)
+          .flat()
+          .find((i) => i.id === id) || null;
       logger.debug(item ? `Item retrieved: ${id}` : `Item not found: ${id}`);
       return item;
     } catch (error) {

@@ -219,7 +219,7 @@ async function renderConfig() {
             <div x-show="result" class="result-banner mt-12" style="margin-top:12px;"
                  :class="result?.error ? 'result-banner--error' : 'result-banner--success'">
               <span x-show="!result?.error"
-                    x-text="\`✅ \${result?.deployed} commands deployed to \${result?.scope}\`'">
+                    x-text="'✅ ' + (result?.deployed || 0) + ' commands deployed to ' + (result?.scope || '')">
               </span>
               <span x-show="result?.error" x-text="'❌ ' + result?.error"></span>
             </div>
@@ -230,7 +230,10 @@ async function renderConfig() {
     `;
 
     // Render Bot Presence Card inside the container
-    renderPresenceCard(document.getElementById("presence-card-container"), metaData);
+    renderPresenceCard(
+      document.getElementById("presence-card-container"),
+      metaData,
+    );
 
     document.getElementById("bot-username-save").onclick = async () => {
       try {

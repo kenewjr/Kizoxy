@@ -24,14 +24,14 @@ async function renderGuild(guildId, initialTab) {
     content.innerHTML = `
       <span class="back-link" onclick="location.hash='#guilds'">← Back to guilds</span>
       <div class="guild-header">
-        \${guildIconHtml(guild.icon, guild.name, "guild-icon guild-icon--lg")}
+        ${guildIconHtml(guild.icon, guild.name, "guild-icon guild-icon--lg")}
         <div class="guild-header-info">
-          <h2>\${esc(guild.name)}</h2>
-          <div class="sub">\${guild.memberCount.toLocaleString()} members</div>
+          <h2>${esc(guild.name)}</h2>
+          <div class="sub">${guild.memberCount.toLocaleString()} members</div>
         </div>
       </div>
       <div class="tabs" id="guild-tabs">
-        \${tabs.map((t) => \`<div class="tab \${t === activeTab ? "active" : ""}" data-tab="\${t}" onclick="switchGuildTab('\${guildId}','\${t}')">\${t}</div>\`).join("")}
+        ${tabs.map((t) => `<div class="tab ${t === activeTab ? "active" : ""}" data-tab="${t}" onclick="switchGuildTab('${guildId}','${t}')">${t}</div>`).join("")}
       </div>
       <div id="guild-tab-content"></div>`;
 
@@ -88,12 +88,12 @@ function switchGuildTab(guildId, tab) {
 function renderGuildOverview(el, g) {
   el.innerHTML = `
     <div class="stat-row">
-      <div class="stat-card"><div class="stat-card__label">Members</div><div class="stat-card__value">\${g.memberCount}</div></div>
-      <div class="stat-card"><div class="stat-card__label">Channels</div><div class="stat-card__value">\${g.channelCount}</div></div>
-      <div class="stat-card"><div class="stat-card__label">Roles</div><div class="stat-card__value">\${g.roleCount}</div></div>
+      <div class="stat-card"><div class="stat-card__label">Members</div><div class="stat-card__value">${g.memberCount}</div></div>
+      <div class="stat-card"><div class="stat-card__label">Channels</div><div class="stat-card__value">${g.channelCount}</div></div>
+      <div class="stat-card"><div class="stat-card__label">Roles</div><div class="stat-card__value">${g.roleCount}</div></div>
     </div>
     <div class="card">
-      <div style="margin-bottom:8px"><strong>Owner:</strong> \${esc(g.ownerId)}</div>
-      <div><strong>Joined:</strong> \${g.joinedAt ? new Date(g.joinedAt).toLocaleDateString() : "N/A"}</div>
+      <div style="margin-bottom:8px"><strong>Owner:</strong> ${esc(g.ownerId)}</div>
+      <div><strong>Joined:</strong> ${g.joinedAt ? new Date(g.joinedAt).toLocaleDateString() : "N/A"}</div>
     </div>`;
 }

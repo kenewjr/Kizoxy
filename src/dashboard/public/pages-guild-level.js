@@ -115,7 +115,7 @@ function renderLevel(el, g) {
       <div class="card" style="padding:0;overflow-x:auto">
         <table class="table">
           <thead><tr><th>Rank</th><th>User</th><th>User ID</th><th>XP</th><th>Level</th><th>Next Level</th></tr></thead>
-          <tbody>\${
+          <tbody>${
             top && top.length
               ? top
                   .map((u, i) => {
@@ -132,11 +132,11 @@ function renderLevel(el, g) {
                     let userColHtml = "";
                     if (serverName) {
                       userColHtml = `
-                        <div style="font-weight:600;color:var(--text-1)">\${esc(serverName)}</div>
-                        <div style="font-size:12px;color:var(--text-3)">\${esc(globalName || "")}</div>
+                        <div style="font-weight:600;color:var(--text-1)">${esc(serverName)}</div>
+                        <div style="font-size:12px;color:var(--text-3)">${esc(globalName || "")}</div>
                       `;
                     } else {
-                      userColHtml = \`<span style="color:var(--text-3);font-style:italic">(User not in server)</span>\`;
+                      userColHtml = `<span style="color:var(--text-3);font-style:italic">(User not in server)</span>`;
                     }
 
                     const xpFormatted = Number(u.xp).toLocaleString();
@@ -144,19 +144,19 @@ function renderLevel(el, g) {
                       ? Math.min(100, Math.round((u.xp / u.next_xp) * 100))
                       : 0;
 
-                    return \`<tr>
-                      <td style="\${borderStyle}">#\${i + 1}</td>
-                      <td>\${userColHtml}</td>
-                      <td><code class="id-chip" style="cursor:pointer;" onclick="navigator.clipboard.writeText('\${esc(u.user_id)}');showToast('Copied ID!','info')">\${esc(u.user_id)}</code></td>
-                      <td>\${xpFormatted}</td>
-                      <td>\${u.level}</td>
+                    return `<tr>
+                      <td style="${borderStyle}">#${i + 1}</td>
+                      <td>${userColHtml}</td>
+                      <td><code class="id-chip" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(u.user_id)}');showToast('Copied ID!','info')">${esc(u.user_id)}</code></td>
+                      <td>${xpFormatted}</td>
+                      <td>${u.level}</td>
                       <td>
                         <div class="xp-bar">
-                          <div class="xp-bar__fill" style="width:\${pct}%"></div>
+                          <div class="xp-bar__fill" style="width:${pct}%"></div>
                         </div>
-                        <div style="font-size:11px;color:var(--text-3);margin-top:2px">\${u.xp_to_next} XP to next level</div>
+                        <div style="font-size:11px;color:var(--text-3);margin-top:2px">${u.xp_to_next} XP to next level</div>
                       </td>
-                    </tr>\`;
+                    </tr>`;
                   })
                   .join("")
               : '<tr><td colspan="6" style="color:var(--text-3);padding:16px">No level data.</td></tr>'
@@ -165,7 +165,7 @@ function renderLevel(el, g) {
       </div>
       
       <!-- XP Management UI -->
-      <div x-data="xpManager('\${g.id}')" class="card mt-16" style="margin-top:16px;">
+      <div x-data="xpManager('${g.id}')" class="card mt-16" style="margin-top:16px;">
         <div class="card-header" style="font-weight:600; font-size:14px; margin-bottom:12px;">XP Management</div>
 
         <div class="form-group">
@@ -207,10 +207,10 @@ function renderLevel(el, g) {
             <span class="text-success" x-text="result?.new_xp?.toLocaleString()"></span>
           </div>
           <div x-show="result?.leveled_up" class="xp-level-up">
-            🎉 Level up! <span x-text="\`\${result?.previous_level} → \${result?.new_level}\`'"></span>
+            🎉 Level up! <span x-text="result?.previous_level + ' → ' + result?.new_level"></span>
           </div>
         </div>
-      </div>\`;
+      </div>`;
 
     const btn = document.getElementById("level-refresh-btn");
     if (btn) {

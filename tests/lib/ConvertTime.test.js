@@ -10,7 +10,7 @@ describe("ConvertTime Tests", () => {
   describe("convertTime", () => {
     it("converts duration under 1 hour correctly", () => {
       expect(convertTime(65000)).toBe("01:05"); // 1 min 5 sec
-      expect(convertTime(5000)).toBe("00:05");  // 5 sec
+      expect(convertTime(5000)).toBe("00:05"); // 5 sec
     });
 
     it("converts duration over 1 hour correctly", () => {

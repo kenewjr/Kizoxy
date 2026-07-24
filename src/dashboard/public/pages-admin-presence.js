@@ -125,9 +125,7 @@ function renderPresenceCard(container, metaData) {
   };
 
   let selectedStatus = metaData.presence_status || "online";
-  const statusBtns = document.querySelectorAll(
-    "#presence-status-group button",
-  );
+  const statusBtns = document.querySelectorAll("#presence-status-group button");
   statusBtns.forEach((btn) => {
     btn.onclick = () => {
       statusBtns.forEach((b) => (b.className = "btn btn--sm btn--ghost"));

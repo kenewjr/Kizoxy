@@ -47,7 +47,12 @@ function patchInteraction(prototype) {
   const originalFollowUp = prototype.followUp;
   const originalEditReply = prototype.editReply;
 
-  const scheduleDeletion = (interaction, response, payload, isEphemeralOverride) => {
+  const scheduleDeletion = (
+    interaction,
+    response,
+    payload,
+    isEphemeralOverride,
+  ) => {
     if (interaction._kizoxyAutoDeleteScheduled) {
       return;
     }

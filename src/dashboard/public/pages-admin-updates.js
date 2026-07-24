@@ -85,10 +85,10 @@ async function renderUpdates() {
 
         return `
         <tr>
-          <td style="font-weight:600;">\${esc(p.name)} \${p.is_dev ? '<span style="font-size:10px;background:var(--bg-mid);color:var(--text-3);padding:2px 4px;border-radius:3px;margin-left:4px;">dev</span>' : ""}</td>
-          <td style="font-family:var(--font-mono);font-size:12px;">\${esc(p.current)}</td>
-          <td style="font-family:var(--font-mono);font-size:12px;">\${esc(p.latest || "—")}</td>
-          <td>\${statusHtml}</td>
+          <td style="font-weight:600;">${esc(p.name)} ${p.is_dev ? '<span style="font-size:10px;background:var(--bg-mid);color:var(--text-3);padding:2px 4px;border-radius:3px;margin-left:4px;">dev</span>' : ""}</td>
+          <td style="font-family:var(--font-mono);font-size:12px;">${esc(p.current)}</td>
+          <td style="font-family:var(--font-mono);font-size:12px;">${esc(p.latest || "—")}</td>
+          <td>${statusHtml}</td>
         </tr>
       `;
       })
@@ -103,23 +103,23 @@ async function renderUpdates() {
       <div class="stat-row" style="margin-bottom:16px;">
         <div class="stat-card">
           <div class="stat-card__label">Node.js Version</div>
-          <div class="stat-card__value" style="font-size:16px;font-family:var(--font-mono);">\${esc(updatesData.node_version)}</div>
+          <div class="stat-card__value" style="font-size:16px;font-family:var(--font-mono);">${esc(updatesData.node_version)}</div>
         </div>
         <div class="stat-card">
           <div class="stat-card__label">Outdated Packages</div>
-          <div class="stat-card__value" style="font-size:16px;color:var(--yellow);">\${updatesData.outdated_count}</div>
+          <div class="stat-card__value" style="font-size:16px;color:var(--yellow);">${updatesData.outdated_count}</div>
         </div>
         <div class="stat-card">
           <div class="stat-card__label">Last Checked</div>
-          <div class="stat-card__value" style="font-size:12px;color:var(--text-2);">\${new Date(updatesData.checked_at).toLocaleTimeString()}</div>
+          <div class="stat-card__value" style="font-size:12px;color:var(--text-2);">${new Date(updatesData.checked_at).toLocaleTimeString()}</div>
         </div>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;">
         <div style="display:flex;gap:8px;" id="updates-filter-group">
-          <button class="btn btn--sm \${filterMode === "all" ? "btn--primary" : "btn--ghost"}" data-mode="all" onclick="setUpdatesFilter('all')">All (\${updatesData.total_count})</button>
-          <button class="btn btn--sm \${filterMode === "outdated" ? "btn--primary" : "btn--ghost"}" data-mode="outdated" onclick="setUpdatesFilter('outdated')">Outdated (\${updatesData.outdated_count})</button>
-          <button class="btn btn--sm \${filterMode === "dev" ? "btn--primary" : "btn--ghost"}" data-mode="dev" onclick="setUpdatesFilter('dev')">Dev Dependencies</button>
+          <button class="btn btn--sm ${filterMode === "all" ? "btn--primary" : "btn--ghost"}" data-mode="all" onclick="setUpdatesFilter('all')">All (${updatesData.total_count})</button>
+          <button class="btn btn--sm ${filterMode === "outdated" ? "btn--primary" : "btn--ghost"}" data-mode="outdated" onclick="setUpdatesFilter('outdated')">Outdated (${updatesData.outdated_count})</button>
+          <button class="btn btn--sm ${filterMode === "dev" ? "btn--primary" : "btn--ghost"}" data-mode="dev" onclick="setUpdatesFilter('dev')">Dev Dependencies</button>
         </div>
       </div>
 
@@ -134,7 +134,7 @@ async function renderUpdates() {
             </tr>
           </thead>
           <tbody>
-            \${pkgs.length ? rowsHtml : \`<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:24px;">No packages match selection.</td></tr>\`}
+            ${pkgs.length ? rowsHtml : `<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:24px;">No packages match selection.</td></tr>`}
           </tbody>
         </table>
       </div>
