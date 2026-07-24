@@ -209,6 +209,7 @@ async function resolveChannel(input) {
 }
 
 module.exports = {
+  resolve: resolveChannel,
   resolveChannel,
   resolveFromPageHtml,
   RESOLVE_ERROR,

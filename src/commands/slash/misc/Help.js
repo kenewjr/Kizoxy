@@ -18,11 +18,10 @@ const CATEGORY_META = {
   tempvoice: { title: "🔊 Temp Voice", order: 2 },
   alarm: { title: "⏰ Alarm", order: 3 },
   level: { title: "🏆 Level", order: 4 },
-  anime: { title: "🍙 Anime", order: 5 },
-  settings: { title: "⚙️ Settings", order: 6 },
-  youtube: { title: "📢 YouTube", order: 7 },
-  tiktok: { title: "🎵 TikTok", order: 8 },
-  misc: { title: "📑 Misc", order: 9 },
+  settings: { title: "⚙️ Settings", order: 5 },
+  youtube: { title: "📢 YouTube", order: 6 },
+  tiktok: { title: "🎵 TikTok", order: 7 },
+  misc: { title: "📑 Misc", order: 8 },
 };
 
 function collectCommands() {

@@ -26,69 +26,60 @@ function buildDeleteRow(authorId) {
   );
 }
 
-async function applyBaseAction(message, action) {
-  if (action === "delete_message") {
-    try {
-      await message.delete();
-    } catch (_) {
-      /* missing permissions — ignore */
-    }
-    return true;
-  }
-  if (action === "remove_embed") {
-    try {
-      await message.suppressEmbeds(true);
-    } catch (_) {
-      /* missing permissions — ignore */
-    }
-  }
-  return false;
-}
-
 async function handleFixembedMessage(message) {
   if (message.content.toLowerCase().includes("fxignore")) return;
 
-  if (
-    !fixembedStorage.isEnabled(
-      message.guild.id,
-      message.channel.id,
-      message.member,
-    )
-  ) {
-    return;
-  }
+  const settings = fixembedStorage.getSettings(message.guild.id);
+
+  // 1. Master toggle
+  if (!settings.enabled) return;
+
+  // 2. Ignored channel
+  if (settings.ignoredChannels?.includes(message.channel.id)) return;
+
+  // Ignored user/role to prevent regressions
+  if (settings.ignoredUsers?.includes(message.author.id)) return;
+  const memberRoles = message.member?.roles?.cache?.map((r) => r.id) ?? [];
+  if (memberRoles.some((rid) => settings.ignoredRoles?.includes(rid))) return;
 
   if (fixembedStorage.hasIgnoredKeyword(message.guild.id, message.content)) {
     return;
   }
 
-  const settings = fixembedStorage.getSettings(message.guild.id);
-  const fixedLinks = await extractFixedLinks(
-    message.content,
-    settings.viewMode,
-    settings.platforms,
-  );
+  const fixedLinks = await extractFixedLinks(message.content, settings);
   if (fixedLinks.length === 0) return;
 
   const changed = fixedLinks.filter((l) => l.changed);
-  const action = settings.baseMessageAction;
-
-  if (action === "nothing" && changed.length === 0) return;
-
-  const wasDeleted = await applyBaseAction(message, action);
   if (changed.length === 0) return;
 
   const replyContent = changed.map(formatLine).join("\n");
   const deleteRow = buildDeleteRow(message.author.id);
 
   try {
-    if (wasDeleted) {
+    if (settings.deleteBehavior === "delete") {
+      try {
+        await message.delete();
+      } catch (_) {
+        /* missing permissions — ignore */
+      }
       await message.channel.send({
         content: `-# ${message.author} •\n${replyContent}`,
         allowedMentions: { users: [] },
         components: [deleteRow],
       });
+    } else if (settings.deleteBehavior === "suppress") {
+      try {
+        await message.suppressEmbeds(true);
+      } catch (_) {
+        /* missing permissions — ignore */
+      }
+      await message.reply({
+        content: replyContent,
+        allowedMentions: { repliedUser: false },
+        components: [deleteRow],
+      });
     } else {
+      // none
       await message.reply({
         content: replyContent,
         allowedMentions: { repliedUser: false },

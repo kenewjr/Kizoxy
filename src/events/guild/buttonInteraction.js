@@ -35,10 +35,9 @@ module.exports = async (client, interaction) => {
       "fixembed_delete",
       "alarm",
       "tvc",
-      "youtube_list_page",
-      "tiktok_list_page",
       "youtube_panel",
       "tiktok_panel",
+      "fixembed_panel",
       "help_category",
     ];
     let button = client.buttons.get(interaction.customId);
@@ -68,20 +67,31 @@ module.exports = async (client, interaction) => {
         interaction.customId === "alarm_new" ||
         interaction.customId.startsWith("alarm_edit_modal:") ||
         interaction.customId === "youtube_panel:add" ||
-        interaction.customId === "tiktok_panel:add";
+        interaction.customId === "tiktok_panel:add" ||
+        interaction.customId === "youtube_panel:custom_msg" ||
+        interaction.customId === "tiktok_panel:custom_msg" ||
+        interaction.customId === "youtube_panel:search_start" ||
+        interaction.customId === "tiktok_panel:search_start" ||
+        interaction.customId === "fixembed_panel:add_domain_btn" ||
+        interaction.customId === "fixembed_panel:add_keyword_btn";
       // tvc owns its own defer lifecycle (mix of modal-open / toggle / select).
       const isTvc = prefix === "tvc";
       const skipDefer = isShowModalButton || isModalSubmit || isTvc;
       const useDeferUpdate =
         prefix === "fxs" ||
         interaction.customId.startsWith("alarm_") ||
-        prefix === "youtube_list_page" ||
-        prefix === "tiktok_list_page" ||
         prefix === "help_category" ||
         (prefix === "youtube_panel" &&
-          interaction.customId !== "youtube_panel:add") ||
+          interaction.customId !== "youtube_panel:add" &&
+          interaction.customId !== "youtube_panel:custom_msg" &&
+          interaction.customId !== "youtube_panel:search_start") ||
         (prefix === "tiktok_panel" &&
-          interaction.customId !== "tiktok_panel:add");
+          interaction.customId !== "tiktok_panel:add" &&
+          interaction.customId !== "tiktok_panel:custom_msg" &&
+          interaction.customId !== "tiktok_panel:search_start") ||
+        (prefix === "fixembed_panel" &&
+          interaction.customId !== "fixembed_panel:add_domain_btn" &&
+          interaction.customId !== "fixembed_panel:add_keyword_btn");
 
       if (skipDefer) {
         logger.debug(`Skipping defer (modal) for: ${interaction.customId}`);

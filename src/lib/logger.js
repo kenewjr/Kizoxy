@@ -42,6 +42,21 @@ function getStream() {
   }
 }
 
+function getConsoleDetails(level) {
+  switch (level) {
+    case "success":
+      return { color: colors.green, prefix: "✅" };
+    case "error":
+      return { color: colors.red, prefix: "❌" };
+    case "warning":
+      return { color: colors.yellow, prefix: "⚠️" };
+    case "debug":
+      return { color: colors.blue, prefix: "🐛" };
+    default:
+      return { color: colors.cyan, prefix: "ℹ️" };
+  }
+}
+
 class Logger {
   constructor(moduleName) {
     this.moduleName = moduleName;
@@ -81,33 +96,7 @@ class Logger {
       return;
     }
 
-    // Pretty-print for local development
-    let color = colors.white;
-    let prefix = "ℹ️";
-
-    switch (level) {
-      case "success":
-        color = colors.green;
-        prefix = "✅";
-        break;
-      case "error":
-        color = colors.red;
-        prefix = "❌";
-        break;
-      case "warning":
-        color = colors.yellow;
-        prefix = "⚠️";
-        break;
-      case "debug":
-        color = colors.blue;
-        prefix = "🐛";
-        break;
-      case "info":
-      default:
-        color = colors.cyan;
-        prefix = "ℹ️";
-    }
-
+    const { color, prefix } = getConsoleDetails(level);
     const formatted = `${colors.bright}${colors.white}[${new Date().toLocaleTimeString()}]${colors.reset} ${color}${prefix} [${this.moduleName}]${colors.reset} ${message}`;
 
     if (level === "error") {

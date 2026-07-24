@@ -160,4 +160,22 @@ describe("youtube channelResolver", () => {
       resolveChannel("https://www.youtube.com/@NonexistentHandle"),
     ).rejects.toThrow(/Channel ID/);
   });
+
+  test("handles channelsList fetch timeout aborts and returns fallback", async () => {
+    jest.useFakeTimers();
+    global.fetch.mockImplementation((url, options) => {
+      return new Promise((resolve, reject) => {
+        if (options?.signal) {
+          options.signal.addEventListener("abort", () =>
+            reject(new Error("aborted")),
+          );
+        }
+      });
+    });
+    const promise = resolveChannel("UC1234567890123456789012");
+    jest.advanceTimersByTime(10000);
+    jest.useRealTimers();
+    const res = await promise;
+    expect(res.youtubeChannelId).toBe("UC1234567890123456789012");
+  });
 });

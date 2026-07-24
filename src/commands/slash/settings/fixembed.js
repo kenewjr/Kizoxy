@@ -1,171 +1,20 @@
-const {
-  ApplicationCommandOptionType,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  PermissionsBitField,
-} = require("discord.js");
-const Embeds = require("../../../lib/embeds");
-const fixembedStorage = require("../../../persistence/fixembedStorage");
-
-function buildMainPage(s, guild, client) {
-  const fmt = (arr, mentionFn) =>
-    arr.length ? arr.map(mentionFn).join(", ") : "*None*";
-  const actionLabel = {
-    nothing: "Nothing",
-    remove_embed: "Remove Embed",
-    delete_message: "Delete Message",
-  };
-  const modeLabel = {
-    normal: "Normal",
-    direct: "Direct",
-    gallery: "Gallery",
-    text: "Text-only",
-  };
-
-  return Embeds.brand(client, {
-    title: `🔗 FixEmbed — ${guild.name}`,
-    thumbnail: guild.iconURL({ dynamic: true }) ?? null,
-    fields: [
-      {
-        name: "Status",
-        value: s.enabled ? "✅ Enabled" : "🚫 Disabled",
-        inline: true,
-      },
-      {
-        name: "Base Message Action",
-        value: actionLabel[s.baseMessageAction] ?? s.baseMessageAction,
-        inline: true,
-      },
-      {
-        name: "View Mode",
-        value: modeLabel[s.viewMode] ?? s.viewMode,
-        inline: true,
-      },
-      {
-        name: "Ignored Channels",
-        value: fmt(s.disabledChannels, (id) => `<#${id}>`),
-        inline: false,
-      },
-      {
-        name: "Ignored Users",
-        value: fmt(s.ignoredUsers, (id) => `<@${id}>`),
-        inline: false,
-      },
-      {
-        name: "Ignored Roles",
-        value: fmt(s.ignoredRoles, (id) => `<@&${id}>`),
-        inline: false,
-      },
-      {
-        name: "Ignored Keywords",
-        value: s.ignoredKeywords.length
-          ? s.ignoredKeywords.map((k) => `\`${k}\``).join(", ")
-          : "*None*",
-        inline: false,
-      },
-    ],
-    footerText: "📄 Page 1/3 — Status Overview",
-  });
-}
-
-function navRow(guildId, userId, currentPage) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`fxs:page_main:${guildId}:${userId}`)
-      .setLabel("📊 Status")
-      .setStyle(
-        currentPage === "main" ? ButtonStyle.Primary : ButtonStyle.Secondary,
-      )
-      .setDisabled(currentPage === "main"),
-    new ButtonBuilder()
-      .setCustomId(`fxs:page_behavior:${guildId}:${userId}`)
-      .setLabel("⚙️ Behavior")
-      .setStyle(
-        currentPage === "behavior"
-          ? ButtonStyle.Primary
-          : ButtonStyle.Secondary,
-      )
-      .setDisabled(currentPage === "behavior"),
-    new ButtonBuilder()
-      .setCustomId(`fxs:page_ignore:${guildId}:${userId}`)
-      .setLabel("🚫 Ignore Lists")
-      .setStyle(
-        currentPage === "ignore" ? ButtonStyle.Primary : ButtonStyle.Secondary,
-      )
-      .setDisabled(currentPage === "ignore"),
-    new ButtonBuilder()
-      .setCustomId(`fxs:toggle_enabled:${guildId}:${userId}`)
-      .setLabel("🔛 Toggle")
-      .setStyle(ButtonStyle.Secondary),
-  );
-}
+const { PermissionsBitField } = require("discord.js");
+const { replyError } = require("../../../lib/interactions");
+const fixembed_panel = require("../../../interactions/buttons/fixembed_panel");
 
 module.exports = {
   name: ["fixembed"],
-  description: "Configure social-media embed fixing settings.",
+  description: "Configure automatic link embed fixes and ignore criteria.",
   category: "Settings",
-  options: [
-    {
-      name: "settings",
-      description: "Open the interactive settings panel.",
-      type: ApplicationCommandOptionType.Subcommand,
-    },
-    {
-      name: "ignore-keyword",
-      description:
-        "Toggle an ignored keyword (messages containing it are skipped).",
-      type: ApplicationCommandOptionType.Subcommand,
-      options: [
-        {
-          name: "keyword",
-          description: "The keyword to toggle.",
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
-  ],
-  permissions: {
-    bot: [PermissionsBitField.Flags.SendMessages],
-    user: [PermissionsBitField.Flags.ManageGuild],
-  },
+  defaultMemberPermissions: PermissionsBitField.Flags.ManageGuild,
   run: async (client, interaction) => {
-    if (
-      !interaction.memberPermissions?.has?.(
-        PermissionsBitField.Flags.ManageGuild,
-      )
-    ) {
-      return interaction.reply({
-        content:
-          "❌ You need the **Manage Server** permission to run this command.",
-        ephemeral: true,
-      });
+    if (!interaction.memberPermissions?.has?.("ManageGuild")) {
+      return replyError(
+        interaction,
+        "You need the **Manage Server** permission to run this command.",
+      );
     }
 
-    const sub = interaction.options.getSubcommand();
-    const guildId = interaction.guild.id;
-    const userId = interaction.user.id;
-
-    if (sub === "settings") {
-      const s = fixembedStorage.getSettings(guildId);
-      return interaction.reply({
-        embeds: [buildMainPage(s, interaction.guild, client)],
-        components: [navRow(guildId, userId, "main")],
-        ephemeral: true,
-      });
-    }
-
-    if (sub === "ignore-keyword") {
-      const keyword = interaction.options.getString("keyword");
-      const added = fixembedStorage.toggleKeyword(guildId, keyword);
-      const embed = Embeds.brand(client, {
-        title: "🔗 FixEmbed",
-        description: added
-          ? `➕ Keyword \`${keyword}\` added — messages containing it will be skipped.`
-          : `➖ Keyword \`${keyword}\` removed.`,
-      });
-      return interaction.reply({ embeds: [embed], ephemeral: true });
-    }
+    await fixembed_panel.showMain(interaction, client);
   },
 };

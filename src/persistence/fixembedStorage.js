@@ -6,16 +6,94 @@ const logger = new Logger("FIXEMBED_STORAGE");
 
 const DATA_PATH = path.join(__dirname, "../../data/fixembed.json");
 
+const KNOWN_PLATFORMS = [
+  "twitter",
+  "instagram",
+  "tiktok",
+  "reddit",
+  "threads",
+  "bluesky",
+  "facebook",
+  "tumblr",
+  "mastodon",
+  "youtube",
+  "twitch",
+  "bilibili",
+  "spotify",
+  "pixiv",
+  "deviantart",
+  "newgrounds",
+  "furaffinity",
+  "snapchat",
+  "pinterest",
+  "imgur",
+  "ifunny",
+  "booru",
+  "danbooru",
+  "weibo",
+];
+
 const DEFAULT_SETTINGS = {
-  enabled: false,
+  enabled: true,
+  deleteBehavior: "suppress",
+  spoilerPassthrough: true,
+  ignoredChannels: [],
+  ignoredDomains: [],
+  platforms: {},
   disabledChannels: [],
   ignoredUsers: [],
   ignoredRoles: [],
   ignoredKeywords: [],
-  baseMessageAction: "remove_embed", // 'nothing' | 'remove_embed' | 'delete_message'
-  viewMode: "normal", // 'normal' | 'direct' | 'gallery' | 'text'
-  platforms: {},
+  baseMessageAction: "remove_embed",
+  viewMode: "normal",
 };
+
+function applyPlatformDefaults(platforms) {
+  const result = { ...platforms };
+  for (const key of KNOWN_PLATFORMS) {
+    if (!result[key]) {
+      result[key] = { enabled: true, viewMode: "normal" };
+    } else {
+      result[key] = {
+        enabled: result[key].enabled ?? true,
+        viewMode: result[key].viewMode ?? "normal",
+      };
+    }
+  }
+  return result;
+}
+
+function applyDefaults(stored) {
+  const deleteBehavior =
+    stored.deleteBehavior ??
+    (stored.baseMessageAction === "delete_message"
+      ? "delete"
+      : stored.baseMessageAction === "nothing"
+        ? "none"
+        : "suppress");
+  const baseMessageAction =
+    stored.baseMessageAction ??
+    (deleteBehavior === "delete"
+      ? "delete_message"
+      : deleteBehavior === "none"
+        ? "nothing"
+        : "remove_embed");
+  const ignoredChannels =
+    stored.ignoredChannels ?? stored.disabledChannels ?? [];
+  const disabledChannels = stored.disabledChannels ?? ignoredChannels;
+
+  const s = {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    deleteBehavior,
+    baseMessageAction,
+    ignoredChannels,
+    disabledChannels,
+  };
+
+  s.platforms = applyPlatformDefaults(s.platforms);
+  return s;
+}
 
 class FixEmbedStorage {
   constructor() {
@@ -44,26 +122,53 @@ class FixEmbedStorage {
   }
 
   getSettings(guildId) {
-    if (!this.cache[guildId]) {
-      this.cache[guildId] = { ...DEFAULT_SETTINGS };
-    }
-    return { ...DEFAULT_SETTINGS, ...this.cache[guildId] };
+    const raw = this.cache[guildId] || {};
+    return applyDefaults(raw);
   }
 
   saveSettings(guildId, settings) {
-    this.cache[guildId] = { ...this.getSettings(guildId), ...settings };
+    const current = this.cache[guildId] || {};
+    const merged = { ...current, ...settings };
+
+    // Sync deleteBehavior <-> baseMessageAction
+    if (settings.deleteBehavior !== undefined) {
+      const mapping = {
+        suppress: "remove_embed",
+        delete: "delete_message",
+        none: "nothing",
+      };
+      merged.baseMessageAction =
+        mapping[settings.deleteBehavior] || "remove_embed";
+    } else if (settings.baseMessageAction !== undefined) {
+      const mapping = {
+        remove_embed: "suppress",
+        delete_message: "delete",
+        nothing: "none",
+      };
+      merged.deleteBehavior = mapping[settings.baseMessageAction] || "suppress";
+    }
+
+    // Sync ignoredChannels <-> disabledChannels
+    if (settings.ignoredChannels !== undefined) {
+      merged.disabledChannels = settings.ignoredChannels;
+    } else if (settings.disabledChannels !== undefined) {
+      merged.ignoredChannels = settings.disabledChannels;
+    }
+
+    this.cache[guildId] = merged;
     this._save();
-    return this.cache[guildId];
+    return this.getSettings(guildId);
   }
 
   isEnabled(guildId, channelId, member) {
     const s = this.getSettings(guildId);
     if (!s.enabled) return false;
-    if (s.disabledChannels.includes(channelId)) return false;
+    if (s.ignoredChannels.includes(channelId)) return false;
     if (member) {
-      if (s.ignoredUsers.includes(member.id)) return false;
+      if (s.ignoredUsers?.includes(member.id)) return false;
       const memberRoles = member.roles?.cache?.map((r) => r.id) ?? [];
-      if (memberRoles.some((rid) => s.ignoredRoles.includes(rid))) return false;
+      if (memberRoles.some((rid) => s.ignoredRoles?.includes(rid)))
+        return false;
     }
     return true;
   }
@@ -71,7 +176,9 @@ class FixEmbedStorage {
   hasIgnoredKeyword(guildId, content) {
     const s = this.getSettings(guildId);
     const lower = content.toLowerCase();
-    return s.ignoredKeywords.some((kw) => lower.includes(kw.toLowerCase()));
+    return (
+      s.ignoredKeywords?.some((kw) => lower.includes(kw.toLowerCase())) ?? false
+    );
   }
 
   _toggle(guildId, field, value) {
@@ -86,7 +193,7 @@ class FixEmbedStorage {
   }
 
   toggleChannel(guildId, channelId) {
-    return this._toggle(guildId, "disabledChannels", channelId);
+    return this._toggle(guildId, "ignoredChannels", channelId);
   }
 
   toggleUser(guildId, userId) {

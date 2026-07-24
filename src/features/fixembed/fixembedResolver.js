@@ -6,9 +6,29 @@ const logger = new Logger("FIXEMBED");
 
 async function extractFixedLinks(
   content,
-  viewMode = "normal",
+  settingsOrViewMode = "normal",
   platformsSettings = null,
 ) {
+  let settings;
+  if (typeof settingsOrViewMode === "object" && settingsOrViewMode !== null) {
+    settings = settingsOrViewMode;
+  } else {
+    settings = {
+      viewMode: settingsOrViewMode,
+      platforms: {},
+      ignoredDomains: [],
+      spoilerPassthrough: true,
+    };
+    if (platformsSettings) {
+      for (const [k, enabled] of Object.entries(platformsSettings)) {
+        settings.platforms[k] = {
+          enabled: !!enabled,
+          viewMode: settingsOrViewMode,
+        };
+      }
+    }
+  }
+
   const urls = [...(content.matchAll(URL_REGEX) || [])].map((m) => m[0]);
   const results = [];
   const seen = new Set();
@@ -18,15 +38,28 @@ async function extractFixedLinks(
     if (seen.has(cleanUrl)) continue;
     seen.add(cleanUrl);
 
+    // 3. Ignored domain
+    if (settings.ignoredDomains?.some((d) => cleanUrl.includes(d))) continue;
+
+    // 4. Spoiler passthrough
+    const spoiler = isSpoiler(content, cleanUrl);
+    if (spoiler && !settings.spoilerPassthrough) continue;
+
     for (const resolver of RESOLVERS) {
       if (!resolver.match(cleanUrl)) continue;
 
-      if (platformsSettings) {
-        const platformKey = resolver.name.toLowerCase().replace(/\s+/g, "");
-        if (platformsSettings[platformKey] === false) {
-          break;
-        }
-      }
+      const platformKey =
+        resolver.platformKey || resolver.name.toLowerCase().replace(/\s+/g, "");
+      const platformSettings = settings.platforms?.[platformKey] ?? {
+        enabled: true,
+      };
+
+      // 5. Platform check
+      if (!platformSettings.enabled) break;
+
+      // 6. View mode
+      const viewMode =
+        platformSettings.viewMode ?? settings.viewMode ?? "normal";
 
       try {
         const res = await resolver.resolve(cleanUrl, viewMode);
@@ -40,7 +73,7 @@ async function extractFixedLinks(
             fixerName: resolver.fixerName,
             platform: resolver.name,
             changed: res.fixed !== cleanUrl,
-            spoiler: isSpoiler(content, cleanUrl),
+            spoiler,
           });
         }
       } catch (err) {

@@ -30,9 +30,11 @@
             class="input btn--sm"
             placeholder="Filter guilds..."
             style="width: 100%; padding-right: 24px"
+            aria-label="Filter guilds"
           />
           <button
             id="sidebar-guild-filter-clear"
+            aria-label="Clear filter"
             style="
               position: absolute;
               right: 8px;
@@ -66,11 +68,16 @@
           class="btn btn--ghost btn--sm"
           id="help-shortcuts-btn"
           title="Keyboard Shortcuts"
+          aria-label="Keyboard Shortcuts"
           style="margin-right: 4px"
         >
           ?
         </button>
-        <button class="btn btn--ghost btn--sm" id="refresh-btn">
+        <button
+          class="btn btn--ghost btn--sm"
+          id="refresh-btn"
+          aria-label="Refresh page"
+        >
           ↻ Refresh
         </button>
       </header>
@@ -82,10 +89,15 @@
     <script src="/pages-overview.js"></script>
     <script src="/pages-guilds.js"></script>
     <script src="/pages-guild-core.js"></script>
+    <script src="/pages-guild-fixembed.js"></script>
     <script src="/pages-guild-notif.js"></script>
-    <script src="/pages-guild-system.js"></script>
+    <script src="/pages-guild-tempvc.js"></script>
+    <script src="/pages-guild-alarms.js"></script>
+    <script src="/pages-guild-level.js"></script>
     <script src="/pages-guild-sendmsg.js"></script>
     <script src="/pages-logs.js"></script>
+    <script src="/pages-admin-updates.js"></script>
+    <script src="/pages-admin-presence.js"></script>
     <script src="/pages-admin.js"></script>
     <script src="/commandsTab.js"></script>
   </body>

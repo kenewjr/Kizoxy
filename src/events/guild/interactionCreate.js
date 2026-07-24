@@ -55,7 +55,8 @@ module.exports = async (client, interaction) => {
     (interaction.customId.startsWith("alarm_") ||
       interaction.customId.startsWith("tvc:") ||
       interaction.customId.startsWith("youtube_panel:") ||
-      interaction.customId.startsWith("tiktok_panel:"))
+      interaction.customId.startsWith("tiktok_panel:") ||
+      interaction.customId.startsWith("fixembed_panel:"))
   ) {
     logger.debug(
       `Modal submit: customId=${interaction.customId} by ${interaction.user?.tag || interaction.user?.id}`,
@@ -218,17 +219,17 @@ module.exports = async (client, interaction) => {
     const command = client.commands.find((command) => {
       switch (command.name.length) {
         case 1:
-          return command.name[0] == interaction.commandName;
+          return command.name[0] === interaction.commandName;
         case 2:
           return (
-            command.name[0] == interaction.commandName &&
-            command.name[1] == subCommandName
+            command.name[0] === interaction.commandName &&
+            command.name[1] === subCommandName
           );
         case 3:
           return (
-            command.name[0] == interaction.commandName &&
-            command.name[1] == subCommandGroupName &&
-            command.name[2] == subCommandName
+            command.name[0] === interaction.commandName &&
+            command.name[1] === subCommandGroupName &&
+            command.name[2] === subCommandName
           );
         default:
           return false;

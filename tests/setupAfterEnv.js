@@ -33,6 +33,7 @@ jest.spyOn(path, "join").mockImplementation((...args) => {
     "donate_seen.json",
     "fixembed.json",
     "level_settings.json",
+    "levelSettings.json",
     "tempvc.json",
     "tiktok.json",
     "youtube.json",

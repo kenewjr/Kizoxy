@@ -97,7 +97,7 @@ async function handleMusicAutoLeave(client, oldState, newState) {
 
   if (
     newState.channelId &&
-    newState.channel.type == ChannelType.GuildStageVoice &&
+    newState.channel.type === ChannelType.GuildStageVoice &&
     newState.guild.members.me.voice.suppress
   ) {
     if (

@@ -5,6 +5,7 @@ const { resolveEmbedEZ } = require("../fixembedResolverHelper");
 module.exports = [
   {
     name: "YouTube",
+    platformKey: "youtube",
     originalLabel: "YouTube",
     fixerName: "Koutube",
     match: (u) =>
@@ -62,6 +63,7 @@ module.exports = [
 
   {
     name: "Twitch",
+    platformKey: "twitch",
     originalLabel: "Clip",
     fixerName: "fxtwitch",
     match: (u) =>
@@ -78,6 +80,7 @@ module.exports = [
 
   {
     name: "BiliBili",
+    platformKey: "bilibili",
     originalLabel: "BiliBili",
     fixerName: "BiliFix",
     match: (u) =>
@@ -91,6 +94,7 @@ module.exports = [
 
   {
     name: "Spotify",
+    platformKey: "spotify",
     originalLabel: "Spotify",
     fixerName: "fxspotify",
     match: (u) =>

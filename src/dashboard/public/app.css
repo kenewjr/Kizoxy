@@ -1,28 +1,30 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap");
+
 /* ── CSS Custom Properties ── */
 :root {
   --sidebar-w: 220px;
   --topbar-h: 48px;
-  --bg-base: #111214;
-  --bg-mid: #1e1f22;
-  --bg-top: #2b2d31;
-  --bg-elevated: #313338;
-  --border: #3f4147;
-  --text-1: #dbdee1;
-  --text-2: #b5bac1;
-  --text-3: #80848e;
+  --bg-base: #0f1012;
+  --bg-mid: #15171a;
+  --bg-top: #1e2024;
+  --bg-elevated: #282a2f;
+  --border: rgba(255, 255, 255, 0.08);
+  --text-1: #f3f4f6;
+  --text-2: #d1d5db;
+  --text-3: #9ca3af;
   --accent: #5865f2;
   --accent-dim: #4752c4;
   --accent-rgb: 88, 101, 242;
-  --green: #23a55a;
-  --green-dim: #1a7f44;
-  --yellow: #f0b232;
-  --red: #f23f43;
-  --blue: #5865f2;
-  --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --green: #10b981;
+  --green-dim: #059669;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --font-ui: "Outfit", system-ui, -apple-system, sans-serif;
   --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
-  --radius: 6px;
-  --radius-sm: 4px;
-  --transition: 120ms ease;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Reset & Layout ── */
@@ -1182,4 +1184,59 @@ body {
 }
 .mb-8 {
   margin-bottom: 8px;
+}
+
+/* ── Premium Styling Extensions & Accessibility ── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card,
+.stat-card {
+  background: rgba(30, 32, 36, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition);
+}
+
+.card:hover,
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn {
+  transform: translateZ(0);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.2);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Glassmorphic Topbar & Sidebar */
+#topbar {
+  background: var(--bg-mid);
+  border-bottom: 1px solid var(--border);
+}
+
+#sidebar {
+  background: var(--bg-mid);
+}
+
+/* Responsive scrollable tables */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius);
 }

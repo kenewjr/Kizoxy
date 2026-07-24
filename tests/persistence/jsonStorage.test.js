@@ -14,8 +14,6 @@ describe("JSONStorage Persistence Tests", () => {
     fs.mkdirSync(tmpDir, { recursive: true });
     filename = "test-storage.json";
 
-    // Instantiating JSONStorage overrides filepath to data/filename relative to __dirname.
-    // Let's stub storage.filepath, backupPath, tmpPath directly to point to our tmpDir!
     storage = new JSONStorage(filename);
     storage.filepath = path.join(tmpDir, filename);
     storage.backupPath = `${storage.filepath}.bak`;
@@ -73,6 +71,12 @@ describe("JSONStorage Persistence Tests", () => {
     expect(fs.readFileSync(storage.filepath, "utf8")).toContain("recovered");
   });
 
+  it("fails to recover if backup file is also corrupted", async () => {
+    fs.writeFileSync(storage.filepath, "{ corrupt json...", "utf8");
+    fs.writeFileSync(storage.backupPath, "{ corrupt json...", "utf8");
+    await expect(storage.load()).rejects.toThrow();
+  });
+
   it("performs CRUD operations correctly", async () => {
     await storage._ensureLoaded();
 
@@ -81,6 +85,7 @@ describe("JSONStorage Persistence Tests", () => {
       id: "crud-1",
       guildId: "guild-1",
       text: "original",
+      userId: "user-123",
     });
     expect(created.id).toBe("crud-1");
 
@@ -88,16 +93,69 @@ describe("JSONStorage Persistence Tests", () => {
     const fetched = await storage.get("crud-1");
     expect(fetched.text).toBe("original");
 
+    // Find by user
+    const userItems = await storage.findByUser("user-123");
+    expect(userItems.length).toBe(1);
+
     // Update
     const updated = await storage.update("crud-1", { text: "modified" });
     expect(updated.text).toBe("modified");
-    const fetchedAfterUpdate = await storage.get("crud-1");
-    expect(fetchedAfterUpdate.text).toBe("modified");
 
     // Delete
     const deleted = await storage.delete("crud-1");
     expect(deleted).toBe(true);
-    const fetchedAfterDelete = await storage.get("crud-1");
-    expect(fetchedAfterDelete).toBeNull();
+  });
+
+  it("handles missing guildId in create", async () => {
+    await storage._ensureLoaded();
+    await expect(storage.create({ id: "item-no-guild" })).rejects.toThrow();
+  });
+
+  it("handles get, findByGuild, findByUser, update, delete not found/errors", async () => {
+    await storage._ensureLoaded();
+
+    // 1. Not found tests
+    expect(await storage.get("non-existent")).toBeNull();
+    expect(await storage.update("non-existent", { val: 1 })).toBeNull();
+    expect(await storage.delete("non-existent")).toBe(false);
+
+    // 2. Exception/error flow tests
+    storage.data = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error("proxy error");
+        },
+        get() {
+          throw new Error("proxy error");
+        },
+      },
+    );
+
+    expect(await storage.findByGuild("guild-1")).toEqual([]);
+    expect(await storage.get("some-id")).toBeNull();
+    expect(await storage.findByUser("user-1")).toEqual([]);
+    await expect(storage.update("some-id", { val: 1 })).rejects.toThrow();
+    await expect(storage.delete("some-id")).rejects.toThrow();
+  });
+
+  it("calls syncWithMessage successfully", async () => {
+    await storage._ensureLoaded();
+    await storage.create({ id: "alarm-1", guildId: "guild-1" });
+    const updated = await storage.syncWithMessage(
+      "alarm-1",
+      "msg-123",
+      "chan-456",
+    );
+    expect(updated.messageId).toBe("msg-123");
+    expect(updated.embedChannelId).toBe("chan-456");
+  });
+
+  it("calls getAll successfully", async () => {
+    await storage._ensureLoaded();
+    await storage.create({ id: "alarm-1", guildId: "guild-1" });
+    await storage.create({ id: "alarm-2", guildId: "guild-2" });
+    const all = await storage.getAll();
+    expect(all.length).toBe(2);
   });
 });

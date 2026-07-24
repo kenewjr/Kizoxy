@@ -9,6 +9,7 @@ const {
 module.exports = [
   {
     name: "Twitter",
+    platformKey: "twitter",
     originalLabel: "Tweet",
     fixerName: "FxTwitter",
     match: (u) =>
@@ -30,6 +31,7 @@ module.exports = [
 
   {
     name: "Instagram",
+    platformKey: "instagram",
     originalLabel: "Instagram",
     fixerName: "InstaFix",
     match: (u) =>
@@ -53,6 +55,7 @@ module.exports = [
 
   {
     name: "TikTok",
+    platformKey: "tiktok",
     originalLabel: "TikTok",
     fixerName: "fxTikTok",
     match: (u) =>
@@ -86,6 +89,7 @@ module.exports = [
 
   {
     name: "Reddit",
+    platformKey: "reddit",
     originalLabel: "Reddit",
     fixerName: "vxreddit",
     match: (u) =>
@@ -105,6 +109,7 @@ module.exports = [
 
   {
     name: "Threads",
+    platformKey: "threads",
     originalLabel: "Threads",
     fixerName: "FixThreads",
     match: (u) =>
@@ -127,6 +132,7 @@ module.exports = [
 
   {
     name: "Bluesky",
+    platformKey: "bluesky",
     originalLabel: "Bluesky",
     fixerName: "FxBluesky",
     match: (u) =>
@@ -145,6 +151,7 @@ module.exports = [
 
   {
     name: "Facebook",
+    platformKey: "facebook",
     originalLabel: "Facebook",
     fixerName: "facebed",
     match: (u) =>
@@ -159,6 +166,7 @@ module.exports = [
 
   {
     name: "Tumblr",
+    platformKey: "tumblr",
     originalLabel: "Tumblr",
     fixerName: "fxtumblr",
     match: (u) =>
@@ -177,6 +185,7 @@ module.exports = [
 
   {
     name: "Mastodon",
+    platformKey: "mastodon",
     originalLabel: "Mastodon",
     fixerName: "FxMastodon",
     match: (u) =>

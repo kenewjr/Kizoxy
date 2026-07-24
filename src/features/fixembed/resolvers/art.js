@@ -3,6 +3,7 @@
 module.exports = [
   {
     name: "Pixiv",
+    platformKey: "pixiv",
     originalLabel: "Pixiv",
     fixerName: "phixiv",
     match: (u) =>
@@ -17,6 +18,7 @@ module.exports = [
 
   {
     name: "DeviantArt",
+    platformKey: "deviantart",
     originalLabel: "DeviantArt",
     fixerName: "fixDeviantArt",
     match: (u) =>
@@ -36,6 +38,7 @@ module.exports = [
 
   {
     name: "Newgrounds",
+    platformKey: "newgrounds",
     originalLabel: "Newgrounds",
     fixerName: "FixNewgrounds",
     match: (u) =>
@@ -55,6 +58,7 @@ module.exports = [
 
   {
     name: "Fur Affinity",
+    platformKey: "furaffinity",
     originalLabel: "Fur Affinity",
     fixerName: "xfuraffinity",
     match: (u) => /https?:\/\/(?:www\.)?furaffinity\.net\/view\/\d+/i.test(u),

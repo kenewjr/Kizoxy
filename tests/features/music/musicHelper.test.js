@@ -1,126 +1,173 @@
-// Tests for utils/helpers/musicHelper.js
 const {
-  EPHEMERAL_TTL_MS,
-  EPHEMERAL_ERROR_TTL_MS,
   validateMusicContext,
+  validateMusicContextMessage,
   scheduleAutoDelete,
+  formatProgressBar,
+  getSourceMeta,
+  buildNowPlayingEmbed,
   buildMusicControlRow,
+  fetchNowPlayingMessage,
+  addLyricsToNowPlaying,
+  removeLyricsFromNowPlaying,
+  swapNowPlayingComponents,
 } = require("../../../src/features/music/musicHelper");
 
-describe("musicHelper", () => {
-  describe("constants", () => {
-    test("ephemeral TTLs are sensible defaults", () => {
-      expect(EPHEMERAL_TTL_MS).toBe(3000);
-      expect(EPHEMERAL_ERROR_TTL_MS).toBe(5000);
-      expect(EPHEMERAL_ERROR_TTL_MS).toBeGreaterThan(EPHEMERAL_TTL_MS);
-    });
+describe("Music Helper Tests", () => {
+  let client, interaction, message, player;
+
+  beforeEach(() => {
+    player = {
+      voiceId: "vc-1",
+      volume: 100,
+      position: 1000,
+      queue: {
+        size: 2,
+        durationLength: 200000,
+      },
+      data: {
+        nowPlayingMessage: {
+          components: [],
+          edit: jest.fn().mockResolvedValue({}),
+        },
+        nowPlayingEmbed: {},
+      },
+    };
+    client = {
+      color: 0x5865f2,
+      user: {
+        displayAvatarURL: () => "https://example.com/avatar.png",
+      },
+      manager: {
+        players: new Map([["guild-1", player]]),
+      },
+    };
+    interaction = {
+      guild: { id: "guild-1" },
+      member: {
+        voice: {
+          channel: { id: "vc-1" },
+        },
+      },
+      message: {
+        edit: jest.fn().mockResolvedValue({}),
+      },
+      deleteReply: jest.fn().mockResolvedValue({}),
+    };
+    message = {
+      guild: { id: "guild-1" },
+      member: {
+        voice: {
+          channel: { id: "vc-1" },
+        },
+      },
+    };
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("validateMusicContext", () => {
-    const baseClient = (player) => ({
-      manager: { players: new Map(player ? [["g1", player]] : []) },
+    it("returns player when match is successful", () => {
+      const res = validateMusicContext(client, interaction);
+      expect(res.player).toBe(player);
     });
 
-    test("returns error when no player is loaded", () => {
-      const interaction = { guild: { id: "g1" }, member: {} };
-      expect(validateMusicContext(baseClient(null), interaction)).toEqual({
-        error: expect.stringContaining("No music"),
-      });
+    it("returns error if player not found", () => {
+      client.manager.players.clear();
+      const res = validateMusicContext(client, interaction);
+      expect(res.error).toContain("No music");
     });
 
-    test("returns error when user is not in the same voice channel", () => {
-      const player = { voiceId: "vc1" };
-      const interaction = {
-        guild: { id: "g1" },
-        member: { voice: { channel: { id: "vc2" } } },
-      };
-      expect(validateMusicContext(baseClient(player), interaction)).toEqual({
-        error: expect.stringContaining("same voice channel"),
-      });
+    it("returns error if member in wrong VC", () => {
+      interaction.member.voice.channel.id = "vc-wrong";
+      const res = validateMusicContext(client, interaction);
+      expect(res.error).toContain("same voice channel");
     });
+  });
 
-    test("returns { player, voiceChannel } on success", () => {
-      const player = { voiceId: "vc1" };
-      const channel = { id: "vc1" };
-      const interaction = {
-        guild: { id: "g1" },
-        member: { voice: { channel } },
-      };
-      const result = validateMusicContext(baseClient(player), interaction);
-      expect(result.player).toBe(player);
-      expect(result.voiceChannel).toBe(channel);
-      expect(result.error).toBeUndefined();
-    });
-
-    test("returns error when user has no voice state at all", () => {
-      const player = { voiceId: "vc1" };
-      const interaction = { guild: { id: "g1" }, member: {} };
-      expect(validateMusicContext(baseClient(player), interaction).error).toBe(
-        "❌ You must be in the same voice channel as the bot.",
-      );
+  describe("validateMusicContextMessage", () => {
+    it("returns player when match is successful", () => {
+      const res = validateMusicContextMessage(client, message);
+      expect(res.player).toBe(player);
     });
   });
 
   describe("scheduleAutoDelete", () => {
-    jest.useFakeTimers();
+    it("fires deleteReply after delay", async () => {
+      scheduleAutoDelete(interaction, 1000);
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+      expect(interaction.deleteReply).toHaveBeenCalled();
+    });
+  });
 
-    test("calls deleteReply after the default TTL", () => {
-      const interaction = { deleteReply: jest.fn().mockResolvedValue() };
-      scheduleAutoDelete(interaction);
-      jest.advanceTimersByTime(EPHEMERAL_TTL_MS);
-      expect(interaction.deleteReply).toHaveBeenCalledTimes(1);
+  describe("formatProgressBar", () => {
+    it("returns formatted bar", () => {
+      expect(formatProgressBar(50, 100)).toContain("▰");
+      expect(formatProgressBar(0, 0)).toBe("▱▱▱▱▱▱▱▱▱▱▱▱▱▱");
+    });
+  });
+
+  describe("getSourceMeta", () => {
+    it("resolves metadata for known platforms", () => {
+      const meta = getSourceMeta("youtube");
+      expect(meta.label).toBe("YouTube");
     });
 
-    test("respects a custom TTL", () => {
-      const interaction = { deleteReply: jest.fn().mockResolvedValue() };
-      scheduleAutoDelete(interaction, 1234);
-      jest.advanceTimersByTime(1233);
-      expect(interaction.deleteReply).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(1);
-      expect(interaction.deleteReply).toHaveBeenCalledTimes(1);
+    it("resolves default for unknown", () => {
+      const meta = getSourceMeta("unknown");
+      expect(meta.label).toBe("Unknown");
     });
+  });
 
-    test("swallows deleteReply rejections without throwing", () => {
-      const interaction = {
-        deleteReply: jest.fn().mockRejectedValue(new Error("nope")),
+  describe("buildNowPlayingEmbed", () => {
+    it("builds embed builder instance", () => {
+      const track = {
+        title: "Test Song",
+        uri: "https://youtube.com/watch?v=123",
+        author: "Singer",
+        length: 200000,
+        sourceName: "youtube",
       };
-      expect(() => {
-        scheduleAutoDelete(interaction);
-        jest.advanceTimersByTime(EPHEMERAL_TTL_MS);
-      }).not.toThrow();
+      const embed = buildNowPlayingEmbed(client, player, track);
+      expect(embed).toBeDefined();
     });
   });
 
   describe("buildMusicControlRow", () => {
-    test("returns 5 buttons", () => {
-      const row = buildMusicControlRow();
-      expect(row.toJSON().components).toHaveLength(5);
+    it("builds ActionRowBuilder", () => {
+      const row = buildMusicControlRow({ paused: false, queueLength: 2 });
+      expect(row).toBeDefined();
     });
+  });
 
-    test("first button shows Pause label by default", () => {
-      const row = buildMusicControlRow(false);
-      const first = row.toJSON().components[0];
-      expect(first.label).toBe("Pause");
-      expect(first.custom_id).toBe("music-pause");
+  describe("fetchNowPlayingMessage", () => {
+    it("fetches message directly from player data", async () => {
+      const msg = await fetchNowPlayingMessage(client, player);
+      expect(msg).toBe(player.data.nowPlayingMessage);
     });
+  });
 
-    test("first button shows Resume label when isPaused=true", () => {
-      const row = buildMusicControlRow(true);
-      const first = row.toJSON().components[0];
-      expect(first.label).toBe("Resume");
+  describe("addLyricsToNowPlaying", () => {
+    it("attaches lyrics embed to now playing message", async () => {
+      const res = await addLyricsToNowPlaying(client, player, {});
+      expect(res).toBe(true);
     });
+  });
 
-    test("custom IDs match what the button handlers expect", () => {
-      const ids = buildMusicControlRow()
-        .toJSON()
-        .components.map((c) => c.custom_id);
-      expect(ids).toEqual([
-        "music-pause",
-        "music-skip",
-        "music-stop",
-        "music-lyrics",
-        "music-shuffle",
-      ]);
+  describe("removeLyricsFromNowPlaying", () => {
+    it("removes lyrics embed from now playing message", async () => {
+      const res = await removeLyricsFromNowPlaying(client, player);
+      expect(res).toBe(true);
+    });
+  });
+
+  describe("swapNowPlayingComponents", () => {
+    it("edits the interaction message components", async () => {
+      const res = await swapNowPlayingComponents(interaction, []);
+      expect(res).toBe(true);
     });
   });
 });

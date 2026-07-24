@@ -75,4 +75,4 @@ jobs:
         run: npm run validate:env
 
       - name: Run Unit Tests (Jest)
-        run: npm run test
+        run: npm run test:coverage

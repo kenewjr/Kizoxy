@@ -31,7 +31,7 @@ const NormalPage = async (
     components: [row],
     allowedMentions: { repliedUser: false },
   });
-  if (pages.length == 0) return;
+  if (pages.length === 0) return;
 
   const filter = (m) => m.user.id === message.user.id;
   const collector = await curPage.createMessageComponentCollector({

@@ -56,5 +56,40 @@ describe("Embeds Utility Tests", () => {
       expect(data.color).toBe(Embeds.COLORS.ERROR);
       expect(data.description).toContain("❌ Failure");
     });
+
+    it("creates EmbedBuilder via warning method", () => {
+      const embed = Embeds.warning(client, { description: "Warning message" });
+      const data = embed.toJSON();
+      expect(data.color).toBe(Embeds.COLORS.WARNING);
+      expect(data.description).toContain("⚠️ Warning message");
+    });
+
+    it("creates EmbedBuilder via music/brand/withColor methods", () => {
+      expect(
+        Embeds.music(client, { description: "Music" }).toJSON().color,
+      ).toBe(Embeds.COLORS.MUSIC);
+      expect(
+        Embeds.brand(client, { description: "Brand" }).toJSON().color,
+      ).toBe(5793266);
+      expect(
+        Embeds.withColor(client, 12345, { description: "Custom" }).toJSON()
+          .color,
+      ).toBe(12345);
+    });
+  });
+
+  describe("formatError", () => {
+    it("returns default message for null", () => {
+      expect(Embeds.formatError(null)).toContain("unknown error");
+    });
+
+    it("returns string as-is", () => {
+      expect(Embeds.formatError("Direct error")).toBe("Direct error");
+    });
+
+    it("formats error object message", () => {
+      const err = new TypeError("Invalid argument");
+      expect(Embeds.formatError(err)).toBe("Invalid argument");
+    });
   });
 });

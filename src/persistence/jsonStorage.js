@@ -174,13 +174,11 @@ class JSONStorage {
   async findByGuild(guildId) {
     await this._ensureLoaded();
     try {
-      const guildItems = this.data[guildId] || [];
-      logger.debug(`Found ${guildItems.length} items for guild: ${guildId}`);
-      return guildItems;
+      const items = this.data[guildId] || [];
+      logger.debug(`Found ${items.length} items for guild: ${guildId}`);
+      return items;
     } catch (error) {
-      logger.error(
-        `Error finding items for guild ${guildId}: ${error.message}`,
-      );
+      logger.error(`Error finding items for guild ${guildId}: ${error.message}`);
       return [];
     }
   }
@@ -188,17 +186,9 @@ class JSONStorage {
   async get(id) {
     await this._ensureLoaded();
     try {
-      for (const guildId in this.data) {
-        const arr = this.data[guildId];
-        if (!Array.isArray(arr)) continue;
-        const item = arr.find((i) => i.id === id);
-        if (item) {
-          logger.debug(`Item retrieved: ${id}`);
-          return item;
-        }
-      }
-      logger.debug(`Item not found: ${id}`);
-      return null;
+      const item = Object.values(this.data).flat().find((i) => i.id === id) || null;
+      logger.debug(item ? `Item retrieved: ${id}` : `Item not found: ${id}`);
+      return item;
     } catch (error) {
       logger.error(`Error getting item ${id}: ${error.message}`);
       return null;
@@ -208,16 +198,11 @@ class JSONStorage {
   async findByUser(userId) {
     await this._ensureLoaded();
     try {
-      const userItems = [];
-      for (const guildId in this.data) {
-        const arr = this.data[guildId];
-        if (!Array.isArray(arr)) continue;
-        for (const item of arr) {
-          if (item.userId === userId) userItems.push(item);
-        }
-      }
-      logger.debug(`Found ${userItems.length} items for user: ${userId}`);
-      return userItems;
+      const items = Object.values(this.data)
+        .flat()
+        .filter((i) => i.userId === userId);
+      logger.debug(`Found ${items.length} items for user: ${userId}`);
+      return items;
     } catch (error) {
       logger.error(`Error finding items for user ${userId}: ${error.message}`);
       return [];
@@ -226,37 +211,31 @@ class JSONStorage {
 
   async create(item) {
     await this._ensureLoaded();
-    try {
-      const gid = item.guildId;
-      if (!gid)
-        throw new Error(
-          "Item missing guildId, cannot store in guild-indexed storage",
-        );
+    const gid = item.guildId;
+    if (!gid)
+      throw new Error(
+        "Item missing guildId, cannot store in guild-indexed storage",
+      );
 
-      if (!this.data[gid]) this.data[gid] = [];
-      this.data[gid].push(item);
-
-      this.scheduleSave();
-      logger.info(`Item created: ${item.id}`);
-      return item;
-    } catch (error) {
-      logger.error(`Error creating item: ${error.message}`);
-      throw error;
-    }
+    if (!this.data[gid]) this.data[gid] = [];
+    this.data[gid].push(item);
+    this.scheduleSave();
+    logger.info(`Item created: ${item.id}`);
+    return item;
   }
 
   async update(id, updates) {
     await this._ensureLoaded();
     try {
-      for (const guildId in this.data) {
-        const arr = this.data[guildId];
+      for (const gid in this.data) {
+        const arr = this.data[gid];
         if (!Array.isArray(arr)) continue;
-        const index = arr.findIndex((i) => i.id === id);
-        if (index !== -1) {
-          arr[index] = { ...arr[index], ...updates };
+        const idx = arr.findIndex((i) => i.id === id);
+        if (idx !== -1) {
+          arr[idx] = { ...arr[idx], ...updates };
           this.scheduleSave();
           logger.info(`Item updated: ${id}`);
-          return arr[index];
+          return arr[idx];
         }
       }
       logger.warning(`Item not found for update: ${id}`);
@@ -270,12 +249,12 @@ class JSONStorage {
   async delete(id) {
     await this._ensureLoaded();
     try {
-      for (const guildId in this.data) {
-        const arr = this.data[guildId];
+      for (const gid in this.data) {
+        const arr = this.data[gid];
         if (!Array.isArray(arr)) continue;
-        const index = arr.findIndex((i) => i.id === id);
-        if (index !== -1) {
-          arr.splice(index, 1);
+        const idx = arr.findIndex((i) => i.id === id);
+        if (idx !== -1) {
+          arr.splice(idx, 1);
           this.scheduleSave();
           logger.info(`Item deleted: ${id}`);
           return true;

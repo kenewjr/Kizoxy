@@ -26,6 +26,14 @@ function generateId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function safeNum(val, def = 0) {
+  return Number.isInteger(val) ? val : def;
+}
+
+function arrayCopy(val) {
+  return Array.isArray(val) ? [...val] : [];
+}
+
 class TempVcStorage extends JSONStorage {
   constructor(filename = "tempvc.json") {
     super(filename);
@@ -132,24 +140,20 @@ class TempVcStorage extends JSONStorage {
     const g = await this._guild(guildId);
     const record = {
       id: channelData.id,
-      generatorId: channelData.generatorId ?? null,
+      generatorId: channelData.generatorId || null,
       ownerId: channelData.ownerId,
       guildId,
-      name: channelData.name ?? "",
-      limit: Number.isInteger(channelData.limit) ? channelData.limit : 0,
-      isLocked: Boolean(channelData.isLocked),
-      isHidden: Boolean(channelData.isHidden),
-      allowedUsers: Array.isArray(channelData.allowedUsers)
-        ? [...channelData.allowedUsers]
-        : [],
-      bannedUsers: Array.isArray(channelData.bannedUsers)
-        ? [...channelData.bannedUsers]
-        : [],
-      interfaceMessageId: channelData.interfaceMessageId ?? null,
-      interfaceChannelId: channelData.interfaceChannelId ?? null,
-      pinnedInfoMessageId: channelData.pinnedInfoMessageId ?? null,
-      templateId: channelData.templateId ?? null,
-      createdAt: channelData.createdAt ?? Date.now(),
+      name: channelData.name || "",
+      limit: safeNum(channelData.limit),
+      isLocked: !!channelData.isLocked,
+      isHidden: !!channelData.isHidden,
+      allowedUsers: arrayCopy(channelData.allowedUsers),
+      bannedUsers: arrayCopy(channelData.bannedUsers),
+      interfaceMessageId: channelData.interfaceMessageId || null,
+      interfaceChannelId: channelData.interfaceChannelId || null,
+      pinnedInfoMessageId: channelData.pinnedInfoMessageId || null,
+      templateId: channelData.templateId || null,
+      createdAt: channelData.createdAt || Date.now(),
     };
     g.tempChannels[record.id] = record;
     this.scheduleSave();
@@ -190,20 +194,19 @@ class TempVcStorage extends JSONStorage {
 
   async addTemplate(guildId, templateData) {
     const g = await this._guild(guildId);
-    const id = templateData?.id || generateId();
+    const td = templateData || {};
+    const id = td.id || generateId();
     const record = {
       id,
-      name: templateData?.name ?? "Untitled",
-      channelName: templateData?.channelName ?? "{username}'s Channel",
-      namePattern: templateData?.namePattern ?? null,
-      limit: Number.isInteger(templateData?.limit) ? templateData.limit : 0,
-      bitrate: Number.isInteger(templateData?.bitrate)
-        ? templateData.bitrate
-        : 64000,
-      isLocked: Boolean(templateData?.isLocked),
-      isHidden: Boolean(templateData?.isHidden),
-      createdBy: templateData?.createdBy ?? null,
-      createdAt: templateData?.createdAt ?? Date.now(),
+      name: td.name || "Untitled",
+      channelName: td.channelName || "{username}'s Channel",
+      namePattern: td.namePattern || null,
+      limit: safeNum(td.limit),
+      bitrate: safeNum(td.bitrate, 64000),
+      isLocked: !!td.isLocked,
+      isHidden: !!td.isHidden,
+      createdBy: td.createdBy || null,
+      createdAt: td.createdAt || Date.now(),
     };
     g.templates[id] = record;
     this.scheduleSave();

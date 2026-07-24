@@ -1,0 +1,13 @@
+{
+  "guild-1": {
+    "users": {
+      "user-1": {
+        "userId": "user-1",
+        "guildId": "guild-1",
+        "xp": 10,
+        "level": 1,
+        "lastUpdated": "2026-07-24T10:05:56.578Z"
+      }
+    }
+  }
+}

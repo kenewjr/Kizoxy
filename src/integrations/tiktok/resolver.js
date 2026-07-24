@@ -41,4 +41,4 @@ function resolveProfile(input) {
   throw new Error(RESOLVE_ERROR);
 }
 
-module.exports = { resolveProfile, RESOLVE_ERROR };
+module.exports = { resolve: resolveProfile, resolveProfile, RESOLVE_ERROR };

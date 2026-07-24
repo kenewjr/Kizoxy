@@ -7,7 +7,6 @@ const COLORS = Object.freeze({
   WARNING: 0xfee75c, // Discord yellow
   MUSIC: 0x9b59b6, // Purple (matches lyrics)
   LOFI: 0xff7f50, // Coral
-  ANIME: 0x1974d2, // Jikan / anime integration accent
 });
 
 const LIMITS = Object.freeze({

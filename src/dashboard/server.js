@@ -22,6 +22,10 @@ function createDashboard(client) {
   app.use("/api", require("./routes/meta"));
   app.use("/api/config", require("./routes/config"));
   app.use("/api/guilds", require("./routes/guilds"));
+  app.use("/api/guilds", require("./routes/guildFixembed"));
+  app.use("/api/guilds", require("./routes/guildLevel"));
+  app.use("/api/guilds", require("./routes/guildTempvc"));
+  app.use("/api/guilds", require("./routes/guildAlarms"));
   app.use("/api/guilds", require("./routes/youtube"));
   app.use("/api/guilds", require("./routes/tiktok"));
   app.use("/api/logs", require("./routes/logs"));

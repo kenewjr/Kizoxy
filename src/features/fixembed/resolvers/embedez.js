@@ -1,7 +1,8 @@
 const { resolveEmbedEZ } = require("../fixembedResolverHelper");
-function embedEzEntry({ name, originalLabel = name, match }) {
+function embedEzEntry({ name, originalLabel = name, match, platformKey }) {
   return {
     name,
+    platformKey: platformKey || name.toLowerCase(),
     originalLabel,
     fixerName: "EmbedEZ",
     match,

@@ -54,7 +54,7 @@ module.exports = {
           name: `Queue - ${interaction.guild.name}`,
           iconURL: interaction.guild.iconURL({ dynamic: true }),
         },
-        description: `**Currently Playing**\n[${song.title}](${song.uri}) \`[${formatDuration(song.length)}]\` • ${song.requester}\n\n**Rest of queue**:${str == "" ? "  Nothing" : "\n" + str}`,
+        description: `**Currently Playing**\n[${song.title}](${song.uri}) \`[${formatDuration(song.length)}]\` • ${song.requester}\n\n**Rest of queue**:${str === "" ? "  Nothing" : "\n" + str}`,
         footerText: `Page • ${i + 1}/${pagesNum} | ${player.queue.length} • Song/s | ${qduration} • Total Duration`,
       });
 
@@ -68,7 +68,7 @@ module.exports = {
     }
 
     if (!args) {
-      if (pages.length == pagesNum && player.queue.length > 10)
+      if (pages.length === pagesNum && player.queue.length > 10)
         NormalPage(
           client,
           interaction,
@@ -84,7 +84,7 @@ module.exports = {
         return interaction.editReply(
           `There are only ${pagesNum} pages available!`,
         );
-      const pageNum = args == 0 ? 1 : args - 1;
+      const pageNum = args === 0 ? 1 : args - 1;
       return interaction.editReply({ embeds: [pages[pageNum]] });
     }
   },

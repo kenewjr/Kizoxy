@@ -33,7 +33,7 @@ Quick Start | Features | Commands | Dashboard | Config
   <tr>
     <td width="50%" valign="top">
 
-#### 🎵 Music
+### 🎵 Music
 
 - High-quality Lavalink v4 playback.
 - YouTube, SoundCloud + plugin sources (Spotify, Deezer, Apple Music via compatible Lavalink plugins).
@@ -42,37 +42,36 @@ Quick Start | Features | Commands | Dashboard | Config
 - Lyrics with romaji conversion (LRCLIB + local analyzer).
 - Full queue management: skip, loop, shuffle, forward, remove, volume.
 
-#### 🔔 Notifications
+### 🔔 Notifications
 
 - YouTube channel notifications (new video, live, Shorts, upcoming) via RSS polling — no API quota usage.
 - TikTok account notifications (new posts, live detection) via TikWM scraper.
 - Per-type toggle (video/shorts/live/upcoming on/off per subscription).
 - Custom notification message templates with dynamic tokens.
 
-#### 📊 Engagement
+### 📊 Engagement
 
 - XP & leveling system with ranking cards.
 - Server leaderboards.
-- Anime schedule via Jikan API.
 
     </td>
     <td width="50%" valign="top">
 
-#### 🏠 Temp Voice Channels
+### 🏠 Temp Voice Channels
 
 - Auto-created voice channels from a generator channel.
 - Full in-channel control panel (15 buttons: lock, unlock, hide, show, reset, allow, ban, kick, transfer, claim, rename, limit, muteall, unbanall, pininfo).
 - Voice roles, channel templates, name patterns with tokens.
 - Bitrate and region settings per generator.
 
-#### ⚙️ Administration
+### ⚙️ Administration
 
 - Dashboard: browser-based admin panel (per-guild settings, log viewer with level filters, YouTube/TikTok subscription manager, active player monitor, bot presence editor, update checker).
 - Social media embed fixer (Twitter/X, Instagram, TikTok, Reddit, Threads, Bluesky, Facebook, Tumblr, Mastodon).
 - Alarm system (single/recurring, timezone-aware, countdown auto-updates).
 - Per-guild log channels.
 
-#### 🛠️ Developer Experience
+### 🛠️ Developer Experience
 
 - Slash AND prefix command support (prefix: `k`).
 - AutoComplete suggestions on `/play`.
@@ -115,7 +114,7 @@ npm run start:pm2      # Production (recommended)
 ```
 
 > [!TIP]
-> Use `npm run start:pm2` in production. PM2 handles auto-restart, log rotation, and the built-in dashboard at http://127.0.0.1:4040.
+> Use `npm run start:pm2` in production. PM2 handles auto-restart, log rotation, and the built-in dashboard at `http://127.0.0.1:4040`.
 
 ---
 
@@ -254,7 +253,7 @@ DASHBOARD_PORT=4040         # Dashboard bind port
 | `/vcrole`      | Configure voice-specific roles        |
 | `/vctemplate`  | Manage channel name templates         |
 
-#### Available Actions for `/vc` Option:
+### Available Actions for `/vc` Option
 
 - `lock` / `unlock`: Prevent or allow users to join.
 - `hide` / `show`: Set channel visibility.
@@ -319,7 +318,6 @@ DASHBOARD_PORT=4040         # Dashboard bind port
 | :------------------ | :----------------------------------------------------- |
 | `/fixembed`         | Configure social-media URL auto-embed settings         |
 | `/setlog <channel>` | Set the logs channel for server updates                |
-| `/anime`            | Search anime information or check release schedules    |
 | `/donate`           | Send the donation link to support Kizoxy's development |
 | `/help`             | Open the help menu interface                           |
 
@@ -367,7 +365,7 @@ Kizoxy includes a built-in web admin panel, accessible at `http://127.0.0.1:4040
   <img src="https://img.shields.io/badge/SoundCloud-FF5500?style=flat-square&logo=soundcloud&logoColor=white" alt="SoundCloud" />
 </p>
 
-#### Sources requiring a Lavalink plugin:
+### Sources requiring a Lavalink plugin
 
 - 🔌 **Spotify** (via `spotify-source` Lavalink plugin)
 - 🔌 **Deezer** (via `deezer-source` Lavalink plugin)
@@ -416,6 +414,6 @@ Distributed under the **Apache 2.0** License. See [LICENSE](./LICENSE) for detai
 
 <sub>Built with ❤️ by <a href="https://github.com/kenewjr">@kenewjr</a></sub>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=80&section=footer&color=0:ec4899,50:8b5cf6,100:6366f1" />
+<img src="https://capsule-render.vercel.app/api?type=waving&height=80&section=footer&color=0:ec4899,50:8b5cf6,100:6366f1" alt="Footer Banner" />
 
 </div>

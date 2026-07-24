@@ -94,10 +94,6 @@ async function bootstrap() {
     LOADERS.map((mod) => runLoader(mod, require(`./loaders/${mod}`))),
   );
 
-  await runLoader("loadJikanSchedule", (c) =>
-    require("./integrations/jikan/loadJikanSchedule")(c),
-  );
-
   require("./features/lyrics/romajiConverter")
     .preInitialize()
     .catch(() => {});

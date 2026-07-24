@@ -105,6 +105,9 @@ function createMockInteraction(overrides = {}) {
       voice: { channel: null },
       permissions: { has: () => false },
     },
+    memberPermissions: {
+      has: () => true,
+    },
     guild: null, // set in test
     channel: null, // set in test
     replied: false,
