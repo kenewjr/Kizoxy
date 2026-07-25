@@ -38,6 +38,7 @@ jest.spyOn(path, "join").mockImplementation((...args) => {
     "tiktok.json",
     "youtube.json",
     "config_overrides.json",
+    "musicSessions.json",
   ];
   if (
     args.some(

@@ -33,6 +33,7 @@ client.logStorage = new LogStorage();
 client.commandStorage = require("./persistence/commandStorage");
 
 const Nodes = client.config.NODES;
+const LAVALINK_RESUME_TIMEOUT_SEC = 60;
 
 client.manager = new Kazagumo(
   {
@@ -48,6 +49,8 @@ client.manager = new Kazagumo(
   {
     reconnectTries: Infinity,
     reconnectInterval: 15,
+    resume: true,
+    resumeTimeout: LAVALINK_RESUME_TIMEOUT_SEC,
   },
 );
 
@@ -173,8 +176,33 @@ client.manager.shoukaku.on("error", (name, error) => {
   );
 });
 
-client.manager.shoukaku.on("ready", (name) => {
-  bootLogger.success(`Lavalink node "${name}" connected`);
+let musicResumeLoaded = false;
+async function tryTriggerMusicResume() {
+  if (musicResumeLoaded) return;
+  if (!client.isReady()) return;
+  const nodes = client.manager?.shoukaku?.nodes;
+  const hasConnectedNode =
+    nodes && [...nodes.values()].some((n) => n.state === 1);
+  if (!hasConnectedNode) return;
+
+  musicResumeLoaded = true;
+  runLoader("loadMusicResume", require("./loaders/loadMusicResume")).catch(
+    () => {},
+  );
+}
+
+client.once("ready", () => {
+  tryTriggerMusicResume().catch(() => {});
+});
+
+client.manager.shoukaku.on("ready", (name, lavalinkResume, libraryResume) => {
+  const resumed = !!(lavalinkResume || libraryResume);
+  bootLogger.info(
+    resumed
+      ? `Lavalink node "${name}" session RESUMED — active players preserved.`
+      : `Lavalink node "${name}" connected (fresh session).`,
+  );
+  tryTriggerMusicResume().catch(() => {});
 });
 client.manager.shoukaku.on("disconnect", (name) => {
   bootLogger.warning(`Lavalink node "${name}" disconnected`);
@@ -187,6 +215,42 @@ client.manager.shoukaku.on("close", (name, code) => {
 
 async function gracefulShutdown(signal) {
   console.warn(`[SHUTDOWN] Received ${signal}, flushing storage...`);
+  const musicSessionStorage = require("./persistence/musicSessionStorage");
+  async function snapshotActivePlayers() {
+    if (!client.manager?.players) return;
+    const snapshots = [];
+    for (const [guildId, player] of client.manager.players) {
+      try {
+        if (!player.queue?.current) continue;
+        snapshots.push(
+          musicSessionStorage.saveSession(guildId, {
+            guildId,
+            voiceChannelId: player.voiceId,
+            textChannelId: player.textId,
+            currentTrack: {
+              uri: player.queue.current.uri,
+              title: player.queue.current.title,
+              requesterId: player.queue.current.requester?.id,
+            },
+            positionMs: player.position ?? 0,
+            queue: [...player.queue].map((t) => ({
+              uri: t.uri,
+              title: t.title,
+              requesterId: t.requester?.id,
+            })),
+            volume: player.volume,
+            loopMode: player.loop,
+            savedAt: Date.now(),
+          }),
+        );
+      } catch (err) {
+        console.error(`Failed to snapshot player for guild ${guildId}:`, err);
+      }
+    }
+    await Promise.allSettled(snapshots);
+  }
+  await snapshotActivePlayers();
+
   const storages = [
     client.alarmStorage,
     client.levelStorage,
@@ -222,17 +286,26 @@ async function gracefulShutdown(signal) {
   } catch (err) {
     console.error("Failed to clear alarm intervals:", err);
   }
-  process.exit(0);
+  if (process.env.NODE_ENV !== "test") {
+    process.exit(0);
+  }
 }
 process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 
-bootstrap().catch((err) => {
-  bootLogger.error(`Bootstrap failed: ${err.message}`);
-  sendErrorWebhook(
-    "Bootstrap Failure",
-    err instanceof Error ? err : new Error(String(err)),
-  );
-});
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    bootLogger.error(`Bootstrap failed: ${err.message}`);
+    sendErrorWebhook(
+      "Bootstrap Failure",
+      err instanceof Error ? err : new Error(String(err)),
+    );
+  });
 
-client.login(client.token);
+  client.login(client.token);
+}
+
+module.exports = {
+  client,
+  gracefulShutdown,
+};

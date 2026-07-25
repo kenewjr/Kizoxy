@@ -103,6 +103,10 @@ class FixEmbedStorage {
 
   _init() {
     try {
+      const dir = path.dirname(DATA_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       if (!fs.existsSync(DATA_PATH)) {
         fs.writeFileSync(DATA_PATH, JSON.stringify({}, null, 2), "utf8");
       }

@@ -427,10 +427,21 @@ describe("New Dashboard Endpoints", () => {
 
     // Updates GET
     it("GET /api/updates returns packages list with outdated flags", async () => {
-      const res = await request(app).get("/api/updates").expect(200);
-      expect(res.body).toHaveProperty("packages");
-      expect(res.body).toHaveProperty("outdated_count");
-      expect(res.body).toHaveProperty("total_count");
+      const origFetch = global.fetch;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ version: "1.0.0" }),
+      });
+      try {
+        const res = await request(app)
+          .get("/api/updates?refresh=1")
+          .expect(200);
+        expect(res.body).toHaveProperty("packages");
+        expect(res.body).toHaveProperty("outdated_count");
+        expect(res.body).toHaveProperty("total_count");
+      } finally {
+        global.fetch = origFetch;
+      }
     });
 
     // Bot Identity & Presence PATCH

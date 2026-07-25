@@ -23,15 +23,15 @@
         </h1>
         <div class="clearfix">
           <div class="fl pad1y space-right2">
-            <span class="strong">71.27% </span>
+            <span class="strong">68.08% </span>
             <span class="quiet">Statements</span>
-            <span class="fraction">67/94</span>
+            <span class="fraction">64/94</span>
           </div>
 
           <div class="fl pad1y space-right2">
-            <span class="strong">54.9% </span>
+            <span class="strong">52.94% </span>
             <span class="quiet">Branches</span>
-            <span class="fraction">56/102</span>
+            <span class="fraction">54/102</span>
           </div>
 
           <div class="fl pad1y space-right2">
@@ -41,9 +41,9 @@
           </div>
 
           <div class="fl pad1y space-right2">
-            <span class="strong">76.19% </span>
+            <span class="strong">72.61% </span>
             <span class="quiet">Lines</span>
-            <span class="fraction">64/84</span>
+            <span class="fraction">61/84</span>
           </div>
         </div>
         <p class="quiet">
@@ -57,7 +57,7 @@
           </div>
         </template>
       </div>
-      <div class="status-line high"></div>
+      <div class="status-line medium"></div>
       <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -379,9 +379,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -638,10 +638,10 @@ async function getBotMeta(client) {
     "../../../data/config_overrides.json",
   );
   let custom_activities = [];
-  if (fs.existsSync(overridesPath)) {
-    try {
-      const overrides = JSON.parse(fs.readFileSync(overridesPath, "utf8"));
-      <span class="missing-if-branch" title="if path not taken" >I</span>if (overrides.custom_activities) {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (fs.existsSync(overridesPath)) {
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const overrides = <span class="cstat-no" title="statement not covered" >JSON.parse(fs.readFileSync(overridesPath, "utf8"));</span>
+<span class="cstat-no" title="statement not covered" >      if (overrides.custom_activities) {</span>
 <span class="cstat-no" title="statement not covered" >        custom_activities = overrides.custom_activities;</span>
       }
     } catch (_) {}
@@ -853,7 +853,7 @@ module.exports = { getBotMeta, getGuildList, getGuildDetail, nextLevelXp };
         rel="noopener noreferrer"
         >istanbul</a
       >
-      at 2026-07-24T10:26:56.241Z
+      at 2026-07-25T12:27:12.305Z
     </div>
     <script src="../../../prettify.js"></script>
     <script>

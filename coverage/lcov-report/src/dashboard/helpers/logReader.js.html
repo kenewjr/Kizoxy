@@ -23,15 +23,15 @@
         </h1>
         <div class="clearfix">
           <div class="fl pad1y space-right2">
-            <span class="strong">82.43% </span>
+            <span class="strong">86.48% </span>
             <span class="quiet">Statements</span>
-            <span class="fraction">61/74</span>
+            <span class="fraction">64/74</span>
           </div>
 
           <div class="fl pad1y space-right2">
-            <span class="strong">71.42% </span>
+            <span class="strong">77.14% </span>
             <span class="quiet">Branches</span>
-            <span class="fraction">25/35</span>
+            <span class="fraction">27/35</span>
           </div>
 
           <div class="fl pad1y space-right2">
@@ -41,9 +41,9 @@
           </div>
 
           <div class="fl pad1y space-right2">
-            <span class="strong">86.36% </span>
+            <span class="strong">89.39% </span>
             <span class="quiet">Lines</span>
-            <span class="fraction">57/66</span>
+            <span class="fraction">59/66</span>
           </div>
         </div>
         <p class="quiet">
@@ -196,11 +196,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -210,11 +210,11 @@
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -225,7 +225,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">13x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -321,9 +321,9 @@ function validateName(name) {
 function formatSize(bytes) {
   if (bytes &lt; 1024) return `${bytes} B`;
   const kb = bytes / 1024;
-  <span class="missing-if-branch" title="else path not taken" >E</span>if (kb &lt; 1024) return `${kb.toFixed(2)} KB`;
-  const mb = <span class="cstat-no" title="statement not covered" >kb / 1024;</span>
-<span class="cstat-no" title="statement not covered" >  if (mb &lt; 1024) <span class="cstat-no" title="statement not covered" >return `${mb.toFixed(2)} MB`;</span></span>
+  if (kb &lt; 1024) return `${kb.toFixed(2)} KB`;
+  const mb = kb / 1024;
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (mb &lt; 1024) return `${mb.toFixed(2)} MB`;
   const gb = <span class="cstat-no" title="statement not covered" >mb / 1024;</span>
 <span class="cstat-no" title="statement not covered" >  return `${gb.toFixed(2)} GB`;</span>
 }
@@ -442,7 +442,7 @@ module.exports = {
         rel="noopener noreferrer"
         >istanbul</a
       >
-      at 2026-07-24T10:26:56.241Z
+      at 2026-07-25T12:27:12.305Z
     </div>
     <script src="../../../prettify.js"></script>
     <script>

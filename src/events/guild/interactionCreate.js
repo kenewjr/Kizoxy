@@ -56,7 +56,8 @@ module.exports = async (client, interaction) => {
       interaction.customId.startsWith("tvc:") ||
       interaction.customId.startsWith("youtube_panel:") ||
       interaction.customId.startsWith("tiktok_panel:") ||
-      interaction.customId.startsWith("fixembed_panel:"))
+      interaction.customId.startsWith("fixembed_panel:") ||
+      interaction.customId.startsWith("tempvc_panel:"))
   ) {
     logger.debug(
       `Modal submit: customId=${interaction.customId} by ${interaction.user?.tag || interaction.user?.id}`,
