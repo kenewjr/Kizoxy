@@ -4,8 +4,8 @@ const { Constants } = require("shoukaku");
 const logger = new Logger("PLAY");
 
 const NODE_READY_TIMEOUT_MS = 10000;
-const SEARCH_RETRY_DELAY_MS = 600;
-const PLAYLIST_RETRY_DELAY_MS = 2000;
+const SEARCH_RETRY_DELAYS_MS = [600, 1500, 3000];
+const PLAYLIST_RETRY_DELAYS_MS = [2000, 3000, 4000];
 const NODE_POLL_INTERVAL_MS = 200;
 
 const PLAYLIST_URL_RE = /[?&]list=|\bplaylist\b/i;
@@ -142,20 +142,23 @@ async function playLogic(client, ctx, args) {
     }
 
     // Search BEFORE creating the player: a failed lookup should not leave an
-    // idle voice connection behind. Retry once to absorb a node that just
-    // finished connecting.
+    // idle voice connection behind.
     let result = await client.manager.search(query, { requester });
-    if (!result?.tracks?.length) {
-      logger.debug("Search returned empty, retrying once...");
-      const retryDelay = looksLikePlaylist
-        ? PLAYLIST_RETRY_DELAY_MS
-        : SEARCH_RETRY_DELAY_MS;
-      await delay(retryDelay);
+    const delays = looksLikePlaylist
+      ? PLAYLIST_RETRY_DELAYS_MS
+      : SEARCH_RETRY_DELAYS_MS;
+    let attempt = 0;
+    while (!result?.tracks?.length && attempt < delays.length) {
+      logger.debug(
+        `Search returned empty, retry ${attempt + 1}/${delays.length}...`,
+      );
+      await delay(delays[attempt]);
       result = await client.manager.search(query, { requester });
+      attempt++;
     }
     if (!result?.tracks?.length) {
       logger.warning(
-        `Search retry also empty for query "${query}" — genuine no results`,
+        `Search failed after ${attempt} retries for query "${query}" — genuine no results`,
       );
       if (placeholderMsg) {
         try {
@@ -233,6 +236,8 @@ module.exports.playLogic = playLogic;
 module.exports.waitForNodeReady = waitForNodeReady;
 module.exports.startPlayback = startPlayback;
 module.exports._NODE_READY_TIMEOUT_MS = NODE_READY_TIMEOUT_MS;
-module.exports._SEARCH_RETRY_DELAY_MS = SEARCH_RETRY_DELAY_MS;
-module.exports._PLAYLIST_RETRY_DELAY_MS = PLAYLIST_RETRY_DELAY_MS;
+module.exports._SEARCH_RETRY_DELAYS_MS = SEARCH_RETRY_DELAYS_MS;
+module.exports._PLAYLIST_RETRY_DELAYS_MS = PLAYLIST_RETRY_DELAYS_MS;
+module.exports._SEARCH_RETRY_DELAY_MS = SEARCH_RETRY_DELAYS_MS[0];
+module.exports._PLAYLIST_RETRY_DELAY_MS = PLAYLIST_RETRY_DELAYS_MS[0];
 module.exports._NODE_POLL_INTERVAL_MS = NODE_POLL_INTERVAL_MS;

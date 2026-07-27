@@ -1,6 +1,5 @@
 const path = require("path");
 const fs = require("fs");
-const os = require("os");
 
 // 1. Mock canvacord globally to prevent native canvas CustomGC thread leaks
 jest.mock("canvacord", () => ({
@@ -20,40 +19,48 @@ jest.mock("canvacord", () => ({
   })),
 }));
 
-// 2. Redirect all storage JSON paths to a temp directory to prevent writing to real data/ folder
-const globalTmpDir = path.join(os.tmpdir(), "kizoxy-global-test-data");
+// 2. Redirect all storage JSON paths to tests/logs/test-data directory
+const globalTmpDir = path.resolve(__dirname, "logs", "test-data");
 if (!fs.existsSync(globalTmpDir)) {
   fs.mkdirSync(globalTmpDir, { recursive: true });
 }
 
 const originalJoin = path.join;
 jest.spyOn(path, "join").mockImplementation((...args) => {
-  const jsonFiles = [
-    "command_customizations.json",
-    "donate_seen.json",
-    "fixembed.json",
-    "level_settings.json",
-    "levelSettings.json",
-    "tempvc.json",
-    "tiktok.json",
-    "youtube.json",
-    "config_overrides.json",
-    "musicSessions.json",
+  const result = originalJoin(...args);
+  if (typeof result !== "string") return result;
+
+  const resolved = path.resolve(result);
+  const basename = path.basename(resolved);
+  const lower = basename.toLowerCase();
+
+  const configFiles = [
+    "package.json",
+    "package-lock.json",
+    ".markdownlint.json",
+    "tsconfig.json",
+    "jsconfig.json",
+    "plugin.json",
   ];
-  if (
-    args.some(
-      (arg) =>
-        typeof arg === "string" && jsonFiles.some((f) => arg.includes(f)),
-    )
-  ) {
-    const filename = args.find(
-      (arg) =>
-        typeof arg === "string" && jsonFiles.some((f) => arg.includes(f)),
-    );
-    const basename = path.basename(filename);
+  if (configFiles.includes(lower)) {
+    return result;
+  }
+
+  const isDataFolder =
+    resolved.includes(path.sep + "data" + path.sep) ||
+    resolved.endsWith(path.sep + "data");
+  const isTestTempFile =
+    lower.startsWith("levels-") ||
+    lower.startsWith("youtube.test") ||
+    lower.startsWith("tiktok.test") ||
+    lower.startsWith("tempvc_test") ||
+    lower.includes("music.test");
+
+  if ((isDataFolder && lower.endsWith(".json")) || isTestTempFile) {
     return path.resolve(globalTmpDir, basename);
   }
-  return originalJoin(...args);
+
+  return result;
 });
 
 // 3. Automatically flush all active storage singletons after each test to prevent pending save timers

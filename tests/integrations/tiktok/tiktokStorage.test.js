@@ -13,6 +13,7 @@ describe("tiktokStorage", () => {
 
   beforeAll(() => {
     storage = new TiktokStorage(TEST_FILENAME);
+    storage._saveDelayMs = 0;
   });
 
   afterAll(async () => {

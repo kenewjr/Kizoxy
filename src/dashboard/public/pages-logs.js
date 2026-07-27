@@ -7,6 +7,18 @@ let logsAutoTimer = null;
 let logsCurrentFile = null;
 let logsRawContent = "";
 
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+const debouncedReloadLogFile = debounce(async () => {
+  await reloadLogFile();
+}, 150);
+
 function getLevelFromLine(line) {
   const cls = classifyLogLine(line);
   return cls === "warn" ? "WARN" : cls.toUpperCase();
@@ -26,12 +38,18 @@ window.logFilterState = function () {
     counts: {},
     visibleCount: 0,
     totalCount: 0,
+    filtered: false,
     init() {
       // Listen to log data updates
       window.addEventListener("log-data-updated", (e) => {
         this.counts = e.detail.level_counts || {};
         this.totalCount = this.counts.TOTAL || 0;
+        this.filtered = !!e.detail.filtered;
         this.applyFilter();
+      });
+      this.$watch("searchText", () => {
+        this.applyFilter();
+        debouncedReloadLogFile();
       });
     },
     get allActive() {
@@ -51,7 +69,10 @@ window.logFilterState = function () {
       } else {
         this.activeLevels.add(id);
       }
-      this.$nextTick(() => this.applyFilter());
+      this.$nextTick(() => {
+        this.applyFilter();
+        debouncedReloadLogFile();
+      });
     },
     applyFilter() {
       applyLogFilter(this.searchText, this.activeLevels);
@@ -126,7 +147,7 @@ async function renderLogs() {
             <label style="font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:4px">
               Auto-tail ${toggleHtml("", logsAutoTail, 'id="log-autotail" onchange="toggleAutoTail(this.checked)"')}
             </label>
-            <span class="log-count" style="font-size:12px;color:var(--text-3);margin-left:auto" x-text="'Showing ' + visibleCount + ' / ' + totalCount"></span>
+            <span class="log-count" style="font-size:12px;color:var(--text-3);margin-left:auto" x-text="filtered ? 'Showing ' + visibleCount + ' matching lines (full file scan)' : 'Showing ' + visibleCount + ' / ' + totalCount"></span>
             <span id="log-paused" class="badge badge--yellow" style="display:none">⏸ Paused</span>
           </div>
           <div id="log-viewer-wrap"><div style="padding:20px;color:var(--text-3)">Select a log file to view.</div></div>
@@ -159,18 +180,53 @@ async function selectLogFile(name) {
 
 async function reloadLogFile() {
   if (!logsCurrentFile) return;
-  const tail = document.getElementById("log-lines")?.value || "200";
+
+  // Get active filters from Alpine
+  let activeLevels = null;
+  let searchText = "";
+  let allActive = true;
+  const el = document.getElementById("log-toolbar");
+  if (el && window.Alpine) {
+    try {
+      const data = window.Alpine.$data(el);
+      if (data) {
+        activeLevels = data.activeLevels;
+        searchText = data.searchText || "";
+        allActive = data.allActive;
+      }
+    } catch (_) {}
+  }
+
+  let url = `/logs/${encodeURIComponent(logsCurrentFile)}?`;
+  const isFiltered = searchText.trim().length > 0 || !allActive;
+
+  if (isFiltered) {
+    const params = [];
+    if (searchText.trim()) {
+      params.push(`search=${encodeURIComponent(searchText.trim())}`);
+    }
+    if (!allActive && activeLevels) {
+      params.push(`levels=${encodeURIComponent([...activeLevels].join(","))}`);
+    }
+    url += params.join("&");
+  } else {
+    const tail = document.getElementById("log-lines")?.value || "200";
+    url += `tail=${tail}`;
+  }
+
   try {
-    const data = await api.get(
-      `/logs/${encodeURIComponent(logsCurrentFile)}?tail=${tail}`,
-    );
-    logsRawContent = data.content || "";
+    const data = await api.get(url);
+    if (data.filtered) {
+      logsRawContent = data.lines ? data.lines.join("\n") : "";
+    } else {
+      logsRawContent = data.content || "";
+    }
 
     const event = new CustomEvent("log-data-updated", {
-      detail: { level_counts: data.level_counts },
+      detail: { level_counts: data.level_counts, filtered: !!data.filtered },
     });
     window.dispatchEvent(event);
-  } catch {
+  } catch (err) {
     const wrap = document.getElementById("log-viewer-wrap");
     if (wrap)
       wrap.innerHTML =

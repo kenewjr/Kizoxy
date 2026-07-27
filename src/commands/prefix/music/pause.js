@@ -16,11 +16,14 @@ module.exports = {
 
     try {
       const { player } = ctx;
-      await player.pause(player.playing);
-      return message.channel.send(player.paused ? "⏸ Paused." : "▶ Resumed.");
+      if (player.paused) {
+        return message.reply("❌ Playback is already paused.");
+      }
+      await player.pause(true);
+      return message.channel.send("⏸ Paused.");
     } catch (err) {
       logger.error(`kpause failed: ${err.message}`);
-      return message.reply("❌ Failed to toggle pause.");
+      return message.reply("❌ Failed to pause.");
     }
   },
 };

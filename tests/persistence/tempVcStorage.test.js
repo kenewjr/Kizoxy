@@ -17,6 +17,7 @@ describe("tempVcStorage Persistence Tests", () => {
       } catch (_) {}
     }
     storage = new TempVcStorage("tempvc_test.json");
+    storage._saveDelayMs = 0;
     await storage._ensureLoaded();
   });
 

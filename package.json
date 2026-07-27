@@ -29,8 +29,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "test": "jest tests/",
-    "test:coverage": "jest --coverage",
+    "test": "node scripts/runTestsWithLog.js",
+    "test:coverage": "node scripts/runTestsWithLog.js --coverage",
+    "clean:test-logs": "node scripts/cleanTestLogs.js",
     "validate:modules": "node scripts/validateModules.js",
     "validate:env": "node scripts/validateEnv.js"
   },
@@ -49,42 +50,5 @@
     "jest": "^30.4.2",
     "prettier": "^3.9.6",
     "supertest": "^7.2.2"
-  },
-  "jest": {
-    "testMatch": [
-      "**/tests/**/*.test.js"
-    ],
-    "testTimeout": 15000,
-    "clearMocks": true,
-    "restoreMocks": false,
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setupAfterEnv.js"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "statements": 70,
-        "branches": 55,
-        "functions": 65,
-        "lines": 70
-      },
-      "./src/lib/interactions.js": {
-        "statements": 85
-      },
-      "./src/lib/embeds.js": {
-        "statements": 90
-      },
-      "./src/persistence/jsonStorage.js": {
-        "statements": 85
-      },
-      "./src/persistence/levelStorage.js": {
-        "statements": 85
-      },
-      "./src/features/music/musicHelper.js": {
-        "statements": 80
-      },
-      "./src/events/client/clientReady.js": {
-        "statements": 75
-      }
-    }
   }
 }

@@ -23,20 +23,21 @@ router.get("/", (_req, res) => {
 router.get("/:name", (req, res) => {
   try {
     const { name } = req.params;
-    const { tail, search } = req.query;
+    const { tail, search, levels } = req.query;
+    const levelList = levels ? levels.split(",").filter(Boolean) : null;
+
+    if (search || (levelList && levelList.length)) {
+      const lines = searchLogFile(name, search, levelList);
+      const levelCounts = getLogLevelCounts(name);
+      return res.json({ lines, level_counts: levelCounts, filtered: true });
+    }
+
     const parsedTail = tail ? parseInt(tail, 10) : undefined;
     const tailLines =
       isNaN(parsedTail) || parsedTail < 0 ? undefined : parsedTail;
-
-    if (search) {
-      const lines = searchLogFile(name, search);
-      const levelCounts = getLogLevelCounts(name);
-      return res.json({ lines, level_counts: levelCounts });
-    }
-
     const content = readLogFile(name, tailLines);
     const levelCounts = getLogLevelCounts(name);
-    res.json({ content, level_counts: levelCounts });
+    res.json({ content, level_counts: levelCounts, filtered: false });
   } catch (err) {
     if (err.code === "EINVAL")
       return res.status(400).json({ error: err.message });

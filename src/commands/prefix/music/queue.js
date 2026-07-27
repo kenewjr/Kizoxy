@@ -79,7 +79,7 @@ module.exports = {
   aliases: ["q"],
   description: "Show the song queue.",
   category: "music",
-  run: async (client, message) => {
+  run: async (client, message, args) => {
     const ctx = validateMusicContextMessage(client, message);
     if (ctx.error) return message.reply(ctx.error);
 
@@ -93,6 +93,16 @@ module.exports = {
         return message.channel.send({ embeds: [pages[0]] });
 
       let page = 0;
+      if (args && args[0]) {
+        const parsed = parseInt(args[0], 10);
+        if (!isNaN(parsed)) {
+          page = parsed <= 0 ? 0 : parsed - 1;
+          if (page >= pages.length) {
+            page = pages.length - 1;
+          }
+        }
+      }
+
       const sent = await message.channel.send({
         embeds: [pages[page]],
         components: [buildNavRow(page, pages.length)],

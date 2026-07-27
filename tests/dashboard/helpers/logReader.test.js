@@ -109,6 +109,34 @@ describe("Log Reader Helper Tests", () => {
       expect(matches.length).toBe(1);
       expect(matches[0]).toContain("warning");
     });
+
+    it("returns only matching levels from the full file", () => {
+      const matches = searchLogFile(logFile, null, ["ERROR"]);
+      expect(matches.length).toBe(1);
+      expect(matches[0]).toContain("error");
+    });
+
+    it("returns only lines matching both query and levels", () => {
+      const matches = searchLogFile(logFile, "Success", ["SUCCESS"]);
+      expect(matches.length).toBe(1);
+      expect(matches[0]).toContain("Success pretty line");
+    });
+
+    it("returns unfiltered when both query and levels are omitted", () => {
+      const matches = searchLogFile(logFile, null, null);
+      expect(matches.length).toBe(3);
+    });
+
+    it("caps results at LOG_SEARCH_MAX", () => {
+      const capFile = "kizoxy-cap.log";
+      const lines = [];
+      for (let i = 0; i < 600; i++) {
+        lines.push(`{"level":"info","message":"line ${i}"}`);
+      }
+      fs.writeFileSync(path.join(tmpDir, capFile), lines.join("\n"));
+      const matches = searchLogFile(capFile, "line");
+      expect(matches.length).toBe(500); // capped at LOG_SEARCH_MAX which is 500
+    });
   });
 
   describe("getLogLevelCounts", () => {

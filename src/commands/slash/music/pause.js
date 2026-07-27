@@ -26,21 +26,35 @@ module.exports = {
       return;
     }
 
-    await player.pause(player.playing);
-    const uni = player.paused ? `Paused` : `Resumed`;
+    if (player.paused) {
+      await interaction.reply({
+        content: "❌ Playback is already paused.",
+        ephemeral: true,
+      });
+      return;
+    }
 
-    const embed = Embeds.brand(client, {
-      description: `\`⏯\` | *Song has been:* \`${uni}\``,
-    });
+    try {
+      await player.pause(true);
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+      const embed = Embeds.brand(client, {
+        description: "`⏯` | *Song has been:* `Paused`",
+      });
 
-    setTimeout(async () => {
-      try {
-        await interaction.deleteReply();
-      } catch (_err) {
-        // Ignore error if already deleted
-      }
-    }, 5000);
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (_err) {
+          // Ignore error if already deleted
+        }
+      }, 5000);
+    } catch (_err) {
+      await interaction.reply({
+        content: "❌ Failed to pause playback.",
+        ephemeral: true,
+      });
+    }
   },
 };

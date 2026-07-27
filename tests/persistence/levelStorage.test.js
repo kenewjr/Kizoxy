@@ -11,6 +11,7 @@ describe("LevelStorage Tests", () => {
       `levels-${Date.now()}-${Math.random()}.json`,
     );
     levelStorage = new LevelStorage(path.basename(tempFilePath));
+    levelStorage._saveDelayMs = 0; // save immediately for tests
     // force local temp filepath on the same drive
     levelStorage.filepath = tempFilePath;
     levelStorage.tmpPath = `${tempFilePath}.tmp`;
@@ -18,10 +19,18 @@ describe("LevelStorage Tests", () => {
 
   afterEach(async () => {
     try {
+      if (levelStorage) {
+        await levelStorage.flush();
+      }
+    } catch {}
+    try {
       await fs.unlink(tempFilePath);
     } catch {}
     try {
       await fs.unlink(`${tempFilePath}.tmp`);
+    } catch {}
+    try {
+      await fs.unlink(`${tempFilePath}.bak`);
     } catch {}
   });
 

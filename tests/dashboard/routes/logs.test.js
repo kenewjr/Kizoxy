@@ -118,6 +118,7 @@ describe("Logs Route Tests", () => {
       expect(res.body.content).toContain("Test error message");
       expect(res.body.level_counts.ERROR).toBe(1);
       expect(res.body.level_counts.WARN).toBe(1);
+      expect(res.body.filtered).toBe(false);
     });
 
     it("limits lines with tail parameter", async () => {
@@ -125,6 +126,28 @@ describe("Logs Route Tests", () => {
       expect(res.status).toBe(200);
       const lines = res.body.content.split("\n").filter(Boolean);
       expect(lines.length).toBeLessThanOrEqual(1);
+      expect(res.body.filtered).toBe(false);
+    });
+
+    it("returns filtered lines with levels parameter", async () => {
+      const res = await request(app).get(
+        `/api/logs/${logFile1}?levels=ERROR,WARN`,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.filtered).toBe(true);
+      expect(res.body.lines).toBeDefined();
+      expect(res.body.content).toBeUndefined();
+      expect(res.body.lines.length).toBe(2);
+    });
+
+    it("returns filtered lines with levels and search parameters combined", async () => {
+      const res = await request(app).get(
+        `/api/logs/${logFile1}?levels=ERROR&search=message`,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.filtered).toBe(true);
+      expect(res.body.lines.length).toBe(1);
+      expect(res.body.lines[0]).toContain("Test error message");
     });
 
     it("returns 400 on path traversal attempts", async () => {

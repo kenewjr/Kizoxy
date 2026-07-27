@@ -15,6 +15,7 @@ describe("youtubeStorage", () => {
 
   beforeAll(() => {
     storage = new YoutubeStorage(TEST_FILENAME);
+    storage._saveDelayMs = 0;
   });
 
   afterAll(async () => {

@@ -9,6 +9,8 @@ data/backups/
 *.bak
 logs/
 *.log
+tests/logs/
+coverage/
 .eslintcache
 CONTEXT.md
 .DS_Store

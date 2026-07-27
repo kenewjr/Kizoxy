@@ -172,20 +172,18 @@ describe("playLogicReadiness", () => {
   });
 
   // covers: Empty-result retry exhausted
-  test("empty-result retry exhausted — both searches empty, exactly 2 calls, normal 'no results' message", async () => {
+  test("empty-result retry exhausted — all searches empty, exactly 4 calls, normal 'no results' message", async () => {
     const mgr = mockManager([CONNECTED]);
-    mgr.search
-      .mockResolvedValueOnce(emptyResult)
-      .mockResolvedValueOnce(emptyResult);
+    mgr.search.mockResolvedValue(emptyResult);
     const client = { manager: mgr };
     const ctx = makeCtx();
     const args = ["nonexistent song"];
 
     const promise = playLogic(client, ctx, args);
-    await jest.advanceTimersByTimeAsync(700);
+    await jest.advanceTimersByTimeAsync(5200); // 600 + 1500 + 3000 + 100
     await promise;
 
-    expect(mgr.search).toHaveBeenCalledTimes(2);
+    expect(mgr.search).toHaveBeenCalledTimes(4);
     expect(ctx.channel.send).toHaveBeenCalledWith(
       expect.stringContaining("No results found"),
     );
@@ -281,12 +279,10 @@ describe("playLogicReadiness", () => {
     );
   });
 
-  // covers: Playlist cold start where both retries fail
-  test("cold start + playlist URL — both retries empty, shows no results", async () => {
+  // covers: Playlist cold start where all retries fail
+  test("cold start + playlist URL — all retries empty, shows no results", async () => {
     const mgr = mockManager([CONNECTED]);
-    mgr.search
-      .mockResolvedValueOnce(emptyResult)
-      .mockResolvedValueOnce(emptyResult);
+    mgr.search.mockResolvedValue(emptyResult);
     const client = { manager: mgr };
     const ctx = makeCtx();
     const args = [
@@ -294,10 +290,10 @@ describe("playLogicReadiness", () => {
     ];
 
     const promise = playLogic(client, ctx, args);
-    await jest.advanceTimersByTimeAsync(2100);
+    await jest.advanceTimersByTimeAsync(9100); // 2000 + 3000 + 4000 + 100
     await promise;
 
-    expect(mgr.search).toHaveBeenCalledTimes(2);
+    expect(mgr.search).toHaveBeenCalledTimes(4);
     expect(ctx.channel.send).toHaveBeenCalledWith(
       expect.stringContaining("No results found"),
     );
@@ -356,5 +352,69 @@ describe("playLogicReadiness", () => {
 
     // First editReply should be the searching placeholder
     expect(editReply.mock.calls[0][0]).toEqual({ content: "🔍 Searching..." });
+  });
+
+  test("Search succeeds on first try → no retry loop entered", async () => {
+    const mgr = mockManager([CONNECTED]);
+    mgr.search.mockResolvedValue(singleTrackResult);
+    const client = { manager: mgr };
+    const ctx = makeCtx();
+    const args = ["instant success"];
+
+    const promise = playLogic(client, ctx, args);
+    await jest.advanceTimersByTimeAsync(100);
+    await promise;
+
+    expect(mgr.search).toHaveBeenCalledTimes(1);
+    expect(ctx.channel.send).toHaveBeenCalledWith(
+      expect.stringContaining("Test Song"),
+    );
+  });
+
+  test("Search empty on attempts 1-2, succeeds on attempt 3 → returns success", async () => {
+    const mgr = mockManager([CONNECTED]);
+    mgr.search
+      .mockResolvedValueOnce(emptyResult)
+      .mockResolvedValueOnce(emptyResult)
+      .mockResolvedValueOnce(singleTrackResult);
+    const client = { manager: mgr };
+    const ctx = makeCtx();
+    const args = ["success on attempt 3"];
+
+    const promise = playLogic(client, ctx, args);
+    await jest.advanceTimersByTimeAsync(2200); // 600 + 1500 + 100
+    await promise;
+
+    expect(mgr.search).toHaveBeenCalledTimes(3);
+    expect(ctx.channel.send).toHaveBeenCalledWith(
+      expect.stringContaining("Test Song"),
+    );
+  });
+
+  test("Playlist-looking query uses PLAYLIST_RETRY_DELAYS_MS, non-playlist uses SEARCH_RETRY_DELAYS_MS", async () => {
+    const mgr = mockManager([CONNECTED]);
+    mgr.search.mockResolvedValue(emptyResult);
+    const client = { manager: mgr };
+    const ctx = makeCtx();
+
+    // 1. Non-playlist
+    let promise = playLogic(client, ctx, ["normal song"]);
+    await jest.advanceTimersByTimeAsync(300);
+    expect(mgr.search).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(400); // total 700ms
+    expect(mgr.search).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(10000);
+    await promise;
+
+    mgr.search.mockClear();
+
+    // 2. Playlist
+    promise = playLogic(client, ctx, ["https://youtube.com/playlist?list=123"]);
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(mgr.search).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1100); // total 2100ms
+    expect(mgr.search).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(15000);
+    await promise;
   });
 });

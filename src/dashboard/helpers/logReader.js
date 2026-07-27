@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { MAX_LOG_LINES, LOG_SEARCH_MAX } = require("../../config/constants");
+const { getLevelFromLine } = require("./logParser");
 
 const LOGS_DIR = path.join(__dirname, "..", "..", "..", "logs");
 const VALID_NAME = /^[\w.\-]+$/;
@@ -60,25 +61,33 @@ function readLogFile(name, tailLines) {
   return lines.join("\n");
 }
 
-function searchLogFile(name, query) {
+function searchLogFile(name, query, levels) {
   validateName(name);
   const full = path.join(LOGS_DIR, name);
   if (!fs.existsSync(full)) {
     throw Object.assign(new Error("Log file not found"), { code: "ENOENT" });
   }
   const content = fs.readFileSync(full, "utf8");
-  const lower = query.toLowerCase();
+  let lines = content.split("\n");
+  if (lines.length > MAX_LOG_LINES) {
+    lines = lines.slice(-MAX_LOG_LINES);
+  }
+  const lowerQuery = query ? query.toLowerCase() : null;
   const matches = [];
-  for (const line of content.split("\n")) {
-    if (line.toLowerCase().includes(lower)) {
-      matches.push(line);
-      if (matches.length >= LOG_SEARCH_MAX) break;
+  for (const line of lines) {
+    if (levels && levels.length && !levels.includes(getLevelFromLine(line))) {
+      continue;
+    }
+    if (lowerQuery && !line.toLowerCase().includes(lowerQuery)) {
+      continue;
+    }
+    matches.push(line);
+    if (matches.length >= LOG_SEARCH_MAX) {
+      break;
     }
   }
   return matches;
 }
-
-const { getLevelFromLine } = require("./logParser");
 
 function getLogLevelCounts(name) {
   validateName(name);

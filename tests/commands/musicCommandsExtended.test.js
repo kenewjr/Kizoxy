@@ -494,11 +494,21 @@ describe("Extended Music Commands Tests", () => {
       expect(interaction.editReply).toHaveBeenCalled();
     });
 
-    it("returns error for page out of bounds", async () => {
+    it("clamps page out of bounds", async () => {
       interaction.options.getInteger = jest.fn().mockReturnValue(99);
       await queueCmd.run(client, interaction);
       expect(interaction.editReply).toHaveBeenCalledWith(
-        expect.stringContaining("pages available"),
+        expect.objectContaining({
+          embeds: [
+            expect.objectContaining({
+              data: expect.objectContaining({
+                footer: expect.objectContaining({
+                  text: expect.stringContaining("Page • 1/1"),
+                }),
+              }),
+            }),
+          ],
+        }),
       );
     });
   });

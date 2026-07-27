@@ -31,7 +31,13 @@ module.exports = {
     const args = interaction.options.getInteger("page");
 
     const song = player.queue.current;
-    const qduration = formatDuration(player.queue.durationLength + song.length);
+    if (!song) {
+      return interaction.editReply("❌ Nothing is currently playing.");
+    }
+
+    const qduration = formatDuration(
+      (player.queue.durationLength || 0) + song.length,
+    );
 
     let pagesNum = Math.ceil(player.queue.length / 10);
     if (pagesNum === 0) pagesNum = 1;
@@ -80,12 +86,11 @@ module.exports = {
       else return interaction.editReply({ embeds: [pages[0]] });
     } else {
       if (isNaN(args)) return interaction.editReply(`Please enter a number!`);
-      if (args > pagesNum)
-        return interaction.editReply(
-          `There are only ${pagesNum} pages available!`,
-        );
-      const pageNum = args === 0 ? 1 : args - 1;
-      return interaction.editReply({ embeds: [pages[pageNum]] });
+      let pageNum = args <= 0 ? 1 : args;
+      if (pageNum > pagesNum) {
+        pageNum = pagesNum;
+      }
+      return interaction.editReply({ embeds: [pages[pageNum - 1]] });
     }
   },
 };
