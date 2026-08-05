@@ -57,9 +57,11 @@ describe("TikTok Notifier Tests", () => {
       expect(result).toBe(false);
     });
 
-    it("sends message successfully if channel is found", async () => {
+    it("sends message successfully if channel is found and calls crosspost on announcement channel", async () => {
+      const mockMsg = { crosspostable: true, crosspost: jest.fn().mockResolvedValue({}) };
       const mockChannel = {
-        send: jest.fn().mockResolvedValue({}),
+        type: 5,
+        send: jest.fn().mockResolvedValue(mockMsg),
       };
       mockClient.channels = {
         fetch: jest.fn().mockResolvedValue(mockChannel),
@@ -72,6 +74,7 @@ describe("TikTok Notifier Tests", () => {
       );
       expect(result).toBe(true);
       expect(mockChannel.send).toHaveBeenCalled();
+      expect(mockMsg.crosspost).toHaveBeenCalled();
     });
   });
 

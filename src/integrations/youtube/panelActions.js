@@ -80,7 +80,7 @@ async function handleSetChannel(interaction) {
       .setPlaceholder("Choose announcement channel...")
       .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
   );
-  await interaction.reply({
+  await interaction.followUp({
     content: "Select the announcement channel:",
     components: [row],
     ephemeral: true,
@@ -91,7 +91,7 @@ async function handleChannelSelect(interaction, client) {
   const key = `${interaction.user.id}:${interaction.guildId}`;
   const pending = getPanel().pendingConfigs.get(key);
   if (!pending)
-    return interaction.reply({
+    return interaction.followUp({
       content: "Session expired. Please start over.",
       ephemeral: true,
     });
@@ -209,7 +209,7 @@ async function handleClearMsg(interaction, client) {
   const key = `${interaction.user.id}:${interaction.guildId}`;
   const pending = getPanel().pendingConfigs.get(key);
   if (!pending)
-    return interaction.reply({ content: "Session expired.", ephemeral: true });
+    return interaction.followUp({ content: "Session expired.", ephemeral: true });
   pending.customMessage = null;
   pending.expiresAt = Date.now() + 5 * 60 * 1000;
   const embed = buildYtConfigEmbed(client, pending, !!pending.editSubId);

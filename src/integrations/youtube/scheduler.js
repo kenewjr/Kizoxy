@@ -1,3 +1,4 @@
+const { ChannelType } = require("discord.js");
 const Logger = require("../../lib/logger");
 const { YOUTUBE_POLL_INTERVAL_MS } = require("../../config/constants");
 const { fetchLatestFeedEntry, fetchVideoDetails } = require("./client");
@@ -177,13 +178,24 @@ class YoutubeScheduler {
           },
         });
 
-        await channel
+        const sentMsg = await channel
           .send({ content, embeds: [embed], components })
           .catch((e) =>
             logger.error(
               `Failed to send announcement to ${subscription.announceChannelId}: ${e.message}`,
             ),
           );
+
+        if (
+          sentMsg &&
+          (channel.type === ChannelType.GuildAnnouncement || sentMsg.crosspostable)
+        ) {
+          await sentMsg.crosspost().catch((e) =>
+            logger.warning(
+              `Auto-crosspost failed for YouTube message ${sentMsg.id} in channel ${channel.id}: ${e.message}`,
+            ),
+          );
+        }
       } catch (err) {
         logger.error(`fan-out error for guild ${guildId}: ${err.message}`);
       }
