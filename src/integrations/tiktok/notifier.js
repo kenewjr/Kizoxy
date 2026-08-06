@@ -88,26 +88,36 @@ function buildLinkRow(label, url) {
 // Send to one subscription's channel. Guards a deleted channel (Rule L3/M1):
 // never throws, logs and moves on.
 async function send(client, subscription, { embed, row, content }) {
+  logger.info(
+    `[TIKTOK_NOTIFIER] Delivering notification for @${subscription.username || "unknown"} to channel ${subscription.discordChannelId}...`,
+  );
   const channel = await client.channels
     .fetch(subscription.discordChannelId)
     .catch(() => null);
   if (!channel) {
     logger.warning(
-      `Announce channel ${subscription.discordChannelId} not found; skipping`,
+      `[TIKTOK_NOTIFIER] Announce channel ${subscription.discordChannelId} not found; skipping`,
     );
     return false;
   }
   const msg = await channel
     .send({ content, embeds: [embed], components: row ? [row] : [] })
-    .catch((e) =>
+    .catch((e) => {
       logger.error(
-        `Failed to send TikTok notification to ${subscription.discordChannelId}: ${e.message}`,
-      ),
-    );
-  if (msg && (channel.type === ChannelType.GuildAnnouncement || msg.crosspostable)) {
+        `[TIKTOK_NOTIFIER] Failed to send TikTok notification to ${subscription.discordChannelId}: ${e.message}`,
+      );
+      return null;
+    });
+  if (!msg) return false;
+
+  logger.success(
+    `[TIKTOK_NOTIFIER] Successfully delivered TikTok notification for @${subscription.username || "unknown"} to channel ${channel.id}`,
+  );
+
+  if (channel.type === ChannelType.GuildAnnouncement || msg.crosspostable) {
     await msg.crosspost().catch((e) =>
       logger.warning(
-        `Auto-crosspost failed for TikTok message ${msg.id} in channel ${channel.id}: ${e.message}`,
+        `[TIKTOK_NOTIFIER] Auto-crosspost failed for TikTok message ${msg.id} in channel ${channel.id}: ${e.message}`,
       ),
     );
   }

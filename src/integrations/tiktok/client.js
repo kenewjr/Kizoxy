@@ -4,12 +4,14 @@ const { TIKTOK_HTTP_TIMEOUT_MS } = require("../../config/constants");
 const logger = new Logger("TIKTOK");
 
 // ---------------------------------------------------------------------------
-// Pure Scraper TikTok Client
+// Multi-Strategy Scraper TikTok Client
 //
 // Fetches profile & posts without external API keys.
-// Uses TikWM scraper API as primary source with direct HTML rehydration
-// fallback when TikWM is unavailable. Supports Video, Photo/Reels slides, and
-// Live stream status.
+// Uses a 4-tiered strategy chain:
+// 1. TikWM Search API (https://www.tikwm.com/api/feed/search)
+// 2. TikWM User Posts API (https://www.tikwm.com/api/user/posts)
+// 3. Direct HTML profile rehydration script parsing
+// 4. TikTok oEmbed metadata verification
 // ---------------------------------------------------------------------------
 
 function isConfigured() {
@@ -109,6 +111,108 @@ function _normalize(username, raw) {
   };
 }
 
+async function _fetchTikwmSearch(username) {
+  const url = `https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(username)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (
+      data &&
+      data.code === 0 &&
+      data.data &&
+      Array.isArray(data.data.videos)
+    ) {
+      const matchingVideos = data.data.videos.filter(
+        (v) =>
+          v &&
+          v.author &&
+          String(v.author.unique_id).toLowerCase() === username.toLowerCase(),
+      );
+      if (matchingVideos.length > 0) {
+        const firstAuthor = matchingVideos[0].author;
+        const userId = firstAuthor.id ? String(firstAuthor.id) : null;
+        const userUniqueId = firstAuthor.unique_id || username;
+        const avatar = firstAuthor.avatar || null;
+
+        const videos = matchingVideos.map((v) => {
+          const isPhoto =
+            Boolean(v.images && v.images.length > 0) ||
+            v.type === "images" ||
+            v.type === "photo";
+          const postType = isPhoto ? "photo" : "video";
+          return {
+            id: String(v.video_id),
+            type: postType,
+            url: `https://www.tiktok.com/@${userUniqueId}/${postType}/${v.video_id}`,
+            cover: v.cover || (v.images && v.images[0]) || null,
+            images: Array.isArray(v.images) ? v.images : [],
+            title: v.title || "",
+            createTime: v.create_time || null,
+            isLive: false,
+          };
+        });
+
+        return {
+          user: {
+            id: userId,
+            username: userUniqueId,
+            avatar,
+            live: false,
+            liveId: null,
+            liveUrl: `https://www.tiktok.com/@${userUniqueId}/live`,
+          },
+          videos,
+        };
+      }
+    }
+    throw new Error("No matching posts found in search API response");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function _fetchTikwmUserPosts(username) {
+  const url = `https://www.tikwm.com/api/user/posts?unique_id=${encodeURIComponent(username)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (data && data.code !== 0) {
+      const msg = String(data.msg || "").toLowerCase();
+      if (msg.includes("invalid") || msg.includes("not found")) {
+        throw new TiktokAccountNotFoundError(username);
+      }
+      throw new Error(`TikWM error code ${data.code}: ${data.msg}`);
+    }
+
+    if (!data || !data.data) {
+      throw new Error("Empty response from TikWM API");
+    }
+
+    return _normalize(username, data);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function _fetchHtmlProfile(username) {
   const url = `https://www.tiktok.com/@${encodeURIComponent(username)}`;
   const controller = new AbortController();
@@ -140,23 +244,27 @@ async function _fetchHtmlProfile(username) {
     const user = userDetail.userInfo.user || {};
     const isLive = Boolean(user.roomStatus === 1 || user.isLive);
     const liveId = user.roomId != null ? String(user.roomId) : null;
-    const itemList = userDetail.itemList || scope["webapp.user-post"]?.itemList || [];
+    const itemList =
+      userDetail.itemList || scope["webapp.user-post"]?.itemList || [];
 
-    const videos = itemList.map((item) => {
-      const isPhoto = Boolean(item.images && item.images.length > 0) || item.imagePost;
-      const type = isPhoto ? "photo" : "video";
-      const id = String(item.id || item.video?.id || "");
-      return {
-        id,
-        type,
-        url: `https://www.tiktok.com/@${user.uniqueId || username}/${type}/${id}`,
-        cover: item.video?.cover || item.cover || null,
-        images: item.images || [],
-        title: item.desc || item.title || "",
-        createTime: item.createTime || null,
-        isLive: false,
-      };
-    }).filter((v) => v.id);
+    const videos = itemList
+      .map((item) => {
+        const isPhoto =
+          Boolean(item.images && item.images.length > 0) || item.imagePost;
+        const type = isPhoto ? "photo" : "video";
+        const id = String(item.id || item.video?.id || "");
+        return {
+          id,
+          type,
+          url: `https://www.tiktok.com/@${user.uniqueId || username}/${type}/${id}`,
+          cover: item.video?.cover || item.cover || null,
+          images: item.images || [],
+          title: item.desc || item.title || "",
+          createTime: item.createTime || null,
+          isLive: false,
+        };
+      })
+      .filter((v) => v.id);
 
     return {
       user: {
@@ -174,48 +282,106 @@ async function _fetchHtmlProfile(username) {
   }
 }
 
-// Fetch + normalize a profile via TikWM scraper with direct HTML fallback.
-async function fetchProfile(username) {
-  const url = `https://www.tikwm.com/api/user/posts?unique_id=${encodeURIComponent(username)}`;
+async function _fetchOembedProfile(username) {
+  const url = `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${encodeURIComponent(username)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-      signal: controller.signal,
-    });
+    const res = await fetch(url, { signal: controller.signal });
+    if (res.status === 400 || res.status === 404) {
+      throw new TiktokAccountNotFoundError(username);
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-
-    if (data && data.code !== 0) {
-      const msg = String(data.msg || "").toLowerCase();
-      if (msg.includes("invalid") || msg.includes("not found")) {
-        throw new TiktokAccountNotFoundError(username);
-      }
-      throw new Error(`TikWM error code ${data.code}: ${data.msg}`);
-    }
-
-    if (!data || !data.data) {
-      throw new Error("Empty response from TikWM API");
-    }
-
-    return _normalize(username, data);
-  } catch (err) {
-    if (err instanceof TiktokAccountNotFoundError) throw err;
-    logger.warning(`TikWM fetch failed for @${username}: ${err.message}. Trying direct HTML fallback...`);
-    try {
-      return await _fetchHtmlProfile(username);
-    } catch (htmlErr) {
-      if (htmlErr instanceof TiktokAccountNotFoundError) throw htmlErr;
-      logger.warning(`Direct HTML fetch failed for @${username}: ${htmlErr.message}`);
-      throw err;
-    }
+    return {
+      user: {
+        id: data.embed_product_id || null,
+        username: data.author_name || username,
+        avatar: null,
+        live: false,
+        liveId: null,
+        liveUrl: `https://www.tiktok.com/@${username}/live`,
+      },
+      videos: [],
+    };
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Fetch + normalize a profile via multi-strategy chain with detailed logging.
+async function fetchProfile(username) {
+  const errors = [];
+
+  // Strategy 1: TikWM Search API
+  try {
+    logger.info(`[TIKTOK_CLIENT] Strategy 1: Fetching @${username} via TikWM Search...`);
+    const profile = await _fetchTikwmSearch(username);
+    logger.success(
+      `[TIKTOK_CLIENT] Strategy 1 Success: Fetched @${username} (${profile.videos.length} video(s) found)`,
+    );
+    return profile;
+  } catch (err) {
+    if (err instanceof TiktokAccountNotFoundError) throw err;
+    logger.warning(
+      `[TIKTOK_CLIENT] Strategy 1 (TikWM Search) failed for @${username}: ${err.message}`,
+    );
+    errors.push(`TikWM Search: ${err.message}`);
+  }
+
+  // Strategy 2: TikWM User Posts API
+  try {
+    logger.info(`[TIKTOK_CLIENT] Strategy 2: Fetching @${username} via TikWM User Posts...`);
+    const profile = await _fetchTikwmUserPosts(username);
+    logger.success(
+      `[TIKTOK_CLIENT] Strategy 2 Success: Fetched @${username} (${profile.videos.length} video(s) found)`,
+    );
+    return profile;
+  } catch (err) {
+    if (err instanceof TiktokAccountNotFoundError) throw err;
+    logger.warning(
+      `[TIKTOK_CLIENT] Strategy 2 (TikWM User Posts) failed for @${username}: ${err.message}`,
+    );
+    errors.push(`TikWM Posts: ${err.message}`);
+  }
+
+  // Strategy 3: Direct HTML Profile scraping
+  try {
+    logger.info(`[TIKTOK_CLIENT] Strategy 3: Fetching @${username} via Direct HTML...`);
+    const profile = await _fetchHtmlProfile(username);
+    logger.success(
+      `[TIKTOK_CLIENT] Strategy 3 Success: Fetched @${username} (${profile.videos.length} video(s) found)`,
+    );
+    return profile;
+  } catch (err) {
+    if (err instanceof TiktokAccountNotFoundError) throw err;
+    logger.warning(
+      `[TIKTOK_CLIENT] Strategy 3 (Direct HTML) failed for @${username}: ${err.message}`,
+    );
+    errors.push(`Direct HTML: ${err.message}`);
+  }
+
+  // Strategy 4: TikTok oEmbed check
+  try {
+    logger.info(`[TIKTOK_CLIENT] Strategy 4: Verifying @${username} via TikTok oEmbed...`);
+    const profile = await _fetchOembedProfile(username);
+    logger.warning(
+      `[TIKTOK_CLIENT] Strategy 4 Success: Account @${username} verified via oEmbed (no video list)`,
+    );
+    return profile;
+  } catch (err) {
+    if (err instanceof TiktokAccountNotFoundError) throw err;
+    logger.warning(
+      `[TIKTOK_CLIENT] Strategy 4 (TikTok oEmbed) failed for @${username}: ${err.message}`,
+    );
+    errors.push(`TikTok oEmbed: ${err.message}`);
+  }
+
+  const aggregated = new Error(
+    `All TikTok fetch strategies failed for @${username} [${errors.join(" | ")}]`,
+  );
+  logger.error(`[TIKTOK_CLIENT] ${aggregated.message}`);
+  throw aggregated;
 }
 
 module.exports = {
@@ -224,4 +390,5 @@ module.exports = {
   TiktokAccountNotFoundError,
   _normalize,
 };
+
 

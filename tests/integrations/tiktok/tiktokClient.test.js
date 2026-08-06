@@ -19,8 +19,8 @@ describe("TikTok Client Scraper Tests", () => {
     expect(tiktokClient.isConfigured()).toBe(true);
   });
 
-  describe("TikWM Scraper", () => {
-    it("fetches and normalizes video posts successfully", async () => {
+  describe("TikWM Scraper Strategies", () => {
+    it("fetches and normalizes video posts successfully via Strategy 1 (TikWM Search)", async () => {
       const mockRaw = {
         code: 0,
         msg: "success",
@@ -89,7 +89,14 @@ describe("TikTok Client Scraper Tests", () => {
       expect(profile.videos[0].images).toEqual(["http://img1.jpg", "http://img2.jpg"]);
     });
 
-    it("throws TiktokAccountNotFoundError if user not found via TikWM", async () => {
+    it("throws TiktokAccountNotFoundError if user not found", async () => {
+      // Mock Strategy 1 (Search returns no matching user videos)
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
+      });
+      // Mock Strategy 2 (User posts returns code -1 User not found)
       global.fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -101,23 +108,40 @@ describe("TikTok Client Scraper Tests", () => {
       );
     });
 
-    it("throws general Error if TikWM returns other error codes", async () => {
+    it("throws general Error if all strategies fail", async () => {
+      // Mock all strategy fetch failures
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
+      });
       global.fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({ code: -1, msg: "Rate limit reached" }),
       });
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => "Forbidden",
+      });
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
 
       await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
-        "TikWM error code -1: Rate limit reached",
+        "All TikTok fetch strategies failed for @therock",
       );
     });
 
-    it("falls back to HTML scraper if TikWM fails", async () => {
-      // 1. TikWM fails with network error
+    it("falls back to HTML scraper if Strategy 1 & 2 fail", async () => {
+      // 1. TikWM Search fails with network error
+      global.fetch.mockRejectedValueOnce(new Error("Network Error"));
+      // 2. TikWM Posts fails with network error
       global.fetch.mockRejectedValueOnce(new Error("Network Error"));
 
-      // 2. HTML fallback succeeds
+      // 3. HTML fallback succeeds
       const htmlData = `
         <html>
           <body>

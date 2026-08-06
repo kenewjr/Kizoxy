@@ -189,6 +189,10 @@ async function handleTest(interaction, client, subId) {
       });
     }
 
+    logger.info(
+      `[TIKTOK_MANAGE] User ${interaction.user.tag} triggered test notification for @${sub.username} in channel ${sub.discordChannelId}`,
+    );
+
     let profile;
     try {
       profile = await fetchProfile(sub.username);
