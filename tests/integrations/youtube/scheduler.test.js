@@ -103,9 +103,12 @@ describe("YoutubeScheduler Tests", () => {
     stateStorage.getState.mockResolvedValue(null); // First time seen
 
     await scheduler.pollOnce();
-    expect(stateStorage.setState).toHaveBeenCalledWith("lofi-chan-id", {
-      lastVideoId: "video-1",
-    });
+    expect(stateStorage.setState).toHaveBeenCalledWith(
+      "lofi-chan-id",
+      expect.objectContaining({
+        lastVideoId: "video-1",
+      }),
+    );
     expect(client.channels.fetch).not.toHaveBeenCalled();
   });
 
@@ -225,9 +228,12 @@ describe("YoutubeScheduler Tests", () => {
     client.channels.fetch.mockResolvedValue(null);
 
     await scheduler.pollOnce();
-    expect(stateStorage.setState).toHaveBeenCalledWith("lofi-chan-id", {
-      lastVideoId: "video-1",
-    });
+    expect(stateStorage.setState).toHaveBeenCalledWith(
+      "lofi-chan-id",
+      expect.objectContaining({
+        lastVideoId: "video-1",
+      }),
+    );
   });
 
   it("handles catch errors when channel.fetch rejects or send rejects", async () => {

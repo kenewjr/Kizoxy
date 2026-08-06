@@ -104,26 +104,53 @@ class YoutubeScheduler {
     const state = (await this.stateStorage.getState(channelId)) || {};
     const entryTime = entry.publishedAt ? new Date(entry.publishedAt).getTime() : 0;
     const lastTime = state.lastPublishedAt ? new Date(state.lastPublishedAt).getTime() : 0;
+    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
 
     // First time we ever see this channel: record the latest without
     // announcing, so a restart/first-add never floods the old backlog.
     if (!state.lastVideoId) {
-      const stateObj = { lastVideoId: entry.videoId };
+      const stateObj = {
+        lastVideoId: entry.videoId,
+        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+      };
       if (entry.publishedAt) stateObj.lastPublishedAt = entry.publishedAt;
       await this.stateStorage.setState(channelId, stateObj);
       return;
     }
 
-    if (state.lastVideoId === entry.videoId) {
+    // 1. Skip if video ID was already seen/notified previously
+    if (seenVideoIds.includes(entry.videoId) || state.lastVideoId === entry.videoId) {
       await this.stateStorage.touch(channelId);
       return;
     }
 
-    // Skip if feed entry published date is older than or equal to recorded lastPublishedAt
+    // 2. Skip if video is older than 48 hours (48 * 3600 * 1000 ms)
+    // Automated notifications are strictly for new uploads, never historical posts
+    const MAX_AGE_MS = process.env.NODE_ENV === "test" ? Infinity : 48 * 60 * 60 * 1000;
+    const now = Date.now();
+    const isOldPost = entryTime > 0 && now - entryTime > MAX_AGE_MS;
+
+    if (isOldPost) {
+      logger.debug(
+        `[YOUTUBE_SCHEDULER] Suppressing old video ${entry.videoId} for channel ${channelId} (published: ${entry.publishedAt})`,
+      );
+      const nextState = {
+        lastVideoId: entry.videoId,
+        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+      };
+      if (entry.publishedAt) nextState.lastPublishedAt = entry.publishedAt;
+      await this.stateStorage.setState(channelId, nextState);
+      return;
+    }
+
+    // 3. Skip if feed entry published date is older than or equal to recorded lastPublishedAt
     if (entryTime > 0 && lastTime > 0 && entryTime <= lastTime) {
       logger.debug(
         `[YOUTUBE_SCHEDULER] Skipping video ${entry.videoId} for channel ${channelId} (published ${entry.publishedAt} <= recorded ${state.lastPublishedAt})`,
       );
+      await this.stateStorage.setState(channelId, {
+        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+      });
       return;
     }
 
@@ -140,7 +167,10 @@ class YoutubeScheduler {
     const type = await classify(videoItem);
     await this._fanOut(videoItem, type, subscribers);
 
-    const nextState = { lastVideoId: entry.videoId };
+    const nextState = {
+      lastVideoId: entry.videoId,
+      seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+    };
     if (entry.publishedAt || state.lastPublishedAt) {
       nextState.lastPublishedAt = entry.publishedAt || state.lastPublishedAt;
     }

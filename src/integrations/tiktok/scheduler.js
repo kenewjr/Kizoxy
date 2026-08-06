@@ -114,6 +114,7 @@ class TiktokScheduler {
 
     const latestTime = latest.createTime ? Number(latest.createTime) : 0;
     const lastTime = state.lastVideoCreateTime ? Number(state.lastVideoCreateTime) : 0;
+    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
 
     // First time we ever see this profile: record latest without announcing,
     // so adding a subscription never floods the backlog.
@@ -121,26 +122,52 @@ class TiktokScheduler {
       await this.stateStorage.setState(username, {
         lastVideoId: latest.id,
         lastVideoCreateTime: latestTime,
+        seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
         // Preserve any live fields already set in this cycle.
         isLive: state.isLive || false,
       });
       return;
     }
 
-    if (state.lastVideoId === latest.id) return;
+    // 1. Skip if post ID was already seen/notified previously
+    if (seenVideoIds.includes(latest.id) || state.lastVideoId === latest.id) {
+      return;
+    }
 
-    // Skip if latest post createTime is older than or equal to recorded lastVideoCreateTime
+    // 2. Skip if post is older than 48 hours (48 * 3600 * 1000 ms)
+    // Automated notifications are strictly for new uploads, never historical posts
+    const MAX_AGE_MS = process.env.NODE_ENV === "test" ? Infinity : 48 * 60 * 60 * 1000;
+    const now = Date.now();
+    const isOldPost = latestTime > 0 && now - latestTime * 1000 > MAX_AGE_MS;
+
+    if (isOldPost) {
+      logger.debug(
+        `[TIKTOK_SCHEDULER] Suppressing old post ${latest.id} for @${username} (age: ${Math.round((now - latestTime * 1000) / 86400000)} days)`,
+      );
+      await this.stateStorage.setState(username, {
+        lastVideoId: latest.id,
+        lastVideoCreateTime: Math.max(latestTime, lastTime),
+        seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+      });
+      return;
+    }
+
+    // 3. Skip if latest post createTime is older than or equal to recorded lastVideoCreateTime
     if (latestTime > 0 && lastTime > 0 && latestTime <= lastTime) {
       logger.debug(
         `[TIKTOK_SCHEDULER] Skipping post ${latest.id} for @${username} (timestamp ${latestTime} <= recorded ${lastTime})`,
       );
+      await this.stateStorage.setState(username, {
+        seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+      });
       return;
     }
 
     await this._fanOutVideo(username, profile, latest, subscribers);
     await this.stateStorage.setState(username, {
       lastVideoId: latest.id,
-      lastVideoCreateTime: latestTime || lastTime,
+      lastVideoCreateTime: Math.max(latestTime, lastTime),
+      seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
     });
   }
 

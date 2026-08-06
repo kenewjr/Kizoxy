@@ -104,10 +104,13 @@ describe("TiktokScheduler Tests", () => {
     stateStorage.getState.mockResolvedValue({}); // Empty state
 
     await scheduler.pollOnce();
-    expect(stateStorage.setState).toHaveBeenCalledWith("therock", {
-      lastVideoId: "video-1",
-      isLive: false,
-    });
+    expect(stateStorage.setState).toHaveBeenCalledWith(
+      "therock",
+      expect.objectContaining({
+        lastVideoId: "video-1",
+        isLive: false,
+      }),
+    );
     expect(notifier.send).not.toHaveBeenCalled();
   });
 
