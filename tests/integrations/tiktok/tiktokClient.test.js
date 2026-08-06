@@ -40,7 +40,7 @@ describe("TikTok Client Scraper Tests", () => {
         },
       };
 
-      global.fetch.mockResolvedValueOnce({
+      global.fetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => mockRaw,
@@ -76,7 +76,7 @@ describe("TikTok Client Scraper Tests", () => {
         },
       };
 
-      global.fetch.mockResolvedValueOnce({
+      global.fetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => mockRaw,
@@ -90,18 +90,24 @@ describe("TikTok Client Scraper Tests", () => {
     });
 
     it("throws TiktokAccountNotFoundError if user not found", async () => {
-      // Mock Strategy 1 (Search returns no matching user videos)
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
-      });
-      // Mock Strategy 2 (User posts returns code -1 User not found)
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ code: -1, msg: "User not found" }),
-      });
+      // Strategy 1 (@therock and therock search return no videos)
+      global.fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
+        })
+        // Strategy 2 (User posts returns code -1 User not found)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: -1, msg: "User not found" }),
+        });
 
       await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
         tiktokClient.TiktokAccountNotFoundError,
@@ -109,26 +115,35 @@ describe("TikTok Client Scraper Tests", () => {
     });
 
     it("throws general Error if all strategies fail", async () => {
-      // Mock all strategy fetch failures
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
-      });
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ code: -1, msg: "Rate limit reached" }),
-      });
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        text: async () => "Forbidden",
-      });
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-      });
+      global.fetch
+        // Strategy 1
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
+        })
+        // Strategy 2
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: -1, msg: "Rate limit reached" }),
+        })
+        // Strategy 3
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          text: async () => "Forbidden",
+        })
+        // Strategy 4
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        });
 
       await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
         "All TikTok fetch strategies failed for @therock",
@@ -137,9 +152,11 @@ describe("TikTok Client Scraper Tests", () => {
 
     it("falls back to HTML scraper if Strategy 1 & 2 fail", async () => {
       // 1. TikWM Search fails with network error
-      global.fetch.mockRejectedValueOnce(new Error("Network Error"));
-      // 2. TikWM Posts fails with network error
-      global.fetch.mockRejectedValueOnce(new Error("Network Error"));
+      global.fetch
+        .mockRejectedValueOnce(new Error("Network Error"))
+        .mockRejectedValueOnce(new Error("Network Error"))
+        // 2. TikWM Posts fails with network error
+        .mockRejectedValueOnce(new Error("Network Error"));
 
       // 3. HTML fallback succeeds
       const htmlData = `

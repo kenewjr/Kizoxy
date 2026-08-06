@@ -101,19 +101,29 @@ class YoutubeScheduler {
     }
     if (!entry?.videoId) return;
 
-    const state = await this.stateStorage.getState(channelId);
+    const state = (await this.stateStorage.getState(channelId)) || {};
+    const entryTime = entry.publishedAt ? new Date(entry.publishedAt).getTime() : 0;
+    const lastTime = state.lastPublishedAt ? new Date(state.lastPublishedAt).getTime() : 0;
 
     // First time we ever see this channel: record the latest without
     // announcing, so a restart/first-add never floods the old backlog.
-    if (!state) {
-      await this.stateStorage.setState(channelId, {
-        lastVideoId: entry.videoId,
-      });
+    if (!state.lastVideoId) {
+      const stateObj = { lastVideoId: entry.videoId };
+      if (entry.publishedAt) stateObj.lastPublishedAt = entry.publishedAt;
+      await this.stateStorage.setState(channelId, stateObj);
       return;
     }
 
     if (state.lastVideoId === entry.videoId) {
       await this.stateStorage.touch(channelId);
+      return;
+    }
+
+    // Skip if feed entry published date is older than or equal to recorded lastPublishedAt
+    if (entryTime > 0 && lastTime > 0 && entryTime <= lastTime) {
+      logger.debug(
+        `[YOUTUBE_SCHEDULER] Skipping video ${entry.videoId} for channel ${channelId} (published ${entry.publishedAt} <= recorded ${state.lastPublishedAt})`,
+      );
       return;
     }
 
@@ -130,11 +140,11 @@ class YoutubeScheduler {
     const type = await classify(videoItem);
     await this._fanOut(videoItem, type, subscribers);
 
-    // TODO Phase 2: a scheduled premiere/live already appears in the feed while
-    // liveBroadcastContent is "upcoming"; its videoId won't change when it flips
-    // to "live", so this diff won't re-fire. Catching that transition would need
-    // a small re-check queue for pending "upcoming" video IDs.
-    await this.stateStorage.setState(channelId, { lastVideoId: entry.videoId });
+    const nextState = { lastVideoId: entry.videoId };
+    if (entry.publishedAt || state.lastPublishedAt) {
+      nextState.lastPublishedAt = entry.publishedAt || state.lastPublishedAt;
+    }
+    await this.stateStorage.setState(channelId, nextState);
   }
 
   async _fanOut(videoItem, type, subscribers) {

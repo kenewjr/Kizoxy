@@ -112,74 +112,93 @@ function _normalize(username, raw) {
 }
 
 async function _fetchTikwmSearch(username) {
-  const url = `https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(username)}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      },
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (
-      data &&
-      data.code === 0 &&
-      data.data &&
-      Array.isArray(data.data.videos)
-    ) {
-      const matchingVideos = data.data.videos.filter(
-        (v) =>
-          v &&
-          v.author &&
-          String(v.author.unique_id).toLowerCase() === username.toLowerCase(),
-      );
-      if (matchingVideos.length > 0) {
-        const firstAuthor = matchingVideos[0].author;
-        const userId = firstAuthor.id ? String(firstAuthor.id) : null;
-        const userUniqueId = firstAuthor.unique_id || username;
-        const avatar = firstAuthor.avatar || null;
+  const cleanUser = username.replace(/^@/, "");
+  const queries = [`@${cleanUser}`, cleanUser];
+  const allMatches = [];
 
-        const videos = matchingVideos.map((v) => {
-          const isPhoto =
-            Boolean(v.images && v.images.length > 0) ||
-            v.type === "images" ||
-            v.type === "photo";
-          const postType = isPhoto ? "photo" : "video";
-          return {
-            id: String(v.video_id),
-            type: postType,
-            url: `https://www.tiktok.com/@${userUniqueId}/${postType}/${v.video_id}`,
-            cover: v.cover || (v.images && v.images[0]) || null,
-            images: Array.isArray(v.images) ? v.images : [],
-            title: v.title || "",
-            createTime: v.create_time || null,
-            isLive: false,
-          };
-        });
-
-        videos.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
-
-        return {
-          user: {
-            id: userId,
-            username: userUniqueId,
-            avatar,
-            live: false,
-            liveId: null,
-            liveUrl: `https://www.tiktok.com/@${userUniqueId}/live`,
-          },
-          videos,
-        };
+  for (const q of queries) {
+    const url = `https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(q)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        },
+        signal: controller.signal,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (
+          data &&
+          data.code === 0 &&
+          data.data &&
+          Array.isArray(data.data.videos)
+        ) {
+          const matches = data.data.videos.filter(
+            (v) =>
+              v &&
+              v.author &&
+              String(v.author.unique_id).toLowerCase() === cleanUser.toLowerCase(),
+          );
+          allMatches.push(...matches);
+        }
       }
+    } catch (_err) {
+      // Ignore query errors
+    } finally {
+      clearTimeout(timer);
     }
-    throw new Error("No matching posts found in search API response");
-  } finally {
-    clearTimeout(timer);
   }
+
+  if (allMatches.length === 0) {
+    throw new Error("No matching posts found in search API response");
+  }
+
+  // Deduplicate by video_id
+  const videoMap = new Map();
+  for (const v of allMatches) {
+    videoMap.set(String(v.video_id), v);
+  }
+  const uniqueVideos = [...videoMap.values()];
+
+  const firstAuthor = uniqueVideos[0]?.author || {};
+  const userId = firstAuthor.id ? String(firstAuthor.id) : null;
+  const userUniqueId = firstAuthor.unique_id || cleanUser;
+  const avatar = firstAuthor.avatar || null;
+
+  const videos = uniqueVideos.map((v) => {
+    const isPhoto =
+      Boolean(v.images && v.images.length > 0) ||
+      v.type === "images" ||
+      v.type === "photo";
+    const postType = isPhoto ? "photo" : "video";
+    return {
+      id: String(v.video_id),
+      type: postType,
+      url: `https://www.tiktok.com/@${userUniqueId}/${postType}/${v.video_id}`,
+      cover: v.cover || (v.images && v.images[0]) || null,
+      images: Array.isArray(v.images) ? v.images : [],
+      title: v.title || "",
+      createTime: v.create_time || null,
+      isLive: false,
+    };
+  });
+
+  videos.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
+
+  return {
+    user: {
+      id: userId,
+      username: userUniqueId,
+      avatar,
+      live: false,
+      liveId: null,
+      liveUrl: `https://www.tiktok.com/@${userUniqueId}/live`,
+    },
+    videos,
+  };
 }
 
 async function _fetchTikwmUserPosts(username) {

@@ -112,11 +112,15 @@ class TiktokScheduler {
     const latest = profile.videos.find((v) => !v.isLive) || profile.videos[0];
     if (!latest) return;
 
+    const latestTime = latest.createTime ? Number(latest.createTime) : 0;
+    const lastTime = state.lastVideoCreateTime ? Number(state.lastVideoCreateTime) : 0;
+
     // First time we ever see this profile: record latest without announcing,
     // so adding a subscription never floods the backlog.
     if (!state.lastVideoId) {
       await this.stateStorage.setState(username, {
         lastVideoId: latest.id,
+        lastVideoCreateTime: latestTime,
         // Preserve any live fields already set in this cycle.
         isLive: state.isLive || false,
       });
@@ -125,8 +129,19 @@ class TiktokScheduler {
 
     if (state.lastVideoId === latest.id) return;
 
+    // Skip if latest post createTime is older than or equal to recorded lastVideoCreateTime
+    if (latestTime > 0 && lastTime > 0 && latestTime <= lastTime) {
+      logger.debug(
+        `[TIKTOK_SCHEDULER] Skipping post ${latest.id} for @${username} (timestamp ${latestTime} <= recorded ${lastTime})`,
+      );
+      return;
+    }
+
     await this._fanOutVideo(username, profile, latest, subscribers);
-    await this.stateStorage.setState(username, { lastVideoId: latest.id });
+    await this.stateStorage.setState(username, {
+      lastVideoId: latest.id,
+      lastVideoCreateTime: latestTime || lastTime,
+    });
   }
 
   async _handleLive(username, profile, state, subscribers) {
