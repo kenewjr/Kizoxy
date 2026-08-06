@@ -31,6 +31,8 @@ jest.mock("../../../src/integrations/youtube/panelActions", () => ({
   handleRemoveConfirm: jest.fn(),
   handlePage: jest.fn(),
   handleRefresh: jest.fn(),
+  handleStatus: jest.fn(),
+  handleTest: jest.fn(),
 }));
 
 jest.mock("../../../src/integrations/youtube/panelBuilder", () => ({
@@ -89,6 +91,18 @@ describe("YouTube Panel Button Interaction Tests", () => {
     interaction.customId = "youtube_panel:page:2";
     await youtubePanel.execute(interaction, client);
     expect(actions.handlePage).toHaveBeenCalledWith(interaction, client, 2);
+  });
+
+  it("routes status action correctly", async () => {
+    interaction.customId = "youtube_panel:status:sub-123";
+    await youtubePanel.execute(interaction, client);
+    expect(actions.handleStatus).toHaveBeenCalledWith(interaction, client, "sub-123");
+  });
+
+  it("routes test action correctly", async () => {
+    interaction.customId = "youtube_panel:test:sub-123";
+    await youtubePanel.execute(interaction, client);
+    expect(actions.handleTest).toHaveBeenCalledWith(interaction, client, "sub-123");
   });
 
   it("handles search_start modal", async () => {

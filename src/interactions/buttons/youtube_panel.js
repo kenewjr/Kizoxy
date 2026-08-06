@@ -65,6 +65,10 @@ async function execute(interaction, client) {
         );
       case "refresh":
         return actions.handleRefresh(interaction, client);
+      case "status":
+        return actions.handleStatus(interaction, client, rest[0]);
+      case "test":
+        return actions.handleTest(interaction, client, rest[0]);
       case "search_start": {
         const {
           ModalBuilder,

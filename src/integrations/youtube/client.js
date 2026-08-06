@@ -19,6 +19,7 @@ function apiKey() {
 
 // Returns the newest feed entry as { videoId, title, publishedAt } or null.
 async function fetchLatestFeedEntry(youtubeChannelId) {
+  logger.info(`[YOUTUBE_CLIENT] Fetching latest RSS feed for channel ${youtubeChannelId}...`);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), YOUTUBE_HTTP_TIMEOUT_MS);
   try {
@@ -30,11 +31,22 @@ async function fetchLatestFeedEntry(youtubeChannelId) {
     const data = await res.text();
     const parsed = xmlParser.parse(data);
     let entries = parsed?.feed?.entry;
-    if (!entries) return null;
+    if (!entries) {
+      logger.warning(`[YOUTUBE_CLIENT] No RSS entries found for channel ${youtubeChannelId}`);
+      return null;
+    }
     if (!Array.isArray(entries)) entries = [entries];
+
+    entries.sort((a, b) => {
+      const timeA = new Date(a.published || 0).getTime();
+      const timeB = new Date(b.published || 0).getTime();
+      return timeB - timeA;
+    });
+
     const newest = entries[0];
     if (!newest) return null;
-    return {
+
+    const result = {
       videoId: newest["yt:videoId"],
       title:
         typeof newest.title === "string"
@@ -43,6 +55,15 @@ async function fetchLatestFeedEntry(youtubeChannelId) {
       publishedAt: newest.published,
       author: parsed.feed?.author?.name,
     };
+
+    logger.success(
+      `[YOUTUBE_CLIENT] Fetched latest video for channel ${youtubeChannelId}: ID ${result.videoId} (${result.title})`,
+    );
+
+    return result;
+  } catch (err) {
+    logger.error(`[YOUTUBE_CLIENT] Failed to fetch feed for ${youtubeChannelId}: ${err.message}`);
+    throw err;
   } finally {
     clearTimeout(timer);
   }

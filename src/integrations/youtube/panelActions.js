@@ -400,6 +400,167 @@ async function handleRefresh(interaction, client) {
   await safeReply(interaction, { embeds: [embed], components: rows });
 }
 
+async function handleStatus(interaction, client, subId) {
+  const youtubeStateStorage = require("../../persistence/youtubeStateStorage");
+  const Embeds = require("../../lib/embeds");
+  const Logger = require("../../lib/logger");
+  const logger = new Logger("YOUTUBE_MANAGE");
+
+  try {
+    const subs = await youtubeStorage.listSubscriptions(interaction.guildId);
+    const sub = subs.find((s) => (s.id ?? s.youtubeChannelId) === subId);
+    if (!sub) {
+      return interaction.followUp({
+        content: "❌ Subscription not found.",
+        ephemeral: true,
+      });
+    }
+
+    const state = (await youtubeStateStorage.getState(sub.youtubeChannelId)) || {};
+    const lastChecked = state.lastCheckedAt
+      ? `<t:${Math.floor(new Date(state.lastCheckedAt).getTime() / 1000)}:R>`
+      : "Never";
+
+    const embed = Embeds.brand(client, {
+      title: `YouTube Status — ${sub.youtubeChannelTitle || sub.youtubeChannelId}`,
+      url: sub.youtubeChannelUrl || `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
+      fields: [
+        {
+          name: "Channel",
+          value: `<#${sub.announceChannelId}>`,
+          inline: true,
+        },
+        { name: "Last checked", value: lastChecked, inline: true },
+        {
+          name: "Last video ID",
+          value: state.lastVideoId || "—",
+          inline: true,
+        },
+        {
+          name: "Notify",
+          value: `Videos ${sub.notifyVideos ? "✅" : "❌"} • Shorts ${sub.notifyShorts ? "✅" : "❌"} • Live ${sub.notifyLive ? "✅" : "❌"}`,
+          inline: false,
+        },
+      ],
+    });
+
+    await interaction.followUp({ embeds: [embed], ephemeral: true });
+  } catch (error) {
+    logger.error(`Error in handleStatus: ${error.message}`);
+    await interaction.followUp({
+      content: "❌ An error occurred while fetching the status.",
+      ephemeral: true,
+    });
+  }
+}
+
+async function handleTest(interaction, client, subId) {
+  const { fetchLatestFeedEntry, fetchVideoDetails } = require("./client");
+  const { classify } = require("./classifier");
+  const { buildAnnouncementEmbed, buildWatchRow } = require("./formatter");
+  const Logger = require("../../lib/logger");
+  const logger = new Logger("YOUTUBE_MANAGE");
+
+  try {
+    const subs = await youtubeStorage.listSubscriptions(interaction.guildId);
+    const sub = subs.find((s) => (s.id ?? s.youtubeChannelId) === subId);
+    if (!sub) {
+      return interaction.followUp({
+        content: "❌ Subscription not found.",
+        ephemeral: true,
+      });
+    }
+
+    logger.info(
+      `[YOUTUBE_MANAGE] User ${interaction.user.tag} triggered test notification for YouTube channel ${sub.youtubeChannelTitle || sub.youtubeChannelId}`,
+    );
+
+    let entry;
+    try {
+      entry = await fetchLatestFeedEntry(sub.youtubeChannelId);
+    } catch (err) {
+      logger.error(`[YOUTUBE_MANAGE] Failed to fetch feed for ${sub.youtubeChannelId}: ${err.message}`);
+      return interaction.followUp({
+        content: `❌ Failed to fetch latest YouTube video for **${sub.youtubeChannelTitle || sub.youtubeChannelId}**: ${err.message}`,
+        ephemeral: true,
+      });
+    }
+
+    if (!entry || !entry.videoId) {
+      return interaction.followUp({
+        content: `⚠️ YouTube channel **${sub.youtubeChannelTitle || sub.youtubeChannelId}** has no recent video entries in RSS feed.`,
+        ephemeral: true,
+      });
+    }
+
+    let videoItem;
+    try {
+      videoItem = await fetchVideoDetails(entry.videoId);
+    } catch (_err) {
+      // API key missing or quota exhausted: fall back to feed metadata
+    }
+
+    if (!videoItem) {
+      videoItem = {
+        id: entry.videoId,
+        snippet: {
+          title: entry.title || "New video",
+          channelTitle: sub.youtubeChannelTitle || entry.author || "YouTube",
+          thumbnails: {
+            high: { url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg` },
+          },
+        },
+      };
+    }
+
+    const type = await classify(videoItem);
+    const embed = buildAnnouncementEmbed(client, {
+      videoItem,
+      type,
+      channelTitle: sub.youtubeChannelTitle || entry.author,
+    });
+    const row = buildWatchRow(entry.videoId);
+
+    const channel = await client.channels
+      .fetch(sub.announceChannelId)
+      .catch(() => null);
+
+    if (!channel) {
+      return interaction.followUp({
+        content: `❌ Announcement channel <#${sub.announceChannelId}> not found or missing permissions.`,
+        ephemeral: true,
+      });
+    }
+
+    const msg = await channel
+      .send({ embeds: [embed], components: [row] })
+      .catch((e) => {
+        logger.error(`[YOUTUBE_MANAGE] Failed to post test notification: ${e.message}`);
+        return null;
+      });
+
+    if (!msg) {
+      return interaction.followUp({
+        content: `❌ Could not send message to <#${sub.announceChannelId}>. Check bot permissions in that channel.`,
+        ephemeral: true,
+      });
+    }
+
+    logger.success(`[YOUTUBE_MANAGE] Delivered test notification for ${sub.youtubeChannelTitle} (videoId: ${entry.videoId})`);
+
+    return interaction.followUp({
+      content: `🚀 **Test Notification Delivered**: Sent actual latest YouTube video (\`${entry.videoId}\`) for **${sub.youtubeChannelTitle || entry.author}** to <#${sub.announceChannelId}>.`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    logger.error(`Error in handleTest: ${error.message}`);
+    return interaction.followUp({
+      content: "❌ An error occurred while sending the test notification.",
+      ephemeral: true,
+    });
+  }
+}
+
 module.exports = {
   handleAdd,
   handleAddModal,
@@ -416,4 +577,6 @@ module.exports = {
   handleRemoveConfirm,
   handlePage,
   handleRefresh,
+  handleStatus,
+  handleTest,
 };

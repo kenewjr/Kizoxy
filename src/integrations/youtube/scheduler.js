@@ -178,21 +178,31 @@ class YoutubeScheduler {
           },
         });
 
+        logger.info(
+          `[YOUTUBE_SCHEDULER] Delivering ${type} notification for ${channelName} (video: ${videoItem.id}) to channel ${channel.id}...`,
+        );
+
         const sentMsg = await channel
           .send({ content, embeds: [embed], components })
-          .catch((e) =>
+          .catch((e) => {
             logger.error(
-              `Failed to send announcement to ${subscription.announceChannelId}: ${e.message}`,
-            ),
-          );
+              `[YOUTUBE_SCHEDULER] Failed to send announcement to ${subscription.announceChannelId}: ${e.message}`,
+            );
+            return null;
+          });
+
+        if (!sentMsg) continue;
+
+        logger.success(
+          `[YOUTUBE_SCHEDULER] Delivered ${type} notification for ${channelName} to channel ${channel.id}`,
+        );
 
         if (
-          sentMsg &&
-          (channel.type === ChannelType.GuildAnnouncement || sentMsg.crosspostable)
+          channel.type === ChannelType.GuildAnnouncement || sentMsg.crosspostable
         ) {
           await sentMsg.crosspost().catch((e) =>
             logger.warning(
-              `Auto-crosspost failed for YouTube message ${sentMsg.id} in channel ${channel.id}: ${e.message}`,
+              `[YOUTUBE_SCHEDULER] Auto-crosspost failed for YouTube message ${sentMsg.id} in channel ${channel.id}: ${e.message}`,
             ),
           );
         }

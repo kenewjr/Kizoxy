@@ -95,8 +95,8 @@ function _normalize(username, raw) {
       images: Array.isArray(v.images) ? v.images : [],
       title: v.title || "",
       createTime: v.createTime || null,
-      isLive: Boolean(v.isLive),
     }));
+  videos.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
 
   return {
     user: {
@@ -160,6 +160,8 @@ async function _fetchTikwmSearch(username) {
             isLive: false,
           };
         });
+
+        videos.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
 
         return {
           user: {
