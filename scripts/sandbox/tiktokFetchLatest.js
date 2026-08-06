@@ -3,7 +3,6 @@
 //
 // Usage:
 //   node scripts/sandbox/tiktokFetchLatest.js "<url|@username|username>"
-// Requires TIKTOK_API_BASE in .env.
 require("dotenv").config();
 
 const { resolveProfile } = require("../../src/integrations/tiktok/resolver");
@@ -22,7 +21,7 @@ async function main() {
   console.log("Resolved username:", resolved.username);
   console.log("Resolved profile URL:", resolved.profileUrl);
 
-  console.log("Fetching profile from provider...");
+  console.log("Fetching profile via scraper...");
   const data = await fetchProfile(resolved.username);
 
   console.log("----------------------------------------");

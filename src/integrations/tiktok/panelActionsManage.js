@@ -189,46 +189,45 @@ async function handleTest(interaction, client, subId) {
       });
     }
 
-    let profile = null;
-    let fetchError = null;
-
+    let profile;
     try {
       profile = await fetchProfile(sub.username);
     } catch (err) {
-      fetchError = err;
-    }
-
-    let targetVideo = null;
-    let isRealFetch = false;
-    let avatar = null;
-
-    if (profile) {
-      avatar = profile.user.avatar || null;
-      if (profile.videos && profile.videos.length > 0) {
-        targetVideo = profile.videos.find((v) => !v.isLive) || profile.videos[0];
-        isRealFetch = true;
+      if (err instanceof TiktokAccountNotFoundError) {
+        return interaction.followUp({
+          content: `❌ Account **@${sub.username}** was not found on TikTok (deleted or renamed).`,
+          ephemeral: true,
+        });
       }
+      return interaction.followUp({
+        content: `❌ Failed to fetch TikTok profile for **@${sub.username}**: ${err.message}`,
+        ephemeral: true,
+      });
     }
+
+    const avatar = profile?.user?.avatar || null;
+    const targetVideo = profile?.videos?.find((v) => !v.isLive) || profile?.videos?.[0];
 
     if (!targetVideo) {
-      targetVideo = {
-        id: "0000000000000000000",
-        url: sub.profileUrl,
-        cover: null,
-        title: profile
-          ? `Force fetch success for @${sub.username} (no video posts found).`
-          : `Sample notification — this is what a new video looks like.`,
-        createTime: Math.floor(Date.now() / 1000),
-        isLive: false,
-      };
+      return interaction.followUp({
+        content: `⚠️ Account **@${sub.username}** has no video or photo posts available on TikTok.`,
+        ephemeral: true,
+      });
     }
 
-    const embed = notifier.buildVideoEmbed(client, {
-      username: sub.username,
-      video: targetVideo,
-      avatar,
-    });
-    const row = notifier.buildLinkRow("Watch on TikTok", targetVideo.url);
+    const embed =
+      targetVideo.type === "photo"
+        ? notifier.buildPhotoEmbed(client, {
+            username: sub.username,
+            video: targetVideo,
+            avatar,
+          })
+        : notifier.buildVideoEmbed(client, {
+            username: sub.username,
+            video: targetVideo,
+            avatar,
+          });
+    const row = notifier.buildLinkRow("View on TikTok", targetVideo.url);
 
     const delivered = await notifier.send(client, sub, {
       embed,
@@ -238,24 +237,13 @@ async function handleTest(interaction, client, subId) {
 
     if (!delivered) {
       return interaction.followUp({
-        content: `❌ Couldn't post to <#${sub.discordChannelId}>. Check the bot's permissions there.`,
+        content: `❌ Couldn't post to <#${sub.discordChannelId}>. Check bot permissions in that channel.`,
         ephemeral: true,
       });
     }
 
-    let statusNote = "";
-    if (fetchError) {
-      if (fetchError instanceof TiktokAccountNotFoundError) {
-        statusNote = `\n⚠️ **Fetch Warning**: Account **@${sub.username}** was not found on TikTok (may be deleted, renamed, or private). A fallback test was delivered to verify channel permissions.`;
-      } else {
-        statusNote = `\n⚠️ **Fetch Warning**: TikTok provider fetch failed (${fetchError.message}). A fallback test was delivered to verify channel permissions.`;
-      }
-    } else if (isRealFetch) {
-      statusNote = `\n🚀 **Force Fetch Successful**: Fetched and delivered actual latest video (\`${targetVideo.id}\`) from TikTok!`;
-    }
-
     return interaction.followUp({
-      content: `✅ Sent a test notification to <#${sub.discordChannelId}> for **@${sub.username}**.${statusNote}`,
+      content: `🚀 **Test Notification Delivered**: Sent actual latest activity (\`${targetVideo.id}\`) for **@${sub.username}** to <#${sub.discordChannelId}>.`,
       ephemeral: true,
     });
   } catch (error) {

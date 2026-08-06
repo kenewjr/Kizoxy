@@ -17,26 +17,40 @@ function formatPublishTime(createTime) {
 }
 
 function buildVideoEmbed(client, { username, video, avatar }) {
+  const isPhoto = video.type === "photo";
   const publish = formatPublishTime(video.createTime);
+  const typeLabel = isPhoto ? "Photo" : "Video";
   const fields = [
     {
       name: "Creator",
       value: `[@${username}](https://www.tiktok.com/@${username})`,
       inline: true,
     },
-    { name: "Video", value: `[Watch on TikTok](${video.url})`, inline: true },
+    { name: typeLabel, value: `[View on TikTok](${video.url})`, inline: true },
   ];
   if (publish) fields.push({ name: "Published", value: publish, inline: true });
 
+  const authorBadge = isPhoto
+    ? `📸 New TikTok Photo • @${username}`
+    : `🎬 New TikTok Video • @${username}`;
+  const defaultTitle = isPhoto ? "New TikTok photo post" : "New TikTok video";
+
   return Embeds.withColor(client, VIDEO_COLOR, {
     author: {
-      name: `🎬 New TikTok Video • @${username}`,
+      name: authorBadge,
       iconURL: avatar || undefined,
     },
-    title: video.title ? video.title.slice(0, 256) : "New TikTok video",
+    title: video.title ? video.title.slice(0, 256) : defaultTitle,
     url: video.url,
     fields,
     image: video.cover || undefined,
+  });
+}
+
+function buildPhotoEmbed(client, options) {
+  return buildVideoEmbed(client, {
+    ...options,
+    video: { ...options.video, type: "photo" },
   });
 }
 
@@ -107,6 +121,7 @@ function mentionContent(subscription, prefix) {
 
 module.exports = {
   buildVideoEmbed,
+  buildPhotoEmbed,
   buildLiveEmbed,
   buildLinkRow,
   mentionContent,

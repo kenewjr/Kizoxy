@@ -1,12 +1,6 @@
 const tiktokClient = require("../../../src/integrations/tiktok/client");
-const config = require("../../../src/config/config");
 
-jest.mock("../../../src/config/config", () => ({
-  TIKTOK_API_BASE: null,
-  TIKTOK_API_KEY: null,
-}));
-
-describe("TikTok Client Tests", () => {
+describe("TikTok Client Scraper Tests", () => {
   let originalFetch;
 
   beforeAll(() => {
@@ -19,95 +13,22 @@ describe("TikTok Client Tests", () => {
 
   beforeEach(() => {
     global.fetch = jest.fn();
-    config.TIKTOK_API_BASE = null;
-    config.TIKTOK_API_KEY = null;
   });
 
   it("isConfigured is always true", () => {
     expect(tiktokClient.isConfigured()).toBe(true);
   });
 
-  describe("Custom API Provider", () => {
-    beforeEach(() => {
-      config.TIKTOK_API_BASE = "https://custom.tiktok.api";
-      config.TIKTOK_API_KEY = "token123";
-    });
-
-    it("fetches and normalizes user profile successfully", async () => {
-      const mockRaw = {
-        user: {
-          id: 12345,
-          username: "therock",
-          avatar: "http://avatar.jpg",
-          live: true,
-          liveId: 999,
-        },
-        videos: [
-          {
-            id: 888,
-            url: "http://video.url",
-            title: "Video title",
-            createTime: 1600000000,
-            isLive: false,
-          },
-        ],
-      };
-
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => mockRaw,
-      });
-
-      const profile = await tiktokClient.fetchProfile("therock");
-      expect(global.fetch).toHaveBeenCalledWith(
-        "https://custom.tiktok.api/user/therock",
-        expect.objectContaining({
-          headers: { Authorization: "Bearer token123" },
-        }),
-      );
-      expect(profile.user.id).toBe("12345");
-      expect(profile.user.live).toBe(true);
-      expect(profile.videos[0].id).toBe("888");
-    });
-
-    it("throws TiktokAccountNotFoundError on 404 response", async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-      });
-
-      await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
-        tiktokClient.TiktokAccountNotFoundError,
-      );
-    });
-
-    it("throws general Error on other HTTP error statuses", async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-      });
-
-      await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
-        "HTTP 500",
-      );
-    });
-  });
-
-  describe("TikWM Scraper Fallback", () => {
-    beforeEach(() => {
-      config.TIKTOK_API_BASE = null;
-    });
-
-    it("fetches and normalizes from TikWM API successfully", async () => {
+  describe("TikWM Scraper", () => {
+    it("fetches and normalizes video posts successfully", async () => {
       const mockRaw = {
         code: 0,
         msg: "success",
         data: {
           videos: [
             {
-              video_id: "888",
-              title: "Video title",
+              video_id: "888123",
+              title: "Awesome TikTok Video",
               create_time: 1600000000,
               author: {
                 id: 12345,
@@ -128,7 +49,44 @@ describe("TikTok Client Tests", () => {
       const profile = await tiktokClient.fetchProfile("therock");
       expect(profile.user.id).toBe("12345");
       expect(profile.user.username).toBe("therock");
-      expect(profile.videos[0].id).toBe("888");
+      expect(profile.user.avatar).toBe("http://avatar.jpg");
+      expect(profile.videos[0].id).toBe("888123");
+      expect(profile.videos[0].type).toBe("video");
+      expect(profile.videos[0].url).toBe("https://www.tiktok.com/@therock/video/888123");
+    });
+
+    it("fetches and normalizes photo / reels slide posts successfully", async () => {
+      const mockRaw = {
+        code: 0,
+        msg: "success",
+        data: {
+          videos: [
+            {
+              video_id: "777456",
+              title: "Cool Photo Slide",
+              create_time: 1600000500,
+              images: ["http://img1.jpg", "http://img2.jpg"],
+              author: {
+                id: 12345,
+                unique_id: "therock",
+                avatar: "http://avatar.jpg",
+              },
+            },
+          ],
+        },
+      };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockRaw,
+      });
+
+      const profile = await tiktokClient.fetchProfile("therock");
+      expect(profile.videos[0].id).toBe("777456");
+      expect(profile.videos[0].type).toBe("photo");
+      expect(profile.videos[0].url).toBe("https://www.tiktok.com/@therock/photo/777456");
+      expect(profile.videos[0].images).toEqual(["http://img1.jpg", "http://img2.jpg"]);
     });
 
     it("throws TiktokAccountNotFoundError if user not found via TikWM", async () => {
@@ -155,27 +113,55 @@ describe("TikTok Client Tests", () => {
       );
     });
 
-    it("throws error if TikWM response data is missing", async () => {
+    it("falls back to HTML scraper if TikWM fails", async () => {
+      // 1. TikWM fails with network error
+      global.fetch.mockRejectedValueOnce(new Error("Network Error"));
+
+      // 2. HTML fallback succeeds
+      const htmlData = `
+        <html>
+          <body>
+            <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">
+              {
+                "__DEFAULT_SCOPE__": {
+                  "webapp.user-detail": {
+                    "userInfo": {
+                      "user": {
+                        "id": "55555",
+                        "uniqueId": "therock",
+                        "avatarThumb": "http://avatar_html.jpg",
+                        "roomStatus": 1,
+                        "roomId": "999888"
+                      }
+                    },
+                    "itemList": [
+                      {
+                        "id": "111222",
+                        "desc": "HTML Scraped Video",
+                        "createTime": 1600000000,
+                        "video": { "cover": "http://cover.jpg" }
+                      }
+                    ]
+                  }
+                }
+              }
+            </script>
+          </body>
+        </html>
+      `;
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ code: 0, msg: "success" }),
+        text: async () => htmlData,
       });
 
-      await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
-        "Empty response from TikWM API",
-      );
-    });
-
-    it("throws HTTP error on scraper response failure", async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-      });
-
-      await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
-        "HTTP 403",
-      );
+      const profile = await tiktokClient.fetchProfile("therock");
+      expect(profile.user.id).toBe("55555");
+      expect(profile.user.live).toBe(true);
+      expect(profile.user.liveId).toBe("999888");
+      expect(profile.videos[0].id).toBe("111222");
+      expect(profile.videos[0].title).toBe("HTML Scraped Video");
     });
   });
 });

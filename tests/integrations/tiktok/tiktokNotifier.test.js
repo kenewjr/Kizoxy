@@ -26,6 +26,24 @@ describe("TikTok Notifier Tests", () => {
       expect(embed.data.image.url).toBe("https://cover.url");
     });
 
+    it("builds photo embed correctly", () => {
+      const embed = tiktokNotifier.buildPhotoEmbed(mockClient, {
+        username: "therock",
+        video: {
+          createTime: Math.floor(Date.now() / 1000),
+          title: "New Photo Slide",
+          url: "https://tiktok.com/@therock/photo/2",
+          cover: "https://cover.url",
+          type: "photo",
+        },
+        avatar: "https://avatar.url",
+      });
+
+      expect(embed.data.author.name).toContain("📸 New TikTok Photo");
+      expect(embed.data.title).toBe("New Photo Slide");
+      expect(embed.data.url).toBe("https://tiktok.com/@therock/photo/2");
+    });
+
     it("builds live embed correctly", () => {
       const embed = tiktokNotifier.buildLiveEmbed(mockClient, {
         username: "therock",
