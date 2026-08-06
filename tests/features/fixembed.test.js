@@ -17,7 +17,7 @@ describe("FixEmbed Feature Tests", () => {
     const results = await extractFixedLinks(content);
     expect(results.length).toBe(1);
     expect(results[0].platform).toBe("Instagram");
-    expect(results[0].fixed).toContain("fxstagram.com");
+    expect(results[0].fixed).toContain("kkinstagram.com");
   });
 
   it("respects platformsSettings exclusions", async () => {

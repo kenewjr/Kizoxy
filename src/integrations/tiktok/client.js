@@ -121,6 +121,51 @@ function _normalize(username, raw) {
   };
 }
 
+async function _fetchHtmlProfile(username) {
+  const url = `https://www.tiktok.com/@${encodeURIComponent(username)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: controller.signal,
+    });
+    if (res.status === 404) throw new TiktokAccountNotFoundError(username);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    const match = html.match(
+      /<script\s+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"\s+type="application\/json">([\s\S]*?)<\/script>/,
+    );
+    if (!match) throw new Error("Rehydration script not found in HTML");
+    const json = JSON.parse(match[1]);
+    const scope = json["__DEFAULT_SCOPE__"] || {};
+    const userDetail = scope["webapp.user-detail"] || {};
+    if (userDetail.statusCode === 209002 || !userDetail.userInfo) {
+      throw new TiktokAccountNotFoundError(username);
+    }
+    const user = userDetail.userInfo.user || {};
+    return {
+      user: {
+        id: user.id != null ? String(user.id) : null,
+        username: user.uniqueId || username,
+        avatar: user.avatarThumb || user.avatarLarger || null,
+        live: Boolean(user.roomStatus === 1 || user.isLive),
+        liveId: user.roomId != null ? String(user.roomId) : null,
+        liveUrl: `https://www.tiktok.com/@${user.uniqueId || username}/live`,
+      },
+      videos: [],
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Fetch + normalize a profile. Throws TiktokAccountNotFoundError on 404 so the
 // scheduler can distinguish a deleted account from a transient network error.
 async function fetchProfile(username) {
@@ -149,7 +194,7 @@ async function fetchProfile(username) {
       clearTimeout(timer);
     }
   } else {
-    // Scraper fallback (TikWM API)
+    // Scraper fallback (TikWM API with Direct HTML fallback)
     const url = `https://www.tikwm.com/api/user/posts?unique_id=${encodeURIComponent(username)}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIKTOK_HTTP_TIMEOUT_MS);
@@ -179,8 +224,14 @@ async function fetchProfile(username) {
       return _normalize(username, data);
     } catch (err) {
       if (err instanceof TiktokAccountNotFoundError) throw err;
-      logger.warning(`Scraper fetch failed for @${username}: ${err.message}`);
-      throw err;
+      logger.warning(`TikWM fetch failed for @${username}: ${err.message}. Trying direct HTML fallback...`);
+      try {
+        return await _fetchHtmlProfile(username);
+      } catch (htmlErr) {
+        if (htmlErr instanceof TiktokAccountNotFoundError) throw htmlErr;
+        logger.warning(`Direct HTML fetch failed for @${username}: ${htmlErr.message}`);
+        throw err;
+      }
     } finally {
       clearTimeout(timer);
     }

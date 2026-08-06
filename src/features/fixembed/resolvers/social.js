@@ -33,13 +33,13 @@ module.exports = [
     name: "Instagram",
     platformKey: "instagram",
     originalLabel: "Instagram",
-    fixerName: "InstaFix",
+    fixerName: "KKInstagram",
     match: (u) =>
       /https?:\/\/(?:www\.)?instagram\.com\/(?:share\/|p\/|reel(?:s)?\/|tv\/)[^/\s?#]+/i.test(
         u,
       ),
     resolve: async (u, viewMode) => {
-      let fixed = u.replace(/(?:www\.)?instagram\.com/, "fxstagram.com");
+      let fixed = u.replace(/(?:www\.)?instagram\.com/, "kkinstagram.com");
       if (viewMode === "direct")
         fixed += (fixed.includes("?") ? "&" : "?") + "direct=true";
       if (viewMode === "gallery")
