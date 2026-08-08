@@ -1,5 +1,5 @@
 const Logger = require("../../lib/logger");
-const { TIKTOK_HTTP_TIMEOUT_MS } = require("../../config/constants");
+const { TIKTOK_HTTP_TIMEOUT_MS, TIKTOK_CAMOFOX_URL, TIKTOK_CAMOFOX_TIMEOUT_MS } = require("../../config/constants");
 
 const logger = new Logger("TIKTOK");
 
@@ -8,15 +8,18 @@ const logger = new Logger("TIKTOK");
 //
 // Fetches profile & posts without external API keys.
 // Strategy chain (tried in order):
-// 1. TikWM Search API       — only strategy currently returning video data
+// 0. Camofox Browser Proxy  — real-time HTML via anti-bot bypass; authoritative
+//      live status + actual video list. Only active when TIKTOK_CAMOFOX_URL set.
+// 1. TikWM Search API       — only third-party strategy currently returning video
+//      data (verified 2026-08-08). Primary fallback when Camofox unavailable.
 // 2. TikWM User Posts API   — fallback (HTTP 403 as of 2026-08-08)
 // 3. Direct HTML rehydration — authoritative live status; returns 0 videos
 // 4. TikTok oEmbed          — account-exists confirmation only
 // 5. HTML Extraction + TikWM single-video — last resort
 //
-// _liveStatusKnown flag: Strategy 3 sets true (live data from rehydration
-// JSON is authoritative). All others set false → checkLiveStatus() fallback
-// runs. Flag is stripped before returning to callers.
+// _liveStatusKnown flag: Strategies 0 and 3 set true (live data from
+// rehydration JSON is authoritative). All others set false → checkLiveStatus()
+// fallback runs. Flag is stripped before returning to callers.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -31,6 +34,10 @@ const _strategyStats = {
 };
 const _STATS_WINDOW = 100;
 const _TIKWM_SEARCH_FAIL_WARN_THRESHOLD = 10;
+
+// Camofox circuit breaker — if Camofox is unreachable, skip it for 2 minutes
+// rather than adding latency to every fetchProfile() call.
+let _camofoxOfflineUntil = 0;
 
 function _recordStrategyWin(strategyName) {
   try {
@@ -301,6 +308,167 @@ async function _fetchHtmlProfileExtracted(username) {
     };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// Strategy 0: Camofox browser proxy — bypasses TikTok anti-bot with C++-level
+// fingerprint spoofing. Uses tab-based API: inject cookies → create tab →
+// navigate → evaluate rehydration JSON via JS in page context → cleanup.
+// Only used when TIKTOK_CAMOFOX_URL is set and circuit breaker is not tripped.
+async function _fetchCamofox(username) {
+  const base = TIKTOK_CAMOFOX_URL.replace(/\/$/, "");
+  if (!base) throw new Error("Camofox not configured");
+  if (Date.now() < _camofoxOfflineUntil) {
+    throw new Error("Camofox circuit breaker open (recent failure)");
+  }
+
+  const { loadCookies } = require("./cookieStorage");
+  const profileUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}`;
+  const userId = "kizoxy-tiktok";
+  const sessionKey = "kizoxy-session";
+  const timeout = TIKTOK_CAMOFOX_TIMEOUT_MS;
+
+  let tabId = null;
+
+  const cfFetch = async (path, opts = {}) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      const res = await fetch(`${base}${path}`, {
+        ...opts,
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+      });
+      return res;
+    } catch (err) {
+      if (
+        err.name === "AbortError" ||
+        err.message.includes("ECONNREFUSED") ||
+        err.message.includes("ECONNRESET") ||
+        err.message.includes("fetch failed")
+      ) {
+        _camofoxOfflineUntil = Date.now() + 2 * 60 * 1000;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    // Step 1: Inject TikTok session cookies if available
+    const cookies = loadCookies();
+    if (cookies && cookies.length > 0) {
+      const cookieRes = await cfFetch(`/sessions/${userId}/cookies`, {
+        method: "POST",
+        body: JSON.stringify({ cookies }),
+      });
+      if (!cookieRes.ok) {
+        logger.warning(
+          `[TIKTOK_CLIENT] Camofox cookie injection failed: ${cookieRes.status}`,
+        );
+      } else {
+        logger.debug(`[TIKTOK_CLIENT] Camofox: injected ${cookies.length} cookie(s) for @${username}`);
+      }
+    }
+
+    // Step 2: Create tab and navigate
+    const createRes = await cfFetch("/tabs", {
+      method: "POST",
+      body: JSON.stringify({ userId, sessionKey, url: profileUrl }),
+    });
+    if (!createRes.ok) {
+      const err = await createRes.json().catch(() => ({}));
+      throw new Error(`Camofox create tab failed: ${err.error || createRes.status}`);
+    }
+    const createData = await createRes.json();
+    tabId = createData.tabId || createData.id;
+    if (!tabId) throw new Error("Camofox did not return tabId");
+
+    // Step 2: Poll until rehydration script is present in page (max ~15s)
+    let rehydrationJson = null;
+    const pollStart = Date.now();
+    const pollLimit = Math.min(timeout, 15000);
+
+    while (Date.now() - pollStart < pollLimit) {
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const evalRes = await cfFetch(`/tabs/${tabId}/evaluate`, {
+        method: "POST",
+        body: JSON.stringify({
+          userId,
+          expression: `(function(){var el=document.getElementById('__UNIVERSAL_DATA_FOR_REHYDRATION__');return el?el.textContent:null;})()`,
+        }),
+      });
+
+      if (evalRes.ok) {
+        const evalData = await evalRes.json();
+        const text = evalData.result || evalData.value || evalData.output || null;
+        if (text && text !== "null" && text.length > 100) {
+          try {
+            rehydrationJson = JSON.parse(text);
+            break;
+          } catch (_) {
+            // keep polling
+          }
+        }
+      }
+    }
+
+    if (!rehydrationJson) {
+      throw new Error("Rehydration JSON not found in Camofox page after polling");
+    }
+
+    // Step 3: Parse rehydration JSON — same logic as _fetchHtmlProfile
+    const scope = rehydrationJson["__DEFAULT_SCOPE__"] || {};
+    const userDetail = scope["webapp.user-detail"] || {};
+    if (userDetail.statusCode === 209002 || !userDetail.userInfo) {
+      throw new TiktokAccountNotFoundError(username);
+    }
+    const user = userDetail.userInfo.user || {};
+    const isLive = Boolean(user.roomStatus === 1 || user.isLive);
+    const liveId = user.roomId != null ? String(user.roomId) : null;
+    const itemList =
+      userDetail.itemList || scope["webapp.user-post"]?.itemList || [];
+
+    const videos = itemList
+      .map((item) => {
+        const isPhoto =
+          Boolean(item.images && item.images.length > 0) || item.imagePost;
+        const type = isPhoto ? "photo" : "video";
+        const id = String(item.id || item.video?.id || "");
+        return {
+          id,
+          type,
+          url: `https://www.tiktok.com/@${user.uniqueId || username}/${type}/${id}`,
+          cover: item.video?.cover || item.cover || null,
+          images: item.images || [],
+          title: item.desc || item.title || "",
+          createTime: item.createTime || null,
+          isLive: false,
+        };
+      })
+      .filter((v) => v.id);
+
+    videos.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
+
+    return {
+      user: {
+        id: user.id != null ? String(user.id) : null,
+        username: user.uniqueId || username,
+        avatar: user.avatarThumb || user.avatarLarger || null,
+        live: isLive,
+        liveId: liveId,
+        liveUrl: `https://www.tiktok.com/@${user.uniqueId || username}/live`,
+        _liveStatusKnown: true, // authoritative: rehydration JSON via Camofox
+      },
+      videos,
+    };
+  } finally {
+    // Step 4: Always clean up tab regardless of success/failure
+    if (tabId) {
+      cfFetch(`/tabs/${tabId}?userId=${userId}`, { method: "DELETE" }).catch(() => {});
+    }
   }
 }
 
@@ -625,6 +793,28 @@ async function fetchProfile(username) {
     return profile;
   };
 
+  // Strategy 0: Camofox Browser Proxy (only when TIKTOK_CAMOFOX_URL is set)
+  // Real-time HTML via anti-bot bypass. Returns actual video list + live status.
+  if (TIKTOK_CAMOFOX_URL) {
+    try {
+      logger.info(
+        `[TIKTOK_CLIENT] Strategy 0: Fetching @${cleanUser} via Camofox Browser...`,
+      );
+      const profile = await _fetchCamofox(cleanUser);
+      logger.success(
+        `[TIKTOK_CLIENT] Strategy 0 Success: Fetched @${cleanUser} via Camofox (${profile.videos.length} video(s) found)`,
+      );
+      _recordStrategyWin("Camofox");
+      return applyLiveAndSort(profile);
+    } catch (err) {
+      if (err instanceof TiktokAccountNotFoundError) throw err;
+      logger.warning(
+        `[TIKTOK_CLIENT] Strategy 0 (Camofox) failed for @${cleanUser}: ${err.message}`,
+      );
+      errors.push(`Camofox: ${err.message}`);
+    }
+  }
+
   // Strategy 1: TikWM Search API (count=50)
   // NOTE: Only strategy currently returning video data (verified 2026-08-08).
   // If this starts failing consistently, check /api/stats tiktok_strategy_stats.
@@ -739,6 +929,7 @@ module.exports = {
   isConfigured,
   TiktokAccountNotFoundError,
   _normalize,
+  _fetchCamofox,
 };
 
 

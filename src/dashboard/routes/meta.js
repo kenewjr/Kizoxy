@@ -89,6 +89,56 @@ router.get("/stats", async (req, res) => {
   }
 });
 
+// GET /api/tiktok/cookies/status — check if cookies are stored
+router.get("/tiktok/cookies/status", (req, res) => {
+  try {
+    const { loadCookies } = require("../../integrations/tiktok/cookieStorage");
+    const cookies = loadCookies();
+    if (!cookies) return res.json({ has_cookies: false, count: 0 });
+    res.json({ has_cookies: true, count: cookies.length });
+  } catch (err) {
+    logger.error(`GET /api/tiktok/cookies/status: ${err.message}`);
+    res.status(500).json({ error: "Failed to check cookie status" });
+  }
+});
+
+// POST /api/tiktok/cookies — upload TikTok session cookies (JSON array)
+// Each cookie: { name, value, domain, path, expires, httpOnly, secure, sameSite }
+router.post("/tiktok/cookies", (req, res) => {
+  try {
+    const cookies = req.body;
+    if (!Array.isArray(cookies) || cookies.length === 0) {
+      return res.status(400).json({ error: "Body must be a non-empty array of cookie objects" });
+    }
+    // Validate minimal required fields
+    for (const c of cookies) {
+      if (!c.name || !c.value) {
+        return res.status(400).json({ error: "Each cookie must have name and value fields" });
+      }
+    }
+    const { saveCookies } = require("../../integrations/tiktok/cookieStorage");
+    saveCookies(cookies);
+    logger.info(`[DASHBOARD] TikTok cookies updated: ${cookies.length} cookie(s) stored`);
+    res.json({ saved: true, count: cookies.length });
+  } catch (err) {
+    logger.error(`POST /api/tiktok/cookies: ${err.message}`);
+    res.status(500).json({ error: "Failed to save cookies" });
+  }
+});
+
+// DELETE /api/tiktok/cookies — remove stored cookies
+router.delete("/tiktok/cookies", (req, res) => {
+  try {
+    const { deleteCookies } = require("../../integrations/tiktok/cookieStorage");
+    deleteCookies();
+    logger.info("[DASHBOARD] TikTok cookies deleted");
+    res.json({ deleted: true });
+  } catch (err) {
+    logger.error(`DELETE /api/tiktok/cookies: ${err.message}`);
+    res.status(500).json({ error: "Failed to delete cookies" });
+  }
+});
+
 // GET /api/players
 router.get("/players", (req, res) => {
   try {

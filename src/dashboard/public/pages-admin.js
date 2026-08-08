@@ -224,6 +224,9 @@ async function renderConfig() {
               <span x-show="result?.error" x-text="'❌ ' + result?.error"></span>
             </div>
           </div>
+
+          <!-- TikTok Cookie Section -->
+          <div id="tt-cookie-section"></div>
         </div>
 
       </div>
@@ -251,6 +254,9 @@ async function renderConfig() {
     if (window.Alpine) {
       window.Alpine.initTree(content);
     }
+
+    // Render TikTok cookie section (only visible if TIKTOK_CAMOFOX_URL is set)
+    renderTiktokCookies(document.getElementById("tt-cookie-section"));
 
     state.pageCleanup = () => {
       delete window.revealField;
@@ -292,3 +298,78 @@ window.deployPanel = function () {
     },
   };
 };
+
+// ── TikTok Cookie Management (for Camofox Strategy 0) ──
+async function renderTiktokCookies(el) {
+  if (!el) return;
+  try {
+    const status = await api.get("/tiktok/cookies/status");
+    const hasCookies = status.has_cookies;
+    el.innerHTML = `
+      <div class="card" style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--text-1)">🍪 TikTok Session Cookies <span style="font-size:12px;font-weight:400;color:var(--text-3)">(for Camofox Strategy 0)</span></div>
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:12px">
+          Inject TikTok session cookies so Camofox can fetch full video lists. Without cookies, TikTok shows login page and returns empty video list.<br>
+          <span style="color:var(--text-3);font-size:12px">Export from browser with <b>EditThisCookie</b> or <b>Cookie-Editor</b> extension → Copy as JSON → paste below.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <span style="font-size:13px">Status:</span>
+          ${hasCookies
+            ? `<span style="color:var(--green);font-weight:600">✅ Cookies stored (${status.count} cookies)</span>`
+            : `<span style="color:var(--text-3)">⚠️ No cookies — Camofox will see logged-out TikTok</span>`}
+          ${hasCookies ? `<button class="btn btn--danger btn--sm" onclick="deleteTiktokCookies()">🗑 Remove Cookies</button>` : ""}
+        </div>
+        <div id="tt-cookie-form">
+          <textarea id="tt-cookie-json" class="input" rows="6" style="font-family:var(--font-mono);font-size:11px;resize:vertical;min-height:80px" placeholder='[{"name":"sessionid","value":"abc123","domain":".tiktok.com","path":"/","httpOnly":true,"secure":true}]'></textarea>
+          <div id="tt-cookie-error" class="inline-error" style="display:none;margin-top:4px"></div>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button class="btn btn--primary btn--sm" onclick="uploadTiktokCookies()">💾 Save Cookies</button>
+          </div>
+        </div>
+      </div>`;
+  } catch (err) {
+    if (el) el.innerHTML = '<div style="color:var(--text-3);font-size:13px">Could not load cookie status (Camofox may not be configured).</div>';
+  }
+}
+
+async function uploadTiktokCookies() {
+  const errEl = document.getElementById("tt-cookie-error");
+  const raw = document.getElementById("tt-cookie-json")?.value?.trim();
+  errEl.style.display = "none";
+  if (!raw) {
+    errEl.textContent = "Paste cookie JSON first.";
+    errEl.style.display = "block";
+    return;
+  }
+  let cookies;
+  try {
+    cookies = JSON.parse(raw);
+    if (!Array.isArray(cookies) || cookies.length === 0) throw new Error("Must be a non-empty array");
+  } catch (e) {
+    errEl.textContent = `Invalid JSON: ${e.message}`;
+    errEl.style.display = "block";
+    return;
+  }
+  try {
+    const res = await api.post("/tiktok/cookies", cookies);
+    showToast(`✅ ${res.count} cookies saved`, "success");
+    const el = document.getElementById("tt-cookie-section");
+    if (el) renderTiktokCookies(el);
+  } catch (err) {
+    const body = await err.json?.().catch(() => ({}));
+    errEl.textContent = body?.error || "Failed to save cookies.";
+    errEl.style.display = "block";
+  }
+}
+
+async function deleteTiktokCookies() {
+  try {
+    await api.del("/tiktok/cookies");
+    showToast("Cookies removed", "success");
+    const el = document.getElementById("tt-cookie-section");
+    if (el) renderTiktokCookies(el);
+  } catch {
+    showToast("Failed to remove cookies", "error");
+  }
+}
+

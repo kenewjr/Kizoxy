@@ -273,7 +273,15 @@ function ttRow(s, guildId) {
     <td>${toggleHtml("", (s.notifyLive ?? true) !== false, `onchange="patchTtSub('${guildId}','${s.id}','notify_live',this.checked)"`)}</td>
     <td style="white-space:nowrap">
       <button class="btn btn--ghost btn--sm" onclick="toggleTtEdit('${s.id}')">Edit</button>
+      <button class="btn btn--ghost btn--sm" id="tt-check-btn-${s.id}" onclick="ttCheckStatus('${guildId}','${s.id}')">🔍 Check</button>
+      <button class="btn btn--ghost btn--sm" onclick="ttForceNotify('${guildId}','${s.id}','video')" title="Force send latest video notification">📲 Send Video</button>
+      <button class="btn btn--ghost btn--sm" onclick="ttForceNotify('${guildId}','${s.id}','live')" title="Force send live notification (only if currently live)">🔴 Send Live</button>
       <span id="tt-rm-${s.id}"><button class="btn btn--danger btn--sm" onclick="confirmTtRemove('${guildId}','${s.id}')">Remove</button></span>
+    </td>
+  </tr>
+  <tr id="tt-check-result-${s.id}" style="display:none">
+    <td colspan="5" style="background:var(--bg-2);padding:10px 16px;font-size:12px">
+      <div id="tt-check-content-${s.id}"></div>
     </td>
   </tr>
   <tr id="tt-edit-${s.id}" style="display:none">
@@ -394,5 +402,64 @@ async function submitTtAdd(guildId) {
     const body = await err.json?.().catch(() => ({}));
     errEl.textContent = body?.error || "Failed to add subscription.";
     errEl.style.display = "block";
+  }
+}
+
+// Check current status: fetch latest video + live state from TikTok right now.
+async function ttCheckStatus(guildId, subId) {
+  const btn = document.getElementById(`tt-check-btn-${subId}`);
+  const resultRow = document.getElementById(`tt-check-result-${subId}`);
+  const content = document.getElementById(`tt-check-content-${subId}`);
+
+  // Toggle off if already shown
+  if (resultRow.style.display !== "none") {
+    resultRow.style.display = "none";
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Checking..."; }
+  content.innerHTML = '<span style="color:var(--text-3)">Fetching from TikTok...</span>';
+  resultRow.style.display = "table-row";
+
+  try {
+    const data = await api.get(`/guilds/${guildId}/tiktok/${subId}/check`);
+    const liveHtml = data.live
+      ? `<span style="color:var(--green);font-weight:600">🔴 LIVE</span> — liveId: <code>${esc(data.liveId || "?")}</code>`
+      : `<span style="color:var(--text-3)">Not live</span>`;
+    const videoHtml = data.latest_video
+      ? `<div style="margin-top:6px">
+          <b>Latest video:</b> <a href="${esc(data.latest_video.url)}" target="_blank" style="color:var(--accent)">${esc(data.latest_video.title || data.latest_video.id)}</a><br>
+          <span style="color:var(--text-3)">ID: ${esc(data.latest_video.id)} &nbsp;·&nbsp; ${esc(data.latest_video.createTime_iso || "")}</span>
+        </div>`
+      : `<div style="color:var(--text-3);margin-top:4px">No videos found (total fetched: ${data.total_videos_fetched})</div>`;
+    content.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <b style="color:var(--text-1)">@${esc(data.username)}</b>
+        <span style="color:var(--text-3);font-size:11px">checked ${esc(data.checked_at)}</span>
+      </div>
+      <div>Live status: ${liveHtml}</div>
+      <div>Videos fetched: <b>${data.total_videos_fetched}</b></div>
+      ${videoHtml}`;
+  } catch (err) {
+    const body = await err.json?.().catch(() => ({}));
+    content.innerHTML = `<span style="color:var(--red)">${esc(body?.error || "Failed to check status")}</span>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🔍 Check"; }
+  }
+}
+
+// Force-send a notification immediately (bypasses scheduler dedup).
+async function ttForceNotify(guildId, subId, type) {
+  const label = type === "live" ? "live notification" : "latest video notification";
+  try {
+    const data = await api.post(`/guilds/${guildId}/tiktok/${subId}/force-notify`, { type });
+    if (type === "video" && data.video) {
+      showToast(`📲 Sent: ${data.video.title || data.video.id}`, "success");
+    } else {
+      showToast(`✅ ${label} sent`, "success");
+    }
+  } catch (err) {
+    const body = await err.json?.().catch(() => ({}));
+    showToast(body?.error || `Failed to send ${label}`, "error");
   }
 }
