@@ -4,6 +4,7 @@ const config = require("../../config/config");
 const { getBotMeta } = require("../helpers/guildData");
 const youtubeStorage = require("../../persistence/youtubeStorage");
 const tiktokStorage = require("../../persistence/tiktokStorage");
+const { getStrategyStats } = require("../../integrations/tiktok/client");
 
 const logger = new Logger("DASHBOARD");
 
@@ -80,6 +81,7 @@ router.get("/stats", async (req, res) => {
       active_alarm_count: activeAlarmIds.size,
       donate_seen_count: donateSeenStorage.getSeenCount(),
       romaji_cache: romajiConverter.getCacheStats(),
+      tiktok_strategy_stats: (() => { try { return getStrategyStats(); } catch (_) { return null; } })(),
     });
   } catch (err) {
     logger.error(`GET /api/stats: ${err.message}`);
