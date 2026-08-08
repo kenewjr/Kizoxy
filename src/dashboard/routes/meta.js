@@ -104,15 +104,22 @@ router.get("/tiktok/cookies/status", (req, res) => {
 
 // POST /api/tiktok/cookies — upload TikTok session cookies (JSON array)
 // Each cookie: { name, value, domain, path, expires, httpOnly, secure, sameSite }
+// Accepts both plain array and {cookies:[...]} wrapper (Cookie-Editor/EditThisCookie)
 router.post("/tiktok/cookies", (req, res) => {
   try {
-    const cookies = req.body;
+    let cookies = req.body;
+    // Unwrap common wrapper formats from cookie export extensions
+    if (cookies && !Array.isArray(cookies)) {
+      cookies = cookies.cookies || cookies.data || cookies.items || null;
+    }
     if (!Array.isArray(cookies) || cookies.length === 0) {
-      return res.status(400).json({ error: "Body must be a non-empty array of cookie objects" });
+      return res.status(400).json({
+        error: "Body must be a non-empty array of cookie objects (or {cookies:[...]})",
+      });
     }
     // Validate minimal required fields
     for (const c of cookies) {
-      if (!c.name || !c.value) {
+      if (!c.name || c.value === undefined || c.value === null) {
         return res.status(400).json({ error: "Each cookie must have name and value fields" });
       }
     }
