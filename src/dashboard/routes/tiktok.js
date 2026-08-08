@@ -2,6 +2,7 @@ const router = require("express").Router();
 const Logger = require("../../lib/logger");
 const tiktokStorage = require("../../persistence/tiktokStorage");
 const { resolveProfile } = require("../../integrations/tiktok/resolver");
+const { fetchProfile, TiktokAccountNotFoundError } = require("../../integrations/tiktok/client");
 
 const logger = new Logger("DASHBOARD");
 
@@ -140,6 +141,66 @@ router.delete("/:id/tiktok/:subId", async (req, res) => {
   } catch (err) {
     logger.error(`DELETE tiktok sub: ${err.message}`);
     res.status(500).json({ error: "Failed to delete subscription" });
+  }
+});
+
+// GET /api/guilds/:id/tiktok/:subId/check
+// Manual check: fetch live data from TikTok right now, return latest video +
+// live status without triggering any notifications. Use to verify scraper works.
+router.get("/:id/tiktok/:subId/check", async (req, res) => {
+  try {
+    const { id: guildId, subId } = req.params;
+
+    // Verify subscription belongs to this guild.
+    const subs = await tiktokStorage.listSubscriptions(guildId);
+    const sub = subs.find((s) => s.id === subId);
+    if (!sub) {
+      return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    let profile;
+    try {
+      profile = await fetchProfile(sub.username);
+    } catch (err) {
+      if (err instanceof TiktokAccountNotFoundError) {
+        return res.status(404).json({
+          error: `TikTok account @${sub.username} not found`,
+          username: sub.username,
+        });
+      }
+      return res.status(502).json({
+        error: `Failed to fetch TikTok profile: ${err.message}`,
+        username: sub.username,
+      });
+    }
+
+    const latestVideo = profile.videos.find((v) => !v.isLive) || profile.videos[0] || null;
+
+    res.json({
+      username: profile.user.username,
+      avatar: profile.user.avatar,
+      live: profile.user.live,
+      liveId: profile.user.liveId || null,
+      liveUrl: profile.user.liveUrl,
+      total_videos_fetched: profile.videos.length,
+      latest_video: latestVideo
+        ? {
+            id: latestVideo.id,
+            type: latestVideo.type,
+            url: latestVideo.url,
+            title: latestVideo.title || null,
+            cover: latestVideo.cover || null,
+            createTime: latestVideo.createTime || null,
+            createTime_iso: latestVideo.createTime
+              ? new Date(latestVideo.createTime * 1000).toISOString()
+              : null,
+          }
+        : null,
+      checked_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error(`GET tiktok check: ${err.message}`);
+    res.status(500).json({ error: "Failed to check TikTok profile" });
   }
 });
 
