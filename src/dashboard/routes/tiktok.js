@@ -204,4 +204,107 @@ router.get("/:id/tiktok/:subId/check", async (req, res) => {
   }
 });
 
+// POST /api/guilds/:id/tiktok/:subId/force-notify
+// Force-send a notification right now using live data from TikTok.
+// Bypasses scheduler dedup state — use for manual testing only.
+// Body (optional): { "type": "video" | "live" }  — defaults to "video"
+router.post("/:id/tiktok/:subId/force-notify", async (req, res) => {
+  try {
+    const { id: guildId, subId } = req.params;
+    const notifyType = req.body?.type === "live" ? "live" : "video";
+
+    const subs = await tiktokStorage.listSubscriptions(guildId);
+    const sub = subs.find((s) => s.id === subId);
+    if (!sub) {
+      return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    const discordClient = req.app.locals.client;
+    if (!discordClient) {
+      return res.status(503).json({ error: "Discord client not available" });
+    }
+
+    let profile;
+    try {
+      profile = await fetchProfile(sub.username);
+    } catch (err) {
+      if (err instanceof TiktokAccountNotFoundError) {
+        return res.status(404).json({
+          error: `TikTok account @${sub.username} not found`,
+        });
+      }
+      return res.status(502).json({
+        error: `Failed to fetch TikTok profile: ${err.message}`,
+      });
+    }
+
+    const notifier = require("../../integrations/tiktok/notifier");
+    const { buildContent } = require("../../lib/notificationTemplate");
+
+    if (notifyType === "live") {
+      if (!profile.user.live) {
+        return res.status(409).json({
+          error: `@${sub.username} is not currently live`,
+          live: false,
+        });
+      }
+      const liveUrl = profile.user.liveUrl;
+      const embed = notifier.buildLiveEmbed(discordClient, {
+        username: sub.username,
+        liveUrl,
+        avatar: profile.user.avatar,
+      });
+      const row = notifier.buildLinkRow("Join the live", liveUrl);
+      const content = buildContent({
+        customMessage: sub.customMessage,
+        mentionRoleId: sub.mentionRoleId,
+        defaultPrefix: `🔴 [TIKTOK LIVE] @${sub.username} is live on TikTok!`,
+        vars: { name: `@${sub.username}`, url: liveUrl, title: `@${sub.username} is live`, type: "live" },
+      });
+      await notifier.send(discordClient, sub, { embed, row, content });
+      return res.json({ sent: true, type: "live", liveUrl });
+    }
+
+    // type === "video"
+    const latest = profile.videos.find((v) => !v.isLive) || profile.videos[0];
+    if (!latest) {
+      return res.status(409).json({
+        error: `No videos found for @${sub.username}`,
+        total_videos_fetched: profile.videos.length,
+      });
+    }
+
+    const embed = notifier.buildVideoEmbed(discordClient, {
+      username: sub.username,
+      video: latest,
+      avatar: profile.user.avatar,
+    });
+    const row = notifier.buildLinkRow("Watch on TikTok", latest.url);
+    const content = buildContent({
+      customMessage: sub.customMessage,
+      mentionRoleId: sub.mentionRoleId,
+      defaultPrefix: `📲 [TIKTOK] @${sub.username} posted a new video`,
+      vars: { name: `@${sub.username}`, url: latest.url, title: latest.title || "", type: "video" },
+    });
+    await notifier.send(discordClient, sub, { embed, row, content });
+
+    return res.json({
+      sent: true,
+      type: "video",
+      video: {
+        id: latest.id,
+        url: latest.url,
+        title: latest.title || null,
+        createTime: latest.createTime || null,
+        createTime_iso: latest.createTime
+          ? new Date(latest.createTime * 1000).toISOString()
+          : null,
+      },
+    });
+  } catch (err) {
+    logger.error(`POST tiktok force-notify: ${err.message}`);
+    res.status(500).json({ error: "Failed to send notification" });
+  }
+});
+
 module.exports = router;
