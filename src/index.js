@@ -110,6 +110,9 @@ async function bootstrap() {
       `${failed.length}/${results.length} loaders failed (${failed.join(", ")}); booting in degraded mode (${totalMs}ms)`,
     );
   }
+  bootLogger.info(
+    `Prefix commands active with prefix "${client.prefix}" (${client.prefixCommands.size} total keys incl. aliases)`,
+  );
 }
 
 const { sendErrorWebhook } = require("./lib/webhookReporter");

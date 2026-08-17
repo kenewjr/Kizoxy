@@ -1,344 +1,194 @@
+jest.mock("../../../src/integrations/scraperService/client");
+
+const scraperService = require("../../../src/integrations/scraperService/client");
 const tiktokClient = require("../../../src/integrations/tiktok/client");
 
-describe("TikTok Client", () => {
-  let originalFetch;
-
-  beforeAll(() => {
-    originalFetch = global.fetch;
-  });
-
-  afterAll(() => {
-    global.fetch = originalFetch;
-  });
-
+describe("TikTok Client (kizoxy-scraper backed)", () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    jest.clearAllMocks();
   });
-
-  // Helper: returns true if any fetch call targeted a /live URL
-  function liveFetchCalled() {
-    return global.fetch.mock.calls.some(
-      (args) => typeof args[0] === "string" && args[0].includes("/live"),
-    );
-  }
 
   it("isConfigured always returns true", () => {
     expect(tiktokClient.isConfigured()).toBe(true);
   });
 
-  // ---------------------------------------------------------------------------
-  // _liveStatusKnown gating
-  // ---------------------------------------------------------------------------
-  describe("_liveStatusKnown gating in applyLiveAndSort", () => {
-    it("Strategy 3 (Direct HTML) wins: _liveStatusKnown true, live true → preserved, no /live fetch", async () => {
-      // S1 TikWM Search fails (2 queries)
-      global.fetch
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        // S2 TikWM User Posts fails
-        .mockResolvedValueOnce({ ok: false, status: 403 })
-        // S3 Direct HTML succeeds with live:true
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: async () => `<html><body>
-            <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">
-              {"__DEFAULT_SCOPE__":{"webapp.user-detail":{"userInfo":{"user":{"id":"55555","uniqueId":"testuser","avatarThumb":"http://a.jpg","roomStatus":1,"roomId":"999888"}},"itemList":[]}}}
-            </script></body></html>`,
-        });
+  describe("isValidTikTokId", () => {
+    it("accepts 15-22 digit numeric snowflake IDs", () => {
+      expect(tiktokClient.isValidTikTokId("7653055317907131656")).toBe(true);
+      expect(tiktokClient.isValidTikTokId("123456789012345")).toBe(true);
+    });
 
-      const profile = await tiktokClient.fetchProfile("testuser");
+    it("rejects non-numeric, too-short, too-long, or empty IDs", () => {
+      expect(tiktokClient.isValidTikTokId("")).toBe(false);
+      expect(tiktokClient.isValidTikTokId(null)).toBe(false);
+      expect(tiktokClient.isValidTikTokId("abc123")).toBe(false);
+      expect(tiktokClient.isValidTikTokId("123")).toBe(false);
+      expect(tiktokClient.isValidTikTokId("1".repeat(23))).toBe(false);
+    });
+  });
 
+  describe("fetchProfile() — happy path", () => {
+    it("maps posts from the scraper service and reports live status", async () => {
+      scraperService.getTiktokPosts.mockResolvedValue({
+        success: true,
+        source: "fast",
+        diagnostic: "browser captured 0 items across 2 API responses",
+        data: [
+          { id: "7653055317907131656", desc: "Newest", create_time: 1781865900, cover_url: "http://cover1.jpg" },
+          { id: "7653055317907131600", desc: "Older", create_time: 1781865800, cover_url: "http://cover2.jpg" },
+        ],
+      });
+      scraperService.getTiktokLiveStatus.mockResolvedValue({
+        success: true,
+        source: "fast",
+        data: { is_live: true, video_id: "999888" },
+      });
+
+      const profile = await tiktokClient.fetchProfile("@TestUser");
+
+      expect(profile.user.username).toBe("testuser");
       expect(profile.user.live).toBe(true);
       expect(profile.user.liveId).toBe("999888");
-      // _liveStatusKnown:true → no extra /live fetch
-      expect(liveFetchCalled()).toBe(false);
+      expect(profile.videos).toHaveLength(2);
+      // Sorted newest-first by createTime.
+      expect(profile.videos[0].id).toBe("7653055317907131656");
+      expect(profile.videos[0].url).toBe(
+        "https://www.tiktok.com/@testuser/video/7653055317907131656",
+      );
+      expect(profile.source).toBe("fast");
+      expect(profile.diagnostic).toBe(
+        "browser captured 0 items across 2 API responses",
+      );
     });
 
-    it("Strategy 3 (Direct HTML) wins: _liveStatusKnown true, live false → preserved as false, no /live fetch", async () => {
-      global.fetch
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: false, status: 403 })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: async () => `<html><body>
-            <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">
-              {"__DEFAULT_SCOPE__":{"webapp.user-detail":{"userInfo":{"user":{"id":"55555","uniqueId":"testuser","avatarThumb":"http://a.jpg","roomStatus":0}},"itemList":[]}}}
-            </script></body></html>`,
-        });
+    it("strips a leading @ and lowercases to match normalizeUsername()", () => {
+      scraperService.getTiktokPosts.mockResolvedValue({ success: true, data: [] });
+      scraperService.getTiktokLiveStatus.mockResolvedValue({ success: true, data: {} });
 
-      const profile = await tiktokClient.fetchProfile("testuser");
+      return tiktokClient.fetchProfile("@Foo.Bar").then((profile) => {
+        expect(scraperService.getTiktokPosts).toHaveBeenCalledWith("foo.bar");
+        expect(profile.diagnostic).toBeNull();
+      });
+    });
 
+    it("filters out reposts and videos with invalid (non-snowflake) IDs", async () => {
+      scraperService.getTiktokPosts.mockResolvedValue({
+        success: true,
+        data: [
+          { id: "7653055317907131656", desc: "Real video", create_time: 1781865900 },
+          { id: "7653055317907131600", desc: "Reposted", create_time: 1781865800, is_repost: true },
+          { id: "not-a-snowflake", desc: "Garbage ID", create_time: 1781865700 },
+        ],
+      });
+      scraperService.getTiktokLiveStatus.mockResolvedValue({ success: true, data: {} });
+
+      const profile = await tiktokClient.fetchProfile("someone");
+
+      expect(profile.videos).toHaveLength(1);
+      expect(profile.videos[0].id).toBe("7653055317907131656");
+    });
+
+    it("still returns posts if the live-status call fails (Promise.allSettled isolation)", async () => {
+      scraperService.getTiktokPosts.mockResolvedValue({
+        success: true,
+        data: [{ id: "7653055317907131656", desc: "Video", create_time: 1781865900 }],
+      });
+      scraperService.getTiktokLiveStatus.mockRejectedValue(new Error("live check timed out"));
+
+      const profile = await tiktokClient.fetchProfile("someone");
+
+      expect(profile.videos).toHaveLength(1);
       expect(profile.user.live).toBe(false);
-      // _liveStatusKnown:true even when live:false — must NOT fall back to /live fetch
-      expect(liveFetchCalled()).toBe(false);
-    });
-
-    it("Strategy 1 (TikWM Search) wins: _liveStatusKnown false → /live fetch IS made", async () => {
-      // S1 TikWM Search succeeds
-      global.fetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            code: 0,
-            msg: "success",
-            data: {
-              videos: [{
-                video_id: "888123",
-                title: "Test",
-                create_time: 1600000000,
-                author: { id: 12345, unique_id: "therock", avatar: "http://a.jpg" },
-              }],
-            },
-          }),
-        })
-        // checkLiveStatus fetches /live page
-        .mockResolvedValueOnce({ ok: true, status: 200, text: async () => "<html></html>" });
-
-      await tiktokClient.fetchProfile("therock");
-
-      // _liveStatusKnown:false → checkLiveStatus fallback runs → /live fetch happens
-      expect(liveFetchCalled()).toBe(true);
-    });
-
-    it("_liveStatusKnown flag is never present on the returned profile object", async () => {
-      // S1 TikWM Search fails (2 queries), S2 fails, S3 Direct HTML wins
-      global.fetch
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: false, status: 403 })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: async () => `<html><body>
-            <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">
-              {"__DEFAULT_SCOPE__":{"webapp.user-detail":{"userInfo":{"user":{"id":"1","uniqueId":"u","roomStatus":0}},"itemList":[]}}}
-            </script></body></html>`,
-        });
-
-      const profile = await tiktokClient.fetchProfile("u");
-
-      expect(profile.user).not.toHaveProperty("_liveStatusKnown");
-    });
-
-    it("checkLiveStatus /live page detecting live merges result when TikWM Search wins", async () => {
-      // S1 TikWM Search makes 2 queries: @u and u — both need mocks
-      global.fetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            code: 0,
-            msg: "success",
-            data: {
-              videos: [{
-                video_id: "111",
-                title: "T",
-                create_time: 1600000000,
-                author: { id: 1, unique_id: "u", avatar: null },
-              }],
-            },
-          }),
-        })
-        // second TikWM query (bare username)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ code: 0, msg: "success", data: { videos: [] } }),
-        })
-        // checkLiveStatus /live page — contains liveRoomStatus:1 signal
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: async () => '<html><body>"liveRoomStatus":1</body></html>',
-        });
-
-      const profile = await tiktokClient.fetchProfile("u");
-
-      expect(liveFetchCalled()).toBe(true);
-      expect(profile.user.live).toBe(true);
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Video fetching + normalization
-  // ---------------------------------------------------------------------------
-  describe("Strategy 1 (TikWM Search) — video fetching", () => {
-    it("fetches and normalizes video posts", async () => {
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          code: 0,
-          msg: "success",
-          data: {
-            videos: [{
-              video_id: "888123",
-              title: "Awesome TikTok Video",
-              create_time: 1600000000,
-              author: { id: 12345, unique_id: "therock", avatar: "http://avatar.jpg" },
-            }],
-          },
-        }),
-      });
-
-      const profile = await tiktokClient.fetchProfile("therock");
-
-      expect(profile.user.id).toBe("12345");
-      expect(profile.user.username).toBe("therock");
-      expect(profile.user.avatar).toBe("http://avatar.jpg");
-      expect(profile.videos[0].id).toBe("888123");
-      expect(profile.videos[0].type).toBe("video");
-      expect(profile.videos[0].url).toBe("https://www.tiktok.com/@therock/video/888123");
-    });
-
-    it("fetches and normalizes photo slide posts", async () => {
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          code: 0,
-          msg: "success",
-          data: {
-            videos: [{
-              video_id: "777456",
-              title: "Cool Photo Slide",
-              create_time: 1600000500,
-              images: ["http://img1.jpg", "http://img2.jpg"],
-              author: { id: 12345, unique_id: "therock", avatar: "http://avatar.jpg" },
-            }],
-          },
-        }),
-      });
-
-      const profile = await tiktokClient.fetchProfile("therock");
-
-      expect(profile.videos[0].id).toBe("777456");
-      expect(profile.videos[0].type).toBe("photo");
-      expect(profile.videos[0].url).toBe("https://www.tiktok.com/@therock/photo/777456");
-      expect(profile.videos[0].images).toEqual(["http://img1.jpg", "http://img2.jpg"]);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Error propagation
-  // ---------------------------------------------------------------------------
-  describe("Error handling", () => {
-    it("throws TiktokAccountNotFoundError when a strategy detects account not found", async () => {
-      // S1: both queries return empty videos
-      global.fetch
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        // S2: TikWM Posts returns "User not found"
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: -1, msg: "User not found" }) });
+  describe("fetchProfile() — error handling", () => {
+    it("throws TiktokAccountNotFoundError on a 404-coded failure", async () => {
+      const err = new Error("Not found");
+      err.code = "NOT_FOUND";
+      scraperService.getTiktokPosts.mockRejectedValue(err);
+      scraperService.getTiktokLiveStatus.mockResolvedValue({ success: true, data: {} });
 
       await expect(tiktokClient.fetchProfile("ghost")).rejects.toThrow(
         tiktokClient.TiktokAccountNotFoundError,
       );
     });
 
-    it("throws aggregated error including all 5 strategy failure messages when every strategy fails", async () => {
-      global.fetch
-        // S1: two empty-video queries
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        // S2: rate limit (non-404 code so not AccountNotFound)
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: -1, msg: "Rate limit reached" }) })
-        // S3: 403
-        .mockResolvedValueOnce({ ok: false, status: 403, text: async () => "Forbidden" })
-        // S4: 500
-        .mockResolvedValueOnce({ ok: false, status: 500 })
-        // S5: HTML fetch → no candidate IDs
-        .mockResolvedValueOnce({ ok: true, status: 200, text: async () => "<html><body>no ids here</body></html>" });
+    // Regression test for the bug fixed 2026-08-15: fetchProfile() used to
+    // swallow every non-404 failure and resolve with a fake "successful"
+    // empty profile instead of rejecting. That meant TiktokScheduler's
+    // exponential backoff (which only engages when fetchProfile() throws)
+    // never kicked in during a kizoxy-scraper outage — the scheduler kept
+    // retrying every account at full frequency forever, and manual
+    // "check"/"test-send" surfaces reported "0 videos found" instead of
+    // the real error. fetchProfile() must now reject so callers' existing
+    // try/catch blocks (which all already expect this) can react correctly.
+    it("throws (does not silently return an empty profile) when the scraper service errors", async () => {
+      const err = new Error("connect ECONNREFUSED 127.0.0.1:8100");
+      scraperService.getTiktokPosts.mockRejectedValue(err);
+      scraperService.getTiktokLiveStatus.mockRejectedValue(err);
 
-      await expect(tiktokClient.fetchProfile("therock")).rejects.toThrow(
-        "All TikTok fetch strategies failed for @therock",
+      await expect(tiktokClient.fetchProfile("someone")).rejects.toThrow(
+        /connect ECONNREFUSED/,
       );
     });
 
-    it("falls back to Strategy 3 (Direct HTML) when Strategies 1 and 2 fail", async () => {
-      // S1: network error on both queries
-      global.fetch
-        .mockRejectedValueOnce(new Error("Network Error"))
-        .mockRejectedValueOnce(new Error("Network Error"))
-        // S2: network error
-        .mockRejectedValueOnce(new Error("Network Error"))
-        // S3: Direct HTML with live session
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: async () => `<html><body>
-            <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">
-              {"__DEFAULT_SCOPE__":{"webapp.user-detail":{"userInfo":{"user":{"id":"55555","uniqueId":"therock","avatarThumb":"http://avatar_html.jpg","roomStatus":1,"roomId":"999888"}},"itemList":[{"id":"111222","desc":"HTML Scraped Video","createTime":1600000000,"video":{"cover":"http://cover.jpg"}}]}}}
-            </script></body></html>`,
-        });
+    it("throws when the scraper service returns POOL_EXHAUSTED", async () => {
+      const err = new Error("No browser instance available within 25s");
+      err.code = "POOL_EXHAUSTED";
+      err.status = undefined;
+      scraperService.getTiktokPosts.mockRejectedValue(err);
+      scraperService.getTiktokLiveStatus.mockRejectedValue(err);
 
-      const profile = await tiktokClient.fetchProfile("therock");
-
-      expect(profile.user.id).toBe("55555");
-      expect(profile.user.live).toBe(true);
-      expect(profile.user.liveId).toBe("999888");
-      expect(profile.videos[0].id).toBe("111222");
-      expect(profile.videos[0].title).toBe("HTML Scraped Video");
-      // _liveStatusKnown:true → no /live fetch needed
-      expect(liveFetchCalled()).toBe(false);
+      await expect(tiktokClient.fetchProfile("someone")).rejects.toThrow(
+        /No browser instance available/,
+      );
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Log messages reference correct strategy number/name (catches stale strings)
-  // ---------------------------------------------------------------------------
-  describe("Log message strategy labels", () => {
-    let loggerWarnings;
+  describe("checkLiveStatus()", () => {
+    it("returns live status from the scraper service", async () => {
+      scraperService.getTiktokLiveStatus.mockResolvedValue({
+        success: true,
+        source: "browser",
+        data: { is_live: true, video_id: "12345" },
+      });
 
-    beforeEach(() => {
-      loggerWarnings = [];
-      // Capture logger.warning calls via the module's internal logger
-      // by intercepting console output isn't reliable; instead verify via
-      // the thrown aggregated error message which includes strategy labels
+      const result = await tiktokClient.checkLiveStatus("someone");
+
+      expect(result.live).toBe(true);
+      expect(result.liveId).toBe("12345");
+      expect(result.source).toBe("browser");
     });
 
-    it("aggregated error message names strategies correctly (S1=TikWM Search, S2=TikWM Posts, S3=Direct HTML, S4=TikTok oEmbed, S5=HTML Extraction)", async () => {
-      global.fetch
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ code: 0, data: { videos: [] } }) })
-        .mockResolvedValueOnce({ ok: false, status: 403, text: async () => "Forbidden" })
-        .mockResolvedValueOnce({ ok: false, status: 403, text: async () => "Forbidden" })
-        .mockResolvedValueOnce({ ok: false, status: 500 })
-        .mockResolvedValueOnce({ ok: true, status: 200, text: async () => "<html></html>" });
+    it("fails safe (live: false) instead of throwing when the scraper service errors", async () => {
+      scraperService.getTiktokLiveStatus.mockRejectedValue(new Error("boom"));
 
-      let err;
-      try {
-        await tiktokClient.fetchProfile("nobody");
-      } catch (e) {
-        err = e;
-      }
+      const result = await tiktokClient.checkLiveStatus("someone");
 
-      expect(err).toBeDefined();
-      expect(err.message).toMatch(/TikWM Search/);
-      expect(err.message).toMatch(/TikWM Posts/);
-      expect(err.message).toMatch(/Direct HTML/);
-      expect(err.message).toMatch(/TikTok oEmbed/);
-      expect(err.message).toMatch(/HTML Extraction/);
+      expect(result.live).toBe(false);
+      expect(result.liveId).toBeNull();
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Strategy stats counter
-  // ---------------------------------------------------------------------------
-  describe("getStrategyStats", () => {
-    it("returns stats object with expected shape", () => {
+  describe("getStrategyStats()", () => {
+    it("returns the stats shape the dashboard/status command expects", () => {
+      scraperService.getServiceStatus.mockReturnValue({ status: "Online" });
       const stats = tiktokClient.getStrategyStats();
 
       expect(stats).toHaveProperty("window");
       expect(stats).toHaveProperty("total_recorded");
+      expect(stats).toHaveProperty("primary_strategy", "kizoxy-scraper");
+      expect(stats).toHaveProperty("service_status");
+      expect(stats).toHaveProperty("primary_healthy");
       expect(stats).toHaveProperty("breakdown");
-      expect(stats).toHaveProperty("tikwm_search_consecutive_failures");
-      expect(stats).toHaveProperty("tikwm_search_health");
-      expect(["ok", "degraded"]).toContain(stats.tikwm_search_health);
+    });
+
+    it("flags unhealthy when the underlying service is Offline", () => {
+      scraperService.getServiceStatus.mockReturnValue({ status: "Offline" });
+      const stats = tiktokClient.getStrategyStats();
+      expect(stats.primary_healthy).toBe(false);
+      expect(stats.warning_banner).toMatch(/Offline/);
     });
   });
 });

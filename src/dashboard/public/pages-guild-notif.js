@@ -73,7 +73,14 @@ function ytRow(s, guildId) {
     <td>${toggleHtml("", (s.notifyUpcoming ?? true) !== false, `onchange="patchYtSub('${guildId}','${s.id}','notifyUpcoming',this.checked)"`)}</td>
     <td style="white-space:nowrap">
       <button class="btn btn--ghost btn--sm" onclick="toggleYtEdit('${s.id}')">Edit</button>
+      <button class="btn btn--ghost btn--sm" id="yt-check-btn-${s.id}" onclick="ytCheckStatus('${guildId}','${s.id}')">🔍 Check</button>
+      <button class="btn btn--ghost btn--sm" onclick="ytForceNotify('${guildId}','${s.id}')" title="Force send latest YouTube notification to Discord">📢 Test Notif</button>
       <span id="yt-rm-${s.id}"><button class="btn btn--danger btn--sm" onclick="confirmYtRemove('${guildId}','${s.id}')">Remove</button></span>
+    </td>
+  </tr>
+  <tr id="yt-check-result-${s.id}" style="display:none">
+    <td colspan="8" style="background:var(--bg-2);padding:10px 16px;font-size:12px">
+      <div id="yt-check-content-${s.id}"></div>
     </td>
   </tr>
   <tr id="yt-edit-${s.id}" style="display:none">
@@ -199,22 +206,88 @@ async function submitYtAdd(guildId) {
   }
 }
 
+// Check current status: fetch latest RSS entry & details from YouTube right now.
+async function ytCheckStatus(guildId, subId) {
+  const btn = document.getElementById(`yt-check-btn-${subId}`);
+  const resultRow = document.getElementById(`yt-check-result-${subId}`);
+  const content = document.getElementById(`yt-check-content-${subId}`);
+
+  // Toggle off if already shown
+  if (resultRow.style.display !== "none") {
+    resultRow.style.display = "none";
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Checking..."; }
+  content.innerHTML = '<span style="color:var(--text-3)">Fetching from YouTube...</span>';
+  resultRow.style.display = "table-row";
+
+  try {
+    const data = await api.get(`/guilds/${guildId}/youtube/${subId}/check`);
+    const videoHtml = data.latest_video
+      ? `<div style="margin-top:6px">
+          <b>Latest content:</b> <a href="${esc(data.latest_video.url)}" target="_blank" style="color:var(--accent)">${esc(data.latest_video.title || data.latest_video.id)}</a><br>
+          <span style="color:var(--text-3)">Type: <b style="text-transform:uppercase">${esc(data.latest_video.type || "video")}</b> &nbsp;·&nbsp; ID: ${esc(data.latest_video.id)} &nbsp;·&nbsp; ${esc(data.latest_video.publishedAt || "")}</span>
+        </div>`
+      : `<div style="color:var(--text-3);margin-top:4px">No recent videos found in feed</div>`;
+    content.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <b style="color:var(--text-1)">${esc(data.youtubeChannelTitle)}</b>
+        <span style="color:var(--text-3);font-size:11px">checked ${esc(data.checked_at)}</span>
+      </div>
+      <div>Channel ID: <code>${esc(data.youtubeChannelId)}</code></div>
+      ${videoHtml}`;
+  } catch (err) {
+    const body = await err.json?.().catch(() => ({}));
+    content.innerHTML = `<span style="color:var(--red)">${esc(body?.error || "Failed to check status")}</span>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🔍 Check"; }
+  }
+}
+
+// Force-send a notification immediately (bypasses scheduler dedup).
+async function ytForceNotify(guildId, subId) {
+  try {
+    const data = await api.post(`/guilds/${guildId}/youtube/${subId}/force-notify`);
+    if (data.video) {
+      showToast(`📺 Sent [${data.type || "video"}]: ${data.video.title || data.video.id}`, "success");
+    } else {
+      showToast(`✅ YouTube notification sent`, "success");
+    }
+  } catch (err) {
+    const body = await err.json?.().catch(() => ({}));
+    showToast(body?.error || `Failed to send YouTube notification`, "error");
+  }
+}
+
 // ── Guild Tab: TikTok ──
 async function renderTikTok(el, guildId) {
   el.innerHTML = '<div class="skeleton" style="height:200px"></div>';
   try {
     const subs = await api.get(`/guilds/${guildId}/tiktok`);
     const g = state.currentGuild;
+    let healthBanner = "";
+    try {
+      const meta = await api.get("/meta");
+      const ttStats = meta?.tiktok_strategy_stats;
+      if (ttStats && ttStats.warning_banner) {
+        healthBanner = `<div class="card" style="margin-bottom:12px;border-left:4px solid var(--red);background:rgba(255,59,48,0.1);color:var(--red)">
+          <div style="font-weight:600">⚠️ TikTok Primary Source Health Warning</div>
+          <div style="font-size:13px;margin-top:4px">${ttStats.warning_banner}</div>
+        </div>`;
+      }
+    } catch (_) {}
+
     const dismissed = sessionStorage.getItem("tt-info-dismissed");
     const infoBanner = dismissed
       ? ""
       : `<div class="card" style="margin-bottom:12px;border-left:3px solid var(--accent)" id="tt-info-banner">
       <div style="display:flex;justify-content:space-between;align-items:start">
-        <div style="font-size:13px;color:var(--text-2)">ℹ️ Live detection is disabled when using the default TikWM scraper. The Live toggle has no effect unless a custom TIKTOK_API_BASE is set.</div>
+        <div style="font-size:13px;color:var(--text-2)">ℹ️ Multi-strategy TikTok scraper active. Live streams and video posts are monitored automatically.</div>
         <button class="btn btn--ghost btn--sm" onclick="sessionStorage.setItem('tt-info-dismissed','1');document.getElementById('tt-info-banner').remove()">✕</button>
       </div>
     </div>`;
-    el.innerHTML = `${infoBanner}
+    el.innerHTML = `${healthBanner}${infoBanner}
       <div class="card" style="padding:0;overflow-x:auto">
         <table class="table" id="tt-table">
           <thead><tr><th>Username</th><th>Announce Ch</th><th>Posts</th><th>Live</th><th></th></tr></thead>
@@ -432,6 +505,9 @@ async function ttCheckStatus(guildId, subId) {
           <span style="color:var(--text-3)">ID: ${esc(data.latest_video.id)} &nbsp;·&nbsp; ${esc(data.latest_video.createTime_iso || "")}</span>
         </div>`
       : `<div style="color:var(--text-3);margin-top:4px">No videos found (total fetched: ${data.total_videos_fetched})</div>`;
+    const diagnosticHtml = data.diagnostic
+      ? `<div style="color:var(--text-3);margin-top:4px">Diagnostic: ${esc(data.diagnostic)}</div>`
+      : "";
     content.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <b style="color:var(--text-1)">@${esc(data.username)}</b>
@@ -439,7 +515,8 @@ async function ttCheckStatus(guildId, subId) {
       </div>
       <div>Live status: ${liveHtml}</div>
       <div>Videos fetched: <b>${data.total_videos_fetched}</b></div>
-      ${videoHtml}`;
+      ${videoHtml}
+      ${diagnosticHtml}`;
   } catch (err) {
     const body = await err.json?.().catch(() => ({}));
     content.innerHTML = `<span style="color:var(--red)">${esc(body?.error || "Failed to check status")}</span>`;

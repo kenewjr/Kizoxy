@@ -7,14 +7,7 @@ const { handleMessageXp } = require("../../features/level/messageXpHandler");
 const logger = new Logger("MESSAGE");
 
 function resolvePrefixCommand(client, name) {
-  let command = client.prefixCommands.get(name);
-  if (command) return command;
-  command = client.commands.get(name);
-  if (command) return command;
-  if (client.aliases?.has(name)) {
-    return client.commands.get(client.aliases.get(name));
-  }
-  return null;
+  return client.prefixCommands.get(name) || null;
 }
 
 async function dispatchPrefixCommand(client, message, prefix) {
@@ -39,6 +32,10 @@ async function dispatchPrefixCommand(client, message, prefix) {
       await command.run(client, message, args, prefix);
     } else if (command.exec) {
       await command.exec(client, message, args);
+    } else {
+      await message.reply(
+        `❌ \`${prefix}${cmd}\` isn't available as a prefix command. Try \`/${cmd}\` instead.`,
+      );
     }
   } catch (error) {
     logger.error(`Error executing prefix command ${cmd}: ${error.message}`);
@@ -49,7 +46,7 @@ async function dispatchPrefixCommand(client, message, prefix) {
   return true;
 }
 
-module.exports = async (client, message) => {
+const messageCreate = async (client, message) => {
   if (message.author.bot || !message.guild) return;
 
   const prefix = client.prefix;
@@ -70,3 +67,8 @@ module.exports = async (client, message) => {
     }
   }
 };
+
+messageCreate.resolvePrefixCommand = resolvePrefixCommand;
+messageCreate.dispatchPrefixCommand = dispatchPrefixCommand;
+
+module.exports = messageCreate;

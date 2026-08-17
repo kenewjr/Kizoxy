@@ -12,6 +12,9 @@ const logger = new Logger("DASHBOARD");
 router.get("/meta", async (req, res) => {
   try {
     const meta = await getBotMeta(req.app.locals.client);
+    const { getServiceStatus } = require("../../integrations/scraperService/client");
+    meta.scraper_service = getServiceStatus();
+    meta.tiktok_strategy_stats = getStrategyStats();
     res.json(meta);
   } catch (err) {
     logger.error(`GET /api/meta: ${err.message}`);
@@ -22,15 +25,19 @@ router.get("/meta", async (req, res) => {
 // GET /api/health
 router.get("/health", (req, res) => {
   const client = req.app.locals.client;
+  const { getServiceStatus } = require("../../integrations/scraperService/client");
+  const scraperStatus = getServiceStatus();
   if (!client || !client.ws || client.ws.status !== 0) {
     return res.status(503).json({
       status: "unhealthy",
       ws_status: client?.ws?.status ?? -1,
+      scraper_service: scraperStatus,
       uptime_ms: process.uptime() * 1000,
     });
   }
   return res.json({
     status: "ok",
+    scraper_service: scraperStatus,
     uptime_ms: process.uptime() * 1000,
   });
 });
@@ -89,62 +96,10 @@ router.get("/stats", async (req, res) => {
   }
 });
 
-// GET /api/tiktok/cookies/status — check if cookies are stored
-router.get("/tiktok/cookies/status", (req, res) => {
-  try {
-    const { loadCookies } = require("../../integrations/tiktok/cookieStorage");
-    const cookies = loadCookies();
-    if (!cookies) return res.json({ has_cookies: false, count: 0 });
-    res.json({ has_cookies: true, count: cookies.length });
-  } catch (err) {
-    logger.error(`GET /api/tiktok/cookies/status: ${err.message}`);
-    res.status(500).json({ error: "Failed to check cookie status" });
-  }
-});
-
-// POST /api/tiktok/cookies — upload TikTok session cookies (JSON array)
-// Each cookie: { name, value, domain, path, expires, httpOnly, secure, sameSite }
-// Accepts both plain array and {cookies:[...]} wrapper (Cookie-Editor/EditThisCookie)
-router.post("/tiktok/cookies", (req, res) => {
-  try {
-    let cookies = req.body;
-    // Unwrap common wrapper formats from cookie export extensions
-    if (cookies && !Array.isArray(cookies)) {
-      cookies = cookies.cookies || cookies.data || cookies.items || null;
-    }
-    if (!Array.isArray(cookies) || cookies.length === 0) {
-      return res.status(400).json({
-        error: "Body must be a non-empty array of cookie objects (or {cookies:[...]})",
-      });
-    }
-    // Validate minimal required fields
-    for (const c of cookies) {
-      if (!c.name || c.value === undefined || c.value === null) {
-        return res.status(400).json({ error: "Each cookie must have name and value fields" });
-      }
-    }
-    const { saveCookies } = require("../../integrations/tiktok/cookieStorage");
-    saveCookies(cookies);
-    logger.info(`[DASHBOARD] TikTok cookies updated: ${cookies.length} cookie(s) stored`);
-    res.json({ saved: true, count: cookies.length });
-  } catch (err) {
-    logger.error(`POST /api/tiktok/cookies: ${err.message}`);
-    res.status(500).json({ error: "Failed to save cookies" });
-  }
-});
-
-// DELETE /api/tiktok/cookies — remove stored cookies
-router.delete("/tiktok/cookies", (req, res) => {
-  try {
-    const { deleteCookies } = require("../../integrations/tiktok/cookieStorage");
-    deleteCookies();
-    logger.info("[DASHBOARD] TikTok cookies deleted");
-    res.json({ deleted: true });
-  } catch (err) {
-    logger.error(`DELETE /api/tiktok/cookies: ${err.message}`);
-    res.status(500).json({ error: "Failed to delete cookies" });
-  }
-});
+// Cookie management moved to kizoxy-scraper microservice.
+router.get("/tiktok/cookies/status", (_req, res) => res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }));
+router.post("/tiktok/cookies", (_req, res) => res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }));
+router.delete("/tiktok/cookies", (_req, res) => res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }));
 
 // GET /api/players
 router.get("/players", (req, res) => {

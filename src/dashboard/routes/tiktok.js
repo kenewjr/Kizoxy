@@ -196,6 +196,7 @@ router.get("/:id/tiktok/:subId/check", async (req, res) => {
               : null,
           }
         : null,
+      diagnostic: profile.diagnostic || null,
       checked_at: new Date().toISOString(),
     });
   } catch (err) {
@@ -238,6 +239,7 @@ router.post("/:id/tiktok/:subId/force-notify", async (req, res) => {
       });
     }
 
+    const tiktokStateStorage = require("../../persistence/tiktokStateStorage");
     const notifier = require("../../integrations/tiktok/notifier");
     const { buildContent } = require("../../lib/notificationTemplate");
 
@@ -262,15 +264,20 @@ router.post("/:id/tiktok/:subId/force-notify", async (req, res) => {
         vars: { name: `@${sub.username}`, url: liveUrl, title: `@${sub.username} is live`, type: "live" },
       });
       await notifier.send(discordClient, sub, { embed, row, content });
+
+      await tiktokStateStorage.setState(sub.username, {
+        isLive: true,
+        lastLiveId: profile.user.liveId || "live",
+      });
+
       return res.json({ sent: true, type: "live", liveUrl });
     }
 
     // type === "video"
     const latest = profile.videos.find((v) => !v.isLive) || profile.videos[0];
     if (!latest) {
-      return res.status(409).json({
-        error: `No videos found for @${sub.username}`,
-        total_videos_fetched: profile.videos.length,
+      return res.status(404).json({
+        error: `No videos or posts found for @${sub.username}`,
       });
     }
 
@@ -287,6 +294,21 @@ router.post("/:id/tiktok/:subId/force-notify", async (req, res) => {
       vars: { name: `@${sub.username}`, url: latest.url, title: latest.title || "", type: "video" },
     });
     await notifier.send(discordClient, sub, { embed, row, content });
+
+    // Mark as seen in state storage so background scheduler won't re-trigger notification
+    const state = (await tiktokStateStorage.getState(sub.username)) || {};
+    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
+    let latestTime = latest.createTime ? Number(latest.createTime) : 0;
+    if (!latestTime && latest.id) {
+      try {
+        latestTime = Number(BigInt(latest.id) >> 32n);
+      } catch (_) {}
+    }
+    await tiktokStateStorage.setState(sub.username, {
+      lastVideoId: latest.id,
+      lastVideoCreateTime: Math.max(latestTime, state.lastVideoCreateTime || 0),
+      seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+    });
 
     return res.json({
       sent: true,

@@ -7,8 +7,17 @@ const {
 const { fetchProfile, TiktokAccountNotFoundError } = require("./client");
 const notifier = require("./notifier");
 const { buildContent } = require("../../lib/notificationTemplate");
+const scraperService = require("../scraperService/client");
 
 const logger = new Logger("TIKTOK");
+
+// Randomized delay between account checks so request timing doesn't form
+// an exact, repeatable pattern (a perfectly fixed 3s gap between every
+// check, cycle after cycle, is itself a bot-like signal independent of
+// anything else about the request). Keeps the same ~3s average as before.
+function jitteredDelayMs(baseMs, spreadMs) {
+  return baseMs - spreadMs + Math.random() * spreadMs * 2;
+}
 
 // How long to wait before retrying a profile that has been failing, given its
 // consecutive failure count. Capped so a permanently-dead account is still
@@ -61,20 +70,42 @@ class TiktokScheduler {
       const userMap = await this.subStorage.getUserSubscriberMap();
       if (userMap.size === 0) return;
 
-      const usernames = [...userMap.keys()];
-      logger.debug(`Polling ${usernames.length} unique TikTok profile(s)`);
+      // Optimization: if the scraper microservice is confirmed offline,
+      // skip the whole cycle instead of attempting (and failing) every
+      // subscribed account individually — that just spams identical
+      // errors and burns a slow HTTP-timeout wait per account for no
+      // benefit. Per-account exponential backoff (see _pollUser) still
+      // applies normally once the service is back and failures become
+      // profile-specific again.
+      const serviceStatus = scraperService.getServiceStatus();
+      if (serviceStatus.status === "Offline") {
+        logger.warning(
+          `[TIKTOK] Skipping poll cycle — kizoxy-scraper service is offline (${serviceStatus.error || "no details"})`,
+        );
+        return;
+      }
 
-      await Promise.allSettled(
-        usernames.map((username) =>
-          this._pollUser(username, userMap.get(username)),
-        ),
-      );
+      const usernames = [...userMap.keys()];
+      logger.info(`[TIKTOK] Polling ${usernames.length} profile(s) in sequential queue...`);
+
+      for (const username of usernames) {
+        try {
+          await this._pollUser(username, userMap.get(username));
+        } catch (err) {
+          logger.error(`[TIKTOK] Error polling @${username}:`, err.message);
+        }
+        // Jeda antrean agar tidak tabrakan — jitter agar tidak terlihat pola tetap
+        await new Promise((res) =>
+          setTimeout(res, jitteredDelayMs(3000, 1500)),
+        );
+      }
     } finally {
       this._running = false;
     }
   }
 
   async _pollUser(username, subscribers) {
+    logger.info(`[TIKTOK] [POLL] Checking @${username}...`);
     const state = (await this.stateStorage.getState(username)) || {};
 
     // Respect exponential backoff for a failing profile.
@@ -94,9 +125,14 @@ class TiktokScheduler {
       profile = await fetchProfile(username);
     } catch (err) {
       if (err instanceof TiktokAccountNotFoundError) {
-        // Deleted or renamed: back off hard but keep the subscription so an
-        // admin can see/clean it up via /tiktok status or /tiktok remove.
-        logger.warning(`@${username} not found; recording failure`);
+        logger.warning(
+          `[TIKTOK] [ERROR] @${username}: Code 404 - Account not found`,
+        );
+      } else {
+        const code = err.status || err.code || "FETCH_FAILED";
+        logger.error(
+          `[TIKTOK] [ERROR] @${username}: Code ${code} - ${err.message}`,
+        );
       }
       await this.stateStorage.recordFailure(username);
       return;
@@ -109,20 +145,41 @@ class TiktokScheduler {
   }
 
   async _handleVideos(username, profile, state, subscribers) {
-    const latest = profile.videos.find((v) => !v.isLive) || profile.videos[0];
-    if (!latest) return;
+    const latest = profile.videos?.find((v) => !v.isLive) || profile.videos?.[0];
+    if (!latest) {
+      logger.info(
+        `[TIKTOK] [NO_VIDEOS] @${username} has 0 uploaded videos${
+          profile.diagnostic
+            ? ` — ${profile.diagnostic}`
+            : " (Check TIKTOK_SESSION_ID in .env if restricted)"
+        }`,
+      );
+      return;
+    }
 
-    const latestTime = latest.createTime ? Number(latest.createTime) : 0;
+    const allVideoIds = profile.videos.map((v) => v.id).filter(Boolean);
+    let latestTime = latest.createTime ? Number(latest.createTime) : 0;
+    if (!latestTime && latest.id) {
+      try {
+        latestTime = Number(BigInt(latest.id) >> 32n);
+      } catch (_) {}
+    }
+    const times = profile.videos.map((v) => {
+      if (v.createTime) return Number(v.createTime);
+      try { return Number(BigInt(v.id) >> 32n); } catch (_) { return 0; }
+    });
+    const maxTime = Math.max(...times, latestTime, 0);
+
     const lastTime = state.lastVideoCreateTime ? Number(state.lastVideoCreateTime) : 0;
     const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
 
-    // First time we ever see this profile: record latest without announcing,
-    // so adding a subscription never floods the backlog.
+    // First time we ever see this profile: record all current video IDs without announcing,
+    // so adding a subscription never floods historical posts.
     if (!state.lastVideoId) {
       await this.stateStorage.setState(username, {
         lastVideoId: latest.id,
-        lastVideoCreateTime: latestTime,
-        seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+        lastVideoCreateTime: Math.max(maxTime, latestTime),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
         // Preserve any live fields already set in this cycle.
         isLive: state.isLive || false,
       });
@@ -131,6 +188,9 @@ class TiktokScheduler {
 
     // 1. Skip if post ID was already seen/notified previously
     if (seenVideoIds.includes(latest.id) || state.lastVideoId === latest.id) {
+      await this.stateStorage.setState(username, {
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
+      });
       return;
     }
 
@@ -146,8 +206,8 @@ class TiktokScheduler {
       );
       await this.stateStorage.setState(username, {
         lastVideoId: latest.id,
-        lastVideoCreateTime: Math.max(latestTime, lastTime),
-        seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+        lastVideoCreateTime: Math.max(latestTime, lastTime, maxTime),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
       });
       return;
     }
@@ -158,7 +218,7 @@ class TiktokScheduler {
         `[TIKTOK_SCHEDULER] Skipping post ${latest.id} for @${username} (timestamp ${latestTime} <= recorded ${lastTime})`,
       );
       await this.stateStorage.setState(username, {
-        seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
       });
       return;
     }
@@ -166,29 +226,39 @@ class TiktokScheduler {
     await this._fanOutVideo(username, profile, latest, subscribers);
     await this.stateStorage.setState(username, {
       lastVideoId: latest.id,
-      lastVideoCreateTime: Math.max(latestTime, lastTime),
-      seenVideoIds: [...new Set([latest.id, ...seenVideoIds])].slice(0, 50),
+      lastVideoCreateTime: Math.max(latestTime, lastTime, maxTime),
+      seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
     });
   }
 
   async _handleLive(username, profile, state, subscribers) {
     const live = profile.user.live;
-    const liveId = profile.user.liveId || (live ? "live" : null);
+    const liveId = profile.user.liveId || null;
 
     if (live) {
-      // Only announce on the rising edge of a live session, and only once per
-      // distinct liveId (anti-spam across restarts).
-      const alreadyAnnounced = state.isLive && state.lastLiveId === liveId;
+      logger.info(
+        `[TIKTOK] [LIVE] @${username} is currently live (Room ID: ${liveId || "live"})`,
+      );
+      // Rising-edge gate: only announce when transitioning from NOT-live to live.
+      const alreadyAnnounced = state.isLive === true;
       if (!alreadyAnnounced) {
         await this._fanOutLive(username, profile, subscribers);
       }
       await this.stateStorage.setState(username, {
         isLive: true,
         lastLiveId: liveId,
+        notLiveStreak: 0,
       });
-    } else if (state.isLive) {
-      // Live ended: clear the flag so the next session announces again.
-      await this.stateStorage.setState(username, { isLive: false });
+    } else {
+      const notLiveStreak = (state.notLiveStreak || 0) + 1;
+      if (state.isLive && notLiveStreak >= 2) {
+        await this.stateStorage.setState(username, {
+          isLive: false,
+          notLiveStreak: 0,
+        });
+      } else {
+        await this.stateStorage.setState(username, { notLiveStreak });
+      }
     }
   }
 
@@ -254,3 +324,4 @@ class TiktokScheduler {
 
 module.exports = TiktokScheduler;
 module.exports.backoffMs = backoffMs;
+module.exports.jitteredDelayMs = jitteredDelayMs;

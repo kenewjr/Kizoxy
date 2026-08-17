@@ -1,7 +1,6 @@
 const TiktokScheduler = require("../../../src/integrations/tiktok/scheduler");
-const { backoffMs } = TiktokScheduler;
+const { backoffMs, jitteredDelayMs } = TiktokScheduler;
 const tiktokClient = require("../../../src/integrations/tiktok/client");
-const { _normalize } = require("../../../src/integrations/tiktok/client");
 const notifier = require("../../../src/integrations/tiktok/notifier");
 const {
   TIKTOK_BACKOFF_BASE_MS,
@@ -23,7 +22,7 @@ jest.mock("../../../src/integrations/tiktok/notifier", () => ({
 }));
 
 describe("TiktokScheduler Tests", () => {
-  let scheduler, client, subStorage, stateStorage;
+  let scheduler, client, subStorage, stateStorage, consoleLogSpy;
 
   beforeEach(() => {
     client = {};
@@ -41,12 +40,31 @@ describe("TiktokScheduler Tests", () => {
 
     scheduler = new TiktokScheduler(client, { subStorage, stateStorage });
     jest.clearAllMocks();
+    consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   it("backoffs correctly based on consecutive failures", () => {
     expect(backoffMs(0)).toBe(0);
     expect(backoffMs(1)).toBeGreaterThan(0);
     expect(backoffMs(100)).toBe(30 * 60 * 1000); // capped at max
+  });
+
+  it("jitters delays within the requested range", () => {
+    const randomSpy = jest
+      .spyOn(Math, "random")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
+      .mockReturnValueOnce(1);
+
+    const delays = Array.from({ length: 3 }, () => jitteredDelayMs(3000, 1500));
+
+    expect(delays.every((delay) => delay >= 1500 && delay <= 4500)).toBe(true);
+    expect(new Set(delays).size).toBeGreaterThan(1);
+    randomSpy.mockRestore();
   });
 
   it("registers polling timer on start", () => {
@@ -139,6 +157,31 @@ describe("TiktokScheduler Tests", () => {
     expect(notifier.send).not.toHaveBeenCalled();
   });
 
+  it("logs the scraper diagnostic when a profile has no videos", async () => {
+    await scheduler._handleVideos(
+      "therock",
+      { videos: [], diagnostic: "TikTok status 10221 (likely banned/restricted)" },
+      {},
+      [],
+    );
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "[TIKTOK] [NO_VIDEOS] @therock has 0 uploaded videos — TikTok status 10221 (likely banned/restricted)",
+      ),
+    );
+  });
+
+  it("logs the session-ID hint when an empty profile has no diagnostic", async () => {
+    await scheduler._handleVideos("therock", { videos: [] }, {}, []);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "[TIKTOK] [NO_VIDEOS] @therock has 0 uploaded videos (Check TIKTOK_SESSION_ID in .env if restricted)",
+      ),
+    );
+  });
+
   it("polls and fires notification if new video found", async () => {
     const subscribers = [
       {
@@ -189,10 +232,13 @@ describe("TiktokScheduler Tests", () => {
 
     await scheduler.pollOnce();
     expect(notifier.send).toHaveBeenCalled();
-    expect(stateStorage.setState).toHaveBeenCalledWith("therock", {
-      isLive: true,
-      lastLiveId: "live-session-1",
-    });
+    expect(stateStorage.setState).toHaveBeenCalledWith(
+      "therock",
+      expect.objectContaining({
+        isLive: true,
+        lastLiveId: "live-session-1",
+      }),
+    );
 
     // Case 2: Already live, same session (no double announcement)
     notifier.send.mockClear();
@@ -204,7 +250,7 @@ describe("TiktokScheduler Tests", () => {
     await scheduler.pollOnce();
     expect(notifier.send).not.toHaveBeenCalled();
 
-    // Case 3: Live ends
+    // Case 3: Live ends - debounce step 1 (notLiveStreak = 1, isLive remains true)
     tiktokClient.fetchProfile.mockResolvedValue({
       user: { username: "therock", live: false },
       videos: [{ id: "video-1" }],
@@ -212,79 +258,168 @@ describe("TiktokScheduler Tests", () => {
     stateStorage.setState.mockClear();
     await scheduler.pollOnce();
     expect(stateStorage.setState).toHaveBeenCalledWith("therock", {
+      notLiveStreak: 1,
+    });
+
+    // Case 4: Live ends - step 2 (notLiveStreak >= 2, isLive resets to false)
+    stateStorage.getState.mockResolvedValue({
+      lastVideoId: "video-1",
+      isLive: true,
+      notLiveStreak: 1,
+    });
+    stateStorage.setState.mockClear();
+    await scheduler.pollOnce();
+    expect(stateStorage.setState).toHaveBeenCalledWith("therock", {
       isLive: false,
+      notLiveStreak: 0,
     });
   });
-});
 
-// ---------------------------------------------------------------------------
-// _normalize — consolidated from tiktokScheduler.test.js (stale file deleted)
-// ---------------------------------------------------------------------------
-describe("_normalize", () => {
-  test("maps internal shape onto the contract", () => {
-    const out = _normalize("creator", {
-      user: { id: 42, username: "Creator", avatar: "a.png", live: true, liveId: 7 },
-      videos: [
-        { id: 100, url: "u1", cover: "c1", title: "t1", createTime: 123, isLive: false },
-        { id: 101 },
-      ],
-    });
-    expect(out.user.id).toBe("42");
-    expect(out.user.live).toBe(true);
-    expect(out.user.liveId).toBe("7");
-    expect(out.videos).toHaveLength(2);
-    expect(out.videos[0].id).toBe("100");
-    expect(out.videos[1].url).toContain("/@creator/video/101");
-  });
-
-  test("drops videos without an id and tolerates missing fields", () => {
-    const out = _normalize("creator", {
-      user: {},
-      videos: [{ url: "no-id" }, { id: 5 }],
-    });
-    expect(out.videos).toHaveLength(1);
-    expect(out.videos[0].id).toBe("5");
-    expect(out.user.live).toBe(false);
-    expect(out.user.username).toBe("creator");
-  });
-
-  test("handles a totally empty response", () => {
-    const out = _normalize("creator", {});
-    expect(out.videos).toEqual([]);
-    expect(out.user.id).toBeNull();
-  });
-
-  test("maps TikWM scraper shape onto the internal contract", () => {
-    const tikwmData = {
-      code: 0,
-      msg: "success",
-      data: {
-        videos: [{
-          video_id: "7651447222449556767",
-          title: "At least he got the last one 😅",
-          create_time: 1782232293,
-          cover: "https://p16-common-sign.tiktokcdn-eu.com/cover.jpeg",
-          author: {
-            id: "6614519312189947909",
-            unique_id: "mrbeast",
-            nickname: "MrBeast",
-            avatar: "https://p19-common-sign.tiktokcdn-eu.com/avatar.webp",
-          },
-        }],
+  describe("_handleLive rising-edge and debounce regression tests", () => {
+    const subscribers = [
+      {
+        guildId: "guild-1",
+        subscription: { username: "liveuser", notifyLive: true },
       },
-    };
+    ];
 
-    const out = _normalize("mrbeast", tikwmData);
-    expect(out.user.id).toBe("6614519312189947909");
-    expect(out.user.username).toBe("mrbeast");
-    expect(out.user.avatar).toBe("https://p19-common-sign.tiktokcdn-eu.com/avatar.webp");
-    expect(out.user.live).toBe(false);
-    expect(out.videos).toHaveLength(1);
-    expect(out.videos[0].id).toBe("7651447222449556767");
-    expect(out.videos[0].createTime).toBe(1782232293);
-    expect(out.videos[0].url).toContain("/@mrbeast/video/7651447222449556767");
+    beforeEach(() => {
+      subStorage.getUserSubscriberMap.mockResolvedValue(
+        new Map([["liveuser", subscribers]]),
+      );
+    });
+
+    it("live=true, state.isLive=false (fresh rising edge) -> announces, sets isLive:true, notLiveStreak:0", async () => {
+      tiktokClient.fetchProfile.mockResolvedValue({
+        user: { username: "liveuser", live: true, liveId: "room-100" },
+        videos: [{ id: "v1" }],
+      });
+      stateStorage.getState.mockResolvedValue({
+        lastVideoId: "v1",
+        isLive: false,
+      });
+
+      await scheduler.pollOnce();
+      expect(notifier.send).toHaveBeenCalled();
+      expect(stateStorage.setState).toHaveBeenCalledWith(
+        "liveuser",
+        expect.objectContaining({
+          isLive: true,
+          lastLiveId: "room-100",
+          notLiveStreak: 0,
+        }),
+      );
+    });
+
+    it("live=true, state.isLive=true, profile.user.liveId DIFFERENT from state.lastLiveId -> does NOT re-announce", async () => {
+      tiktokClient.fetchProfile.mockResolvedValue({
+        user: { username: "liveuser", live: true, liveId: "room-NEW-FLIPPED" },
+        videos: [{ id: "v1" }],
+      });
+      stateStorage.getState.mockResolvedValue({
+        lastVideoId: "v1",
+        isLive: true,
+        lastLiveId: "room-OLD",
+      });
+
+      await scheduler.pollOnce();
+      expect(notifier.send).not.toHaveBeenCalled();
+      expect(stateStorage.setState).toHaveBeenCalledWith(
+        "liveuser",
+        expect.objectContaining({
+          isLive: true,
+          lastLiveId: "room-NEW-FLIPPED",
+          notLiveStreak: 0,
+        }),
+      );
+    });
+
+    it("live=true, state.isLive=true, profile.user.liveId is null -> does NOT re-announce", async () => {
+      tiktokClient.fetchProfile.mockResolvedValue({
+        user: { username: "liveuser", live: true, liveId: null },
+        videos: [{ id: "v1" }],
+      });
+      stateStorage.getState.mockResolvedValue({
+        lastVideoId: "v1",
+        isLive: true,
+        lastLiveId: "room-OLD",
+      });
+
+      await scheduler.pollOnce();
+      expect(notifier.send).not.toHaveBeenCalled();
+      expect(stateStorage.setState).toHaveBeenCalledWith(
+        "liveuser",
+        expect.objectContaining({
+          isLive: true,
+          lastLiveId: null,
+          notLiveStreak: 0,
+        }),
+      );
+    });
+
+    it("live=false after being live once -> notLiveStreak increments, isLive stays true on FIRST not-live read (debounce)", async () => {
+      tiktokClient.fetchProfile.mockResolvedValue({
+        user: { username: "liveuser", live: false },
+        videos: [{ id: "v1" }],
+      });
+      stateStorage.getState.mockResolvedValue({
+        lastVideoId: "v1",
+        isLive: true,
+        notLiveStreak: 0,
+      });
+
+      await scheduler.pollOnce();
+      expect(notifier.send).not.toHaveBeenCalled();
+      expect(stateStorage.setState).toHaveBeenCalledWith("liveuser", {
+        notLiveStreak: 1,
+      });
+    });
+
+    it("live=false for TWO consecutive polls -> isLive clears to false, notLiveStreak resets", async () => {
+      tiktokClient.fetchProfile.mockResolvedValue({
+        user: { username: "liveuser", live: false },
+        videos: [{ id: "v1" }],
+      });
+      stateStorage.getState.mockResolvedValue({
+        lastVideoId: "v1",
+        isLive: true,
+        notLiveStreak: 1,
+      });
+
+      await scheduler.pollOnce();
+      expect(notifier.send).not.toHaveBeenCalled();
+      expect(stateStorage.setState).toHaveBeenCalledWith("liveuser", {
+        isLive: false,
+        notLiveStreak: 0,
+      });
+    });
+
+    it("live=true again immediately after a single transient not-live read -> notLiveStreak resets to 0, does NOT re-announce", async () => {
+      tiktokClient.fetchProfile.mockResolvedValue({
+        user: { username: "liveuser", live: true, liveId: "room-100" },
+        videos: [{ id: "v1" }],
+      });
+      stateStorage.getState.mockResolvedValue({
+        lastVideoId: "v1",
+        isLive: true,
+        notLiveStreak: 1, // transient misread on previous poll
+      });
+
+      await scheduler.pollOnce();
+      expect(notifier.send).not.toHaveBeenCalled();
+      expect(stateStorage.setState).toHaveBeenCalledWith(
+        "liveuser",
+        expect.objectContaining({
+          isLive: true,
+          notLiveStreak: 0,
+        }),
+      );
+    });
   });
 });
+
+// ---------------------------------------------------------------------------
+
 
 // ---------------------------------------------------------------------------
 // backoff constants — consolidated from tiktokScheduler.test.js

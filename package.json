@@ -5,6 +5,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "fast-xml-parser": "^5.10.1",
+    "got-scraping": "^4.2.1",
     "kazagumo": "^3.4.3",
     "kuroshiro": "^1.2.0",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
@@ -33,7 +34,8 @@
     "test:coverage": "node scripts/runTestsWithLog.js --coverage",
     "clean:test-logs": "node scripts/cleanTestLogs.js",
     "validate:modules": "node scripts/validateModules.js",
-    "validate:env": "node scripts/validateEnv.js"
+    "validate:env": "node scripts/validateEnv.js",
+    "diagnose:tiktok": "node scripts/diagnoseTikTok.js"
   },
   "repository": {
     "type": "git",

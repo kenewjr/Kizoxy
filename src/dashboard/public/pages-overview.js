@@ -23,18 +23,29 @@ async function renderOverview() {
         '<span class="badge badge--yellow"><span class="status-dot status-dot--reconnecting"></span> reconnecting</span>';
     }
 
+    let scraperBadge =
+      '<span class="badge badge--red"><span class="status-dot status-dot--dnd"></span> Offline</span>';
+    const scraperStatus = meta?.scraper_service?.status;
+    if (scraperStatus === "Online") {
+      scraperBadge =
+        '<span class="badge badge--green"><span class="status-dot status-dot--online"></span> Online</span>';
+    } else if (scraperStatus === "Degraded") {
+      scraperBadge =
+        '<span class="badge badge--yellow"><span class="status-dot status-dot--reconnecting"></span> Degraded</span>';
+    }
+
     content.innerHTML = `
       <div class="stat-row">
         <div class="stat-card"><div class="stat-card__label">Guilds</div><div class="stat-card__value">${stats.guild_count}</div></div>
         <div class="stat-card"><div class="stat-card__label">Users</div><div class="stat-card__value">${stats.user_count.toLocaleString()}</div></div>
         <div class="stat-card"><div class="stat-card__label">Memory</div><div class="stat-card__value">${stats.memory_rss_mb} MB</div></div>
         <div class="stat-card"><div class="stat-card__label">Uptime</div><div class="stat-card__value">${formatUptime(stats.uptime_ms)}</div></div>
+        <div class="stat-card"><div class="stat-card__label">Scraper Backend</div><div class="stat-card__value" style="display:flex;align-items:center;height:24px;">${scraperBadge}</div></div>
         <div class="stat-card"><div class="stat-card__label">Lavalink</div><div class="stat-card__value" style="display:flex;align-items:center;height:24px;">${lavalinkBadge}</div></div>
         <div class="stat-card"><div class="stat-card__label">Music Players</div><div class="stat-card__value">${stats.active_player_count ?? 0}</div></div>
         <div class="stat-card"><div class="stat-card__label">Alarms</div><div class="stat-card__value">${stats.active_alarm_count ?? 0}</div></div>
         <div class="stat-card"><div class="stat-card__label">YT Subs</div><div class="stat-card__value">${stats.youtube_total_subs}</div></div>
         <div class="stat-card"><div class="stat-card__label">TT Subs</div><div class="stat-card__value">${stats.tiktok_total_subs}</div></div>
-        <div class="stat-card"><div class="stat-card__label">Donations Prompted</div><div class="stat-card__value">${stats.donate_seen_count ?? 0}</div></div>
       </div>
 
       <div class="card" style="margin-bottom:16px; display:flex; align-items:center; gap:16px;">
