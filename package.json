@@ -55,5 +55,8 @@
     "jest": "^30.4.2",
     "prettier": "^3.9.6",
     "supertest": "^7.2.2"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.0": true
   }
 }
