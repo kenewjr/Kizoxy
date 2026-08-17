@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload failed test log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-log-node-${{ matrix.node }}
           path: tests/logs/latest-test-run.log
@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload failed coverage log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-test-log-node-24
           path: tests/logs/latest-test-run.log
