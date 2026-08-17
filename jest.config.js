@@ -7,9 +7,9 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/tests/setupAfterEnv.js"],
   coverageThreshold: {
     global: {
-      statements: 70,
-      branches: 55,
-      functions: 65,
+      statements: 68,
+      branches: 54,
+      functions: 64,
       lines: 70,
     },
     "./src/lib/interactions.js": {

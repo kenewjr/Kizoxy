@@ -17,6 +17,9 @@
   "name": "kizoxy",
   "description": "Kizoxy is a premium multipurpose Discord bot.",
   "version": "3.9",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

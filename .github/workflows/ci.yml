@@ -16,8 +16,11 @@ on:
       - ".gitignore"
       - ".gitattributes"
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,14 +35,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run Prettier check
-        run: npx prettier --check .
+        run: npm exec -- prettier --check .
 
       - name: Run ESLint
         run: npm run lint
@@ -50,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["20", "22"]
+        node: ["22", "24"]
 
     steps:
       - name: Checkout repository
@@ -75,4 +78,40 @@ jobs:
         run: npm run validate:env
 
       - name: Run Unit Tests (Jest)
+        run: npm test
+
+      - name: Upload failed test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-node-${{ matrix.node }}
+          path: tests/logs/latest-test-run.log
+          if-no-files-found: ignore
+
+  coverage:
+    name: Coverage (Node 24)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Unit Tests with Coverage
         run: npm run test:coverage
+
+      - name: Upload failed coverage log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-test-log-node-24
+          path: tests/logs/latest-test-run.log
+          if-no-files-found: ignore

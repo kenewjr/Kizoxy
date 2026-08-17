@@ -1,28 +1,35 @@
 name: Dependabot Auto-Merge
 
 on:
-  workflow_run:
-    workflows: ["CI — Lint & Validate"]
-    types:
-      - completed
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  pull-requests: write
   contents: write
+  pull-requests: write
 
 jobs:
   dependabot:
+    name: Queue safe update
     runs-on: ubuntu-latest
-    if: >
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      (github.event.workflow_run.triggering_actor.login == 'dependabot[bot]' || github.event.workflow_run.actor.login == 'dependabot[bot]') &&
-      github.event.workflow_run.pull_requests[0] != null
+    if: >-
+      github.repository == 'kenewjr/Kizoxy' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.draft == false
+
     steps:
-      - name: Approve and Merge Dependabot PR
-        run: |
-          gh pr approve "$PR_URL"
-          gh pr merge --merge "$PR_URL"
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge after required checks pass
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --merge "$PR_URL"
         env:
-          PR_URL: ${{ github.event.workflow_run.pull_requests[0].html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
