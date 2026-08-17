@@ -34,8 +34,18 @@ describe("TikTok Client (kizoxy-scraper backed)", () => {
         source: "fast",
         diagnostic: "browser captured 0 items across 2 API responses",
         data: [
-          { id: "7653055317907131656", desc: "Newest", create_time: 1781865900, cover_url: "http://cover1.jpg" },
-          { id: "7653055317907131600", desc: "Older", create_time: 1781865800, cover_url: "http://cover2.jpg" },
+          {
+            id: "7653055317907131656",
+            desc: "Newest",
+            create_time: 1781865900,
+            cover_url: "http://cover1.jpg",
+          },
+          {
+            id: "7653055317907131600",
+            desc: "Older",
+            create_time: 1781865800,
+            cover_url: "http://cover2.jpg",
+          },
         ],
       });
       scraperService.getTiktokLiveStatus.mockResolvedValue({
@@ -62,8 +72,14 @@ describe("TikTok Client (kizoxy-scraper backed)", () => {
     });
 
     it("strips a leading @ and lowercases to match normalizeUsername()", () => {
-      scraperService.getTiktokPosts.mockResolvedValue({ success: true, data: [] });
-      scraperService.getTiktokLiveStatus.mockResolvedValue({ success: true, data: {} });
+      scraperService.getTiktokPosts.mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      scraperService.getTiktokLiveStatus.mockResolvedValue({
+        success: true,
+        data: {},
+      });
 
       return tiktokClient.fetchProfile("@Foo.Bar").then((profile) => {
         expect(scraperService.getTiktokPosts).toHaveBeenCalledWith("foo.bar");
@@ -75,12 +91,28 @@ describe("TikTok Client (kizoxy-scraper backed)", () => {
       scraperService.getTiktokPosts.mockResolvedValue({
         success: true,
         data: [
-          { id: "7653055317907131656", desc: "Real video", create_time: 1781865900 },
-          { id: "7653055317907131600", desc: "Reposted", create_time: 1781865800, is_repost: true },
-          { id: "not-a-snowflake", desc: "Garbage ID", create_time: 1781865700 },
+          {
+            id: "7653055317907131656",
+            desc: "Real video",
+            create_time: 1781865900,
+          },
+          {
+            id: "7653055317907131600",
+            desc: "Reposted",
+            create_time: 1781865800,
+            is_repost: true,
+          },
+          {
+            id: "not-a-snowflake",
+            desc: "Garbage ID",
+            create_time: 1781865700,
+          },
         ],
       });
-      scraperService.getTiktokLiveStatus.mockResolvedValue({ success: true, data: {} });
+      scraperService.getTiktokLiveStatus.mockResolvedValue({
+        success: true,
+        data: {},
+      });
 
       const profile = await tiktokClient.fetchProfile("someone");
 
@@ -91,9 +123,13 @@ describe("TikTok Client (kizoxy-scraper backed)", () => {
     it("still returns posts if the live-status call fails (Promise.allSettled isolation)", async () => {
       scraperService.getTiktokPosts.mockResolvedValue({
         success: true,
-        data: [{ id: "7653055317907131656", desc: "Video", create_time: 1781865900 }],
+        data: [
+          { id: "7653055317907131656", desc: "Video", create_time: 1781865900 },
+        ],
       });
-      scraperService.getTiktokLiveStatus.mockRejectedValue(new Error("live check timed out"));
+      scraperService.getTiktokLiveStatus.mockRejectedValue(
+        new Error("live check timed out"),
+      );
 
       const profile = await tiktokClient.fetchProfile("someone");
 
@@ -107,7 +143,10 @@ describe("TikTok Client (kizoxy-scraper backed)", () => {
       const err = new Error("Not found");
       err.code = "NOT_FOUND";
       scraperService.getTiktokPosts.mockRejectedValue(err);
-      scraperService.getTiktokLiveStatus.mockResolvedValue({ success: true, data: {} });
+      scraperService.getTiktokLiveStatus.mockResolvedValue({
+        success: true,
+        data: {},
+      });
 
       await expect(tiktokClient.fetchProfile("ghost")).rejects.toThrow(
         tiktokClient.TiktokAccountNotFoundError,

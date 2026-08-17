@@ -160,7 +160,10 @@ describe("TiktokScheduler Tests", () => {
   it("logs the scraper diagnostic when a profile has no videos", async () => {
     await scheduler._handleVideos(
       "therock",
-      { videos: [], diagnostic: "TikTok status 10221 (likely banned/restricted)" },
+      {
+        videos: [],
+        diagnostic: "TikTok status 10221 (likely banned/restricted)",
+      },
       {},
       [],
     );
@@ -419,7 +422,6 @@ describe("TiktokScheduler Tests", () => {
 });
 
 // ---------------------------------------------------------------------------
-
 
 // ---------------------------------------------------------------------------
 // backoff constants — consolidated from tiktokScheduler.test.js

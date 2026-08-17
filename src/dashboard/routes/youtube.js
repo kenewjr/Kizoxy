@@ -158,12 +158,17 @@ router.get("/:id/youtube/:subId/check", async (req, res) => {
   try {
     const { id: guildId, subId } = req.params;
     const subs = await youtubeStorage.listSubscriptions(guildId);
-    const sub = subs.find((s) => s.id === subId || s.youtubeChannelId === subId);
+    const sub = subs.find(
+      (s) => s.id === subId || s.youtubeChannelId === subId,
+    );
     if (!sub) {
       return res.status(404).json({ error: "Subscription not found" });
     }
 
-    const { fetchLatestFeedEntry, fetchVideoDetails } = require("../../integrations/youtube/client");
+    const {
+      fetchLatestFeedEntry,
+      fetchVideoDetails,
+    } = require("../../integrations/youtube/client");
     const { classify } = require("../../integrations/youtube/classifier");
 
     let entry;
@@ -180,7 +185,9 @@ router.get("/:id/youtube/:subId/check", async (req, res) => {
       return res.json({
         youtubeChannelId: sub.youtubeChannelId,
         youtubeChannelTitle: sub.youtubeChannelTitle || "Unknown",
-        youtubeChannelUrl: sub.youtubeChannelUrl || `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
+        youtubeChannelUrl:
+          sub.youtubeChannelUrl ||
+          `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
         latest_video: null,
         checked_at: new Date().toISOString(),
       });
@@ -199,7 +206,9 @@ router.get("/:id/youtube/:subId/check", async (req, res) => {
           channelTitle: sub.youtubeChannelTitle || entry.author || "YouTube",
           publishedAt: entry.publishedAt,
           thumbnails: {
-            high: { url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg` },
+            high: {
+              url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
+            },
           },
         },
       };
@@ -209,14 +218,22 @@ router.get("/:id/youtube/:subId/check", async (req, res) => {
 
     res.json({
       youtubeChannelId: sub.youtubeChannelId,
-      youtubeChannelTitle: sub.youtubeChannelTitle || videoItem.snippet?.channelTitle || entry.author || "YouTube",
-      youtubeChannelUrl: sub.youtubeChannelUrl || `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
+      youtubeChannelTitle:
+        sub.youtubeChannelTitle ||
+        videoItem.snippet?.channelTitle ||
+        entry.author ||
+        "YouTube",
+      youtubeChannelUrl:
+        sub.youtubeChannelUrl ||
+        `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
       latest_video: {
         id: entry.videoId,
         type: type || "video",
         url: `https://www.youtube.com/watch?v=${entry.videoId}`,
         title: videoItem.snippet?.title || entry.title || null,
-        thumbnail: videoItem.snippet?.thumbnails?.high?.url || `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
+        thumbnail:
+          videoItem.snippet?.thumbnails?.high?.url ||
+          `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
         publishedAt: entry.publishedAt || null,
       },
       checked_at: new Date().toISOString(),
@@ -234,7 +251,9 @@ router.post("/:id/youtube/:subId/force-notify", async (req, res) => {
   try {
     const { id: guildId, subId } = req.params;
     const subs = await youtubeStorage.listSubscriptions(guildId);
-    const sub = subs.find((s) => s.id === subId || s.youtubeChannelId === subId);
+    const sub = subs.find(
+      (s) => s.id === subId || s.youtubeChannelId === subId,
+    );
     if (!sub) {
       return res.status(404).json({ error: "Subscription not found" });
     }
@@ -244,9 +263,15 @@ router.post("/:id/youtube/:subId/force-notify", async (req, res) => {
       return res.status(503).json({ error: "Discord client not available" });
     }
 
-    const { fetchLatestFeedEntry, fetchVideoDetails } = require("../../integrations/youtube/client");
+    const {
+      fetchLatestFeedEntry,
+      fetchVideoDetails,
+    } = require("../../integrations/youtube/client");
     const { classify } = require("../../integrations/youtube/classifier");
-    const { buildAnnouncementEmbed, buildWatchRow } = require("../../integrations/youtube/formatter");
+    const {
+      buildAnnouncementEmbed,
+      buildWatchRow,
+    } = require("../../integrations/youtube/formatter");
     const { buildContent } = require("../../lib/notificationTemplate");
     const youtubeStateStorage = require("../../persistence/youtubeStateStorage");
     const { ChannelType } = require("discord.js");
@@ -255,11 +280,15 @@ router.post("/:id/youtube/:subId/force-notify", async (req, res) => {
     try {
       entry = await fetchLatestFeedEntry(sub.youtubeChannelId);
     } catch (err) {
-      return res.status(502).json({ error: `Failed to fetch YouTube feed: ${err.message}` });
+      return res
+        .status(502)
+        .json({ error: `Failed to fetch YouTube feed: ${err.message}` });
     }
 
     if (!entry || !entry.videoId) {
-      return res.status(404).json({ error: "No video entries found in channel feed" });
+      return res
+        .status(404)
+        .json({ error: "No video entries found in channel feed" });
     }
 
     let videoItem = null;
@@ -275,7 +304,9 @@ router.post("/:id/youtube/:subId/force-notify", async (req, res) => {
           channelTitle: sub.youtubeChannelTitle || entry.author || "YouTube",
           publishedAt: entry.publishedAt,
           thumbnails: {
-            high: { url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg` },
+            high: {
+              url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
+            },
           },
         },
       };
@@ -310,27 +341,43 @@ router.post("/:id/youtube/:subId/force-notify", async (req, res) => {
       },
     });
 
-    const channel = await discordClient.channels.fetch(sub.announceChannelId).catch(() => null);
+    const channel = await discordClient.channels
+      .fetch(sub.announceChannelId)
+      .catch(() => null);
     if (!channel) {
-      return res.status(404).json({ error: `Announce channel ${sub.announceChannelId} not found` });
+      return res
+        .status(404)
+        .json({ error: `Announce channel ${sub.announceChannelId} not found` });
     }
 
-    const sentMsg = await channel.send({ content, embeds: [embed], components }).catch((e) => {
-      logger.error(`[YOUTUBE_DASHBOARD] Force-notify failed for channel ${channel.id}: ${e.message}`);
-      return null;
-    });
+    const sentMsg = await channel
+      .send({ content, embeds: [embed], components })
+      .catch((e) => {
+        logger.error(
+          `[YOUTUBE_DASHBOARD] Force-notify failed for channel ${channel.id}: ${e.message}`,
+        );
+        return null;
+      });
 
     if (!sentMsg) {
-      return res.status(500).json({ error: "Failed to send message to Discord channel" });
+      return res
+        .status(500)
+        .json({ error: "Failed to send message to Discord channel" });
     }
 
-    if (channel.type === ChannelType.GuildAnnouncement || sentMsg.crosspostable) {
+    if (
+      channel.type === ChannelType.GuildAnnouncement ||
+      sentMsg.crosspostable
+    ) {
       await sentMsg.crosspost().catch(() => {});
     }
 
     // Mark as seen in state storage
-    const state = (await youtubeStateStorage.getState(sub.youtubeChannelId)) || {};
-    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
+    const state =
+      (await youtubeStateStorage.getState(sub.youtubeChannelId)) || {};
+    const seenVideoIds = Array.isArray(state.seenVideoIds)
+      ? state.seenVideoIds
+      : [];
     await youtubeStateStorage.setState(sub.youtubeChannelId, {
       lastVideoId: entry.videoId,
       lastPublishedAt: entry.publishedAt || state.lastPublishedAt,

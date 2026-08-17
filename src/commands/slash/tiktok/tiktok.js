@@ -112,14 +112,18 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(statusColor)
-        .setTitle(`${statusIcon} kizoxy-scraper Service Status: ${health.status}`)
+        .setTitle(
+          `${statusIcon} kizoxy-scraper Service Status: ${health.status}`,
+        )
         .addFields(
           { name: "Service URL", value: `\`${BASE_URL}\``, inline: true },
           { name: "Status", value: `**${health.status}**`, inline: true },
           { name: "Browser Pool", value: poolInfo, inline: false },
           {
             name: "Last Checked",
-            value: health.lastChecked ? `<t:${Math.floor(new Date(health.lastChecked).getTime() / 1000)}:R>` : "Now",
+            value: health.lastChecked
+              ? `<t:${Math.floor(new Date(health.lastChecked).getTime() / 1000)}:R>`
+              : "Now",
             inline: true,
           },
         );
@@ -255,7 +259,9 @@ module.exports = {
         const subs = await tiktokStorage.listSubscriptions(
           interaction.guild.id,
         );
-        const sub = subs.find((s) => s.username.toLowerCase() === cleanUser.toLowerCase());
+        const sub = subs.find(
+          (s) => s.username.toLowerCase() === cleanUser.toLowerCase(),
+        );
         announceChannelId = sub?.discordChannelId || sub?.announce_channel_id;
       }
       if (!announceChannelId) {

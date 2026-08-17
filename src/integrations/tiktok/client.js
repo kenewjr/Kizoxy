@@ -35,11 +35,11 @@ function _mapPost(username, post) {
   // Filter out reposts
   const isRepost = Boolean(
     post.is_repost ||
-      post.isRepost ||
-      post.repost ||
-      post.is_reposted ||
-      post.item_type === 2 ||
-      post.type === "repost",
+    post.isRepost ||
+    post.repost ||
+    post.is_reposted ||
+    post.item_type === 2 ||
+    post.type === "repost",
   );
   if (isRepost) {
     logger.debug(
@@ -158,9 +158,7 @@ async function fetchProfile(username) {
   const rawPosts = Array.isArray(postsBody?.data) ? postsBody.data : [];
   const source = postsBody?.source || "fast";
 
-  const videos = rawPosts
-    .map((p) => _mapPost(cleanUser, p))
-    .filter(Boolean);
+  const videos = rawPosts.map((p) => _mapPost(cleanUser, p)).filter(Boolean);
 
   videos.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
 

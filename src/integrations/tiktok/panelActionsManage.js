@@ -210,7 +210,8 @@ async function handleTest(interaction, client, subId) {
     }
 
     const avatar = profile?.user?.avatar || null;
-    const targetVideo = profile?.videos?.find((v) => !v.isLive) || profile?.videos?.[0];
+    const targetVideo =
+      profile?.videos?.find((v) => !v.isLive) || profile?.videos?.[0];
 
     if (!targetVideo) {
       return interaction.followUp({

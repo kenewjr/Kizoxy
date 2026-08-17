@@ -2,7 +2,10 @@ const router = require("express").Router();
 const Logger = require("../../lib/logger");
 const tiktokStorage = require("../../persistence/tiktokStorage");
 const { resolveProfile } = require("../../integrations/tiktok/resolver");
-const { fetchProfile, TiktokAccountNotFoundError } = require("../../integrations/tiktok/client");
+const {
+  fetchProfile,
+  TiktokAccountNotFoundError,
+} = require("../../integrations/tiktok/client");
 
 const logger = new Logger("DASHBOARD");
 
@@ -174,7 +177,8 @@ router.get("/:id/tiktok/:subId/check", async (req, res) => {
       });
     }
 
-    const latestVideo = profile.videos.find((v) => !v.isLive) || profile.videos[0] || null;
+    const latestVideo =
+      profile.videos.find((v) => !v.isLive) || profile.videos[0] || null;
 
     res.json({
       username: profile.user.username,
@@ -261,7 +265,12 @@ router.post("/:id/tiktok/:subId/force-notify", async (req, res) => {
         customMessage: sub.customMessage,
         mentionRoleId: sub.mentionRoleId,
         defaultPrefix: `🔴 [TIKTOK LIVE] @${sub.username} is live on TikTok!`,
-        vars: { name: `@${sub.username}`, url: liveUrl, title: `@${sub.username} is live`, type: "live" },
+        vars: {
+          name: `@${sub.username}`,
+          url: liveUrl,
+          title: `@${sub.username} is live`,
+          type: "live",
+        },
       });
       await notifier.send(discordClient, sub, { embed, row, content });
 
@@ -291,13 +300,20 @@ router.post("/:id/tiktok/:subId/force-notify", async (req, res) => {
       customMessage: sub.customMessage,
       mentionRoleId: sub.mentionRoleId,
       defaultPrefix: `📲 [TIKTOK] @${sub.username} posted a new video`,
-      vars: { name: `@${sub.username}`, url: latest.url, title: latest.title || "", type: "video" },
+      vars: {
+        name: `@${sub.username}`,
+        url: latest.url,
+        title: latest.title || "",
+        type: "video",
+      },
     });
     await notifier.send(discordClient, sub, { embed, row, content });
 
     // Mark as seen in state storage so background scheduler won't re-trigger notification
     const state = (await tiktokStateStorage.getState(sub.username)) || {};
-    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
+    const seenVideoIds = Array.isArray(state.seenVideoIds)
+      ? state.seenVideoIds
+      : [];
     let latestTime = latest.createTime ? Number(latest.createTime) : 0;
     if (!latestTime && latest.id) {
       try {

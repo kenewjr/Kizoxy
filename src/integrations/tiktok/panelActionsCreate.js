@@ -199,7 +199,10 @@ async function handleClearMsg(interaction, client) {
   const key = `${interaction.user.id}:${interaction.guildId}`;
   const pending = getPanel().pendingConfigs.get(key);
   if (!pending)
-    return interaction.followUp({ content: "Session expired.", ephemeral: true });
+    return interaction.followUp({
+      content: "Session expired.",
+      ephemeral: true,
+    });
   pending.customMessage = null;
   pending.expiresAt = Date.now() + 5 * 60 * 1000;
   const embed = buildTtConfigEmbed(client, pending, !!pending.editSubId);

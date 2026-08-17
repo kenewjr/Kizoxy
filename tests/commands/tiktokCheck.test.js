@@ -1,8 +1,7 @@
 ﻿jest.mock("../../src/integrations/tiktok/client", () => ({
   fetchProfile: jest.fn(),
-  isValidTikTokId: jest.requireActual(
-    "../../src/integrations/tiktok/client",
-  ).isValidTikTokId,
+  isValidTikTokId: jest.requireActual("../../src/integrations/tiktok/client")
+    .isValidTikTokId,
   TiktokAccountNotFoundError: class extends Error {},
 }));
 

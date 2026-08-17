@@ -25,7 +25,11 @@ describe("scraperService client header and request tests", () => {
       capturedHeaders = options.headers;
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ success: true, browser_pool: { available: 1, total: 1 } }),
+        json: () =>
+          Promise.resolve({
+            success: true,
+            browser_pool: { available: 1, total: 1 },
+          }),
       });
     });
 
@@ -73,6 +77,8 @@ describe("scraperService client header and request tests", () => {
       text: () => Promise.resolve(JSON.stringify({ detail: "Forbidden" })),
     });
 
-    await expect(scraperClient.getTiktokPosts("testuser")).rejects.toThrow("Forbidden");
+    await expect(scraperClient.getTiktokPosts("testuser")).rejects.toThrow(
+      "Forbidden",
+    );
   });
 });

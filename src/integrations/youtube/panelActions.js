@@ -209,7 +209,10 @@ async function handleClearMsg(interaction, client) {
   const key = `${interaction.user.id}:${interaction.guildId}`;
   const pending = getPanel().pendingConfigs.get(key);
   if (!pending)
-    return interaction.followUp({ content: "Session expired.", ephemeral: true });
+    return interaction.followUp({
+      content: "Session expired.",
+      ephemeral: true,
+    });
   pending.customMessage = null;
   pending.expiresAt = Date.now() + 5 * 60 * 1000;
   const embed = buildYtConfigEmbed(client, pending, !!pending.editSubId);
@@ -416,14 +419,17 @@ async function handleStatus(interaction, client, subId) {
       });
     }
 
-    const state = (await youtubeStateStorage.getState(sub.youtubeChannelId)) || {};
+    const state =
+      (await youtubeStateStorage.getState(sub.youtubeChannelId)) || {};
     const lastChecked = state.lastCheckedAt
       ? `<t:${Math.floor(new Date(state.lastCheckedAt).getTime() / 1000)}:R>`
       : "Never";
 
     const embed = Embeds.brand(client, {
       title: `YouTube Status — ${sub.youtubeChannelTitle || sub.youtubeChannelId}`,
-      url: sub.youtubeChannelUrl || `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
+      url:
+        sub.youtubeChannelUrl ||
+        `https://www.youtube.com/channel/${sub.youtubeChannelId}`,
       fields: [
         {
           name: "Channel",
@@ -479,7 +485,9 @@ async function handleTest(interaction, client, subId) {
     try {
       entry = await fetchLatestFeedEntry(sub.youtubeChannelId);
     } catch (err) {
-      logger.error(`[YOUTUBE_MANAGE] Failed to fetch feed for ${sub.youtubeChannelId}: ${err.message}`);
+      logger.error(
+        `[YOUTUBE_MANAGE] Failed to fetch feed for ${sub.youtubeChannelId}: ${err.message}`,
+      );
       return interaction.followUp({
         content: `❌ Failed to fetch latest YouTube video for **${sub.youtubeChannelTitle || sub.youtubeChannelId}**: ${err.message}`,
         ephemeral: true,
@@ -507,7 +515,9 @@ async function handleTest(interaction, client, subId) {
           title: entry.title || "New video",
           channelTitle: sub.youtubeChannelTitle || entry.author || "YouTube",
           thumbnails: {
-            high: { url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg` },
+            high: {
+              url: `https://i.ytimg.com/vi/${entry.videoId}/hqdefault.jpg`,
+            },
           },
         },
       };
@@ -535,7 +545,9 @@ async function handleTest(interaction, client, subId) {
     const msg = await channel
       .send({ embeds: [embed], components: [row] })
       .catch((e) => {
-        logger.error(`[YOUTUBE_MANAGE] Failed to post test notification: ${e.message}`);
+        logger.error(
+          `[YOUTUBE_MANAGE] Failed to post test notification: ${e.message}`,
+        );
         return null;
       });
 
@@ -546,7 +558,9 @@ async function handleTest(interaction, client, subId) {
       });
     }
 
-    logger.success(`[YOUTUBE_MANAGE] Delivered test notification for ${sub.youtubeChannelTitle} (videoId: ${entry.videoId})`);
+    logger.success(
+      `[YOUTUBE_MANAGE] Delivered test notification for ${sub.youtubeChannelTitle} (videoId: ${entry.videoId})`,
+    );
 
     return interaction.followUp({
       content: `🚀 **Test Notification Delivered**: Sent actual latest YouTube video (\`${entry.videoId}\`) for **${sub.youtubeChannelTitle || entry.author}** to <#${sub.announceChannelId}>.`,

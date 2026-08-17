@@ -218,8 +218,12 @@ async function ytCheckStatus(guildId, subId) {
     return;
   }
 
-  if (btn) { btn.disabled = true; btn.textContent = "⏳ Checking..."; }
-  content.innerHTML = '<span style="color:var(--text-3)">Fetching from YouTube...</span>';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Checking...";
+  }
+  content.innerHTML =
+    '<span style="color:var(--text-3)">Fetching from YouTube...</span>';
   resultRow.style.display = "table-row";
 
   try {
@@ -241,16 +245,24 @@ async function ytCheckStatus(guildId, subId) {
     const body = await err.json?.().catch(() => ({}));
     content.innerHTML = `<span style="color:var(--red)">${esc(body?.error || "Failed to check status")}</span>`;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "🔍 Check"; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "🔍 Check";
+    }
   }
 }
 
 // Force-send a notification immediately (bypasses scheduler dedup).
 async function ytForceNotify(guildId, subId) {
   try {
-    const data = await api.post(`/guilds/${guildId}/youtube/${subId}/force-notify`);
+    const data = await api.post(
+      `/guilds/${guildId}/youtube/${subId}/force-notify`,
+    );
     if (data.video) {
-      showToast(`📺 Sent [${data.type || "video"}]: ${data.video.title || data.video.id}`, "success");
+      showToast(
+        `📺 Sent [${data.type || "video"}]: ${data.video.title || data.video.id}`,
+        "success",
+      );
     } else {
       showToast(`✅ YouTube notification sent`, "success");
     }
@@ -490,8 +502,12 @@ async function ttCheckStatus(guildId, subId) {
     return;
   }
 
-  if (btn) { btn.disabled = true; btn.textContent = "⏳ Checking..."; }
-  content.innerHTML = '<span style="color:var(--text-3)">Fetching from TikTok...</span>';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Checking...";
+  }
+  content.innerHTML =
+    '<span style="color:var(--text-3)">Fetching from TikTok...</span>';
   resultRow.style.display = "table-row";
 
   try {
@@ -521,15 +537,22 @@ async function ttCheckStatus(guildId, subId) {
     const body = await err.json?.().catch(() => ({}));
     content.innerHTML = `<span style="color:var(--red)">${esc(body?.error || "Failed to check status")}</span>`;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "🔍 Check"; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "🔍 Check";
+    }
   }
 }
 
 // Force-send a notification immediately (bypasses scheduler dedup).
 async function ttForceNotify(guildId, subId, type) {
-  const label = type === "live" ? "live notification" : "latest video notification";
+  const label =
+    type === "live" ? "live notification" : "latest video notification";
   try {
-    const data = await api.post(`/guilds/${guildId}/tiktok/${subId}/force-notify`, { type });
+    const data = await api.post(
+      `/guilds/${guildId}/tiktok/${subId}/force-notify`,
+      { type },
+    );
     if (type === "video" && data.video) {
       showToast(`📲 Sent: ${data.video.title || data.video.id}`, "success");
     } else {

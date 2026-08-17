@@ -96,13 +96,21 @@ describe("YouTube Panel Button Interaction Tests", () => {
   it("routes status action correctly", async () => {
     interaction.customId = "youtube_panel:status:sub-123";
     await youtubePanel.execute(interaction, client);
-    expect(actions.handleStatus).toHaveBeenCalledWith(interaction, client, "sub-123");
+    expect(actions.handleStatus).toHaveBeenCalledWith(
+      interaction,
+      client,
+      "sub-123",
+    );
   });
 
   it("routes test action correctly", async () => {
     interaction.customId = "youtube_panel:test:sub-123";
     await youtubePanel.execute(interaction, client);
-    expect(actions.handleTest).toHaveBeenCalledWith(interaction, client, "sub-123");
+    expect(actions.handleTest).toHaveBeenCalledWith(
+      interaction,
+      client,
+      "sub-123",
+    );
   });
 
   it("handles search_start modal", async () => {

@@ -3,6 +3,7 @@
 ## 1. Storage System Mechanics (`src/persistence/`)
 
 Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes**:
+
 1. Menulis data baru ke file sementara (`data/<name>.json.tmp`).
 2. Mengganti file lama secara atomic via `fs.rename`.
 3. Membuat cadangan otomatis (`data/<name>.json.bak`) sebelum penulisan.
@@ -15,6 +16,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 ### 2.1 TikTok Storage (`data/tiktok_subscriptions.json` & `data/tiktok_state.json`)
 
 #### Subscriptions Schema:
+
 ```json
 {
   "guild_id_123": [
@@ -31,6 +33,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 ```
 
 #### State Schema:
+
 ```json
 {
   "guild_id_123:sub_1786200000000": {
@@ -49,6 +52,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 ### 2.2 YouTube Storage (`data/youtube_subscriptions.json` & `data/youtube_state.json`)
 
 #### Subscriptions Schema:
+
 ```json
 {
   "guild_id_123": [
@@ -71,6 +75,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 ### 2.3 TempVC Storage (`data/temp_vc_settings.json` & `data/temp_vc_active.json`)
 
 #### Settings Schema:
+
 ```json
 {
   "guild_id_123": {
@@ -86,6 +91,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 ```
 
 #### Active Channels Schema:
+
 ```json
 {
   "channel_id_999": {
@@ -100,6 +106,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 ---
 
 ### 2.4 Alarm Storage (`data/alarms.json`)
+
 ```json
 {
   "guild_id_123": [

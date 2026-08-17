@@ -22,7 +22,6 @@ function getApiKey() {
   );
 }
 
-
 let _healthState = {
   status: "Unknown", // "Online" | "Degraded" | "Offline"
   lastChecked: null,

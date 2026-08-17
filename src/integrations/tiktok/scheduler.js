@@ -86,7 +86,9 @@ class TiktokScheduler {
       }
 
       const usernames = [...userMap.keys()];
-      logger.info(`[TIKTOK] Polling ${usernames.length} profile(s) in sequential queue...`);
+      logger.info(
+        `[TIKTOK] Polling ${usernames.length} profile(s) in sequential queue...`,
+      );
 
       for (const username of usernames) {
         try {
@@ -145,7 +147,8 @@ class TiktokScheduler {
   }
 
   async _handleVideos(username, profile, state, subscribers) {
-    const latest = profile.videos?.find((v) => !v.isLive) || profile.videos?.[0];
+    const latest =
+      profile.videos?.find((v) => !v.isLive) || profile.videos?.[0];
     if (!latest) {
       logger.info(
         `[TIKTOK] [NO_VIDEOS] @${username} has 0 uploaded videos${
@@ -166,12 +169,20 @@ class TiktokScheduler {
     }
     const times = profile.videos.map((v) => {
       if (v.createTime) return Number(v.createTime);
-      try { return Number(BigInt(v.id) >> 32n); } catch (_) { return 0; }
+      try {
+        return Number(BigInt(v.id) >> 32n);
+      } catch (_) {
+        return 0;
+      }
     });
     const maxTime = Math.max(...times, latestTime, 0);
 
-    const lastTime = state.lastVideoCreateTime ? Number(state.lastVideoCreateTime) : 0;
-    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
+    const lastTime = state.lastVideoCreateTime
+      ? Number(state.lastVideoCreateTime)
+      : 0;
+    const seenVideoIds = Array.isArray(state.seenVideoIds)
+      ? state.seenVideoIds
+      : [];
 
     // First time we ever see this profile: record all current video IDs without announcing,
     // so adding a subscription never floods historical posts.
@@ -179,7 +190,10 @@ class TiktokScheduler {
       await this.stateStorage.setState(username, {
         lastVideoId: latest.id,
         lastVideoCreateTime: Math.max(maxTime, latestTime),
-        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
         // Preserve any live fields already set in this cycle.
         isLive: state.isLive || false,
       });
@@ -189,14 +203,18 @@ class TiktokScheduler {
     // 1. Skip if post ID was already seen/notified previously
     if (seenVideoIds.includes(latest.id) || state.lastVideoId === latest.id) {
       await this.stateStorage.setState(username, {
-        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
       });
       return;
     }
 
     // 2. Skip if post is older than 48 hours (48 * 3600 * 1000 ms)
     // Automated notifications are strictly for new uploads, never historical posts
-    const MAX_AGE_MS = process.env.NODE_ENV === "test" ? Infinity : 48 * 60 * 60 * 1000;
+    const MAX_AGE_MS =
+      process.env.NODE_ENV === "test" ? Infinity : 48 * 60 * 60 * 1000;
     const now = Date.now();
     const isOldPost = latestTime > 0 && now - latestTime * 1000 > MAX_AGE_MS;
 
@@ -207,7 +225,10 @@ class TiktokScheduler {
       await this.stateStorage.setState(username, {
         lastVideoId: latest.id,
         lastVideoCreateTime: Math.max(latestTime, lastTime, maxTime),
-        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
       });
       return;
     }
@@ -218,7 +239,10 @@ class TiktokScheduler {
         `[TIKTOK_SCHEDULER] Skipping post ${latest.id} for @${username} (timestamp ${latestTime} <= recorded ${lastTime})`,
       );
       await this.stateStorage.setState(username, {
-        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
       });
       return;
     }
@@ -227,7 +251,10 @@ class TiktokScheduler {
     await this.stateStorage.setState(username, {
       lastVideoId: latest.id,
       lastVideoCreateTime: Math.max(latestTime, lastTime, maxTime),
-      seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(0, 50),
+      seenVideoIds: [...new Set([...allVideoIds, ...seenVideoIds])].slice(
+        0,
+        50,
+      ),
     });
   }
 

@@ -1,4 +1,9 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require("discord.js");
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+} = require("discord.js");
 const Embeds = require("../../lib/embeds");
 const Logger = require("../../lib/logger");
 
@@ -115,11 +120,13 @@ async function send(client, subscription, { embed, row, content }) {
   );
 
   if (channel.type === ChannelType.GuildAnnouncement || msg.crosspostable) {
-    await msg.crosspost().catch((e) =>
-      logger.warning(
-        `[TIKTOK_NOTIFIER] Auto-crosspost failed for TikTok message ${msg.id} in channel ${channel.id}: ${e.message}`,
-      ),
-    );
+    await msg
+      .crosspost()
+      .catch((e) =>
+        logger.warning(
+          `[TIKTOK_NOTIFIER] Auto-crosspost failed for TikTok message ${msg.id} in channel ${channel.id}: ${e.message}`,
+        ),
+      );
   }
   return true;
 }

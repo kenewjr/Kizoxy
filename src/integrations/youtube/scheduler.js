@@ -102,16 +102,25 @@ class YoutubeScheduler {
     if (!entry?.videoId) return;
 
     const state = (await this.stateStorage.getState(channelId)) || {};
-    const entryTime = entry.publishedAt ? new Date(entry.publishedAt).getTime() : 0;
-    const lastTime = state.lastPublishedAt ? new Date(state.lastPublishedAt).getTime() : 0;
-    const seenVideoIds = Array.isArray(state.seenVideoIds) ? state.seenVideoIds : [];
+    const entryTime = entry.publishedAt
+      ? new Date(entry.publishedAt).getTime()
+      : 0;
+    const lastTime = state.lastPublishedAt
+      ? new Date(state.lastPublishedAt).getTime()
+      : 0;
+    const seenVideoIds = Array.isArray(state.seenVideoIds)
+      ? state.seenVideoIds
+      : [];
 
     // First time we ever see this channel: record the latest without
     // announcing, so a restart/first-add never floods the old backlog.
     if (!state.lastVideoId) {
       const stateObj = {
         lastVideoId: entry.videoId,
-        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
       };
       if (entry.publishedAt) stateObj.lastPublishedAt = entry.publishedAt;
       await this.stateStorage.setState(channelId, stateObj);
@@ -119,14 +128,18 @@ class YoutubeScheduler {
     }
 
     // 1. Skip if video ID was already seen/notified previously
-    if (seenVideoIds.includes(entry.videoId) || state.lastVideoId === entry.videoId) {
+    if (
+      seenVideoIds.includes(entry.videoId) ||
+      state.lastVideoId === entry.videoId
+    ) {
       await this.stateStorage.touch(channelId);
       return;
     }
 
     // 2. Skip if video is older than 48 hours (48 * 3600 * 1000 ms)
     // Automated notifications are strictly for new uploads, never historical posts
-    const MAX_AGE_MS = process.env.NODE_ENV === "test" ? Infinity : 48 * 60 * 60 * 1000;
+    const MAX_AGE_MS =
+      process.env.NODE_ENV === "test" ? Infinity : 48 * 60 * 60 * 1000;
     const now = Date.now();
     const isOldPost = entryTime > 0 && now - entryTime > MAX_AGE_MS;
 
@@ -136,7 +149,10 @@ class YoutubeScheduler {
       );
       const nextState = {
         lastVideoId: entry.videoId,
-        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
       };
       if (entry.publishedAt) nextState.lastPublishedAt = entry.publishedAt;
       await this.stateStorage.setState(channelId, nextState);
@@ -149,7 +165,10 @@ class YoutubeScheduler {
         `[YOUTUBE_SCHEDULER] Skipping video ${entry.videoId} for channel ${channelId} (published ${entry.publishedAt} <= recorded ${state.lastPublishedAt})`,
       );
       await this.stateStorage.setState(channelId, {
-        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(0, 50),
+        seenVideoIds: [...new Set([entry.videoId, ...seenVideoIds])].slice(
+          0,
+          50,
+        ),
       });
       return;
     }
@@ -238,13 +257,16 @@ class YoutubeScheduler {
         );
 
         if (
-          channel.type === ChannelType.GuildAnnouncement || sentMsg.crosspostable
+          channel.type === ChannelType.GuildAnnouncement ||
+          sentMsg.crosspostable
         ) {
-          await sentMsg.crosspost().catch((e) =>
-            logger.warning(
-              `[YOUTUBE_SCHEDULER] Auto-crosspost failed for YouTube message ${sentMsg.id} in channel ${channel.id}: ${e.message}`,
-            ),
-          );
+          await sentMsg
+            .crosspost()
+            .catch((e) =>
+              logger.warning(
+                `[YOUTUBE_SCHEDULER] Auto-crosspost failed for YouTube message ${sentMsg.id} in channel ${channel.id}: ${e.message}`,
+              ),
+            );
         }
       } catch (err) {
         logger.error(`fan-out error for guild ${guildId}: ${err.message}`);

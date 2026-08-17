@@ -12,7 +12,9 @@ const logger = new Logger("DASHBOARD");
 router.get("/meta", async (req, res) => {
   try {
     const meta = await getBotMeta(req.app.locals.client);
-    const { getServiceStatus } = require("../../integrations/scraperService/client");
+    const {
+      getServiceStatus,
+    } = require("../../integrations/scraperService/client");
     meta.scraper_service = getServiceStatus();
     meta.tiktok_strategy_stats = getStrategyStats();
     res.json(meta);
@@ -25,7 +27,9 @@ router.get("/meta", async (req, res) => {
 // GET /api/health
 router.get("/health", (req, res) => {
   const client = req.app.locals.client;
-  const { getServiceStatus } = require("../../integrations/scraperService/client");
+  const {
+    getServiceStatus,
+  } = require("../../integrations/scraperService/client");
   const scraperStatus = getServiceStatus();
   if (!client || !client.ws || client.ws.status !== 0) {
     return res.status(503).json({
@@ -88,7 +92,13 @@ router.get("/stats", async (req, res) => {
       active_alarm_count: activeAlarmIds.size,
       donate_seen_count: donateSeenStorage.getSeenCount(),
       romaji_cache: romajiConverter.getCacheStats(),
-      tiktok_strategy_stats: (() => { try { return getStrategyStats(); } catch (_) { return null; } })(),
+      tiktok_strategy_stats: (() => {
+        try {
+          return getStrategyStats();
+        } catch (_) {
+          return null;
+        }
+      })(),
     });
   } catch (err) {
     logger.error(`GET /api/stats: ${err.message}`);
@@ -97,9 +107,15 @@ router.get("/stats", async (req, res) => {
 });
 
 // Cookie management moved to kizoxy-scraper microservice.
-router.get("/tiktok/cookies/status", (_req, res) => res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }));
-router.post("/tiktok/cookies", (_req, res) => res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }));
-router.delete("/tiktok/cookies", (_req, res) => res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }));
+router.get("/tiktok/cookies/status", (_req, res) =>
+  res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }),
+);
+router.post("/tiktok/cookies", (_req, res) =>
+  res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }),
+);
+router.delete("/tiktok/cookies", (_req, res) =>
+  res.status(410).json({ error: "Cookie management moved to kizoxy-scraper" }),
+);
 
 // GET /api/players
 router.get("/players", (req, res) => {

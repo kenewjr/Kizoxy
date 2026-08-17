@@ -19,7 +19,9 @@ module.exports = (client) => {
 
     client.once(Events.ClientReady, async () => {
       try {
-        const { initHealthCheck } = require("../integrations/scraperService/client");
+        const {
+          initHealthCheck,
+        } = require("../integrations/scraperService/client");
         initHealthCheck();
         await tiktokStorage.load();
         await tiktokStateStorage.load();

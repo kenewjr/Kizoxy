@@ -314,9 +314,11 @@ async function renderTiktokCookies(el) {
         </div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <span style="font-size:13px">Status:</span>
-          ${hasCookies
-            ? `<span style="color:var(--green);font-weight:600">✅ Cookies stored (${status.count} cookies)</span>`
-            : `<span style="color:var(--text-3)">⚠️ No cookies — Camofox will see logged-out TikTok</span>`}
+          ${
+            hasCookies
+              ? `<span style="color:var(--green);font-weight:600">✅ Cookies stored (${status.count} cookies)</span>`
+              : `<span style="color:var(--text-3)">⚠️ No cookies — Camofox will see logged-out TikTok</span>`
+          }
           ${hasCookies ? `<button class="btn btn--danger btn--sm" onclick="deleteTiktokCookies()">🗑 Remove Cookies</button>` : ""}
         </div>
         <div id="tt-cookie-form">
@@ -328,7 +330,9 @@ async function renderTiktokCookies(el) {
         </div>
       </div>`;
   } catch (err) {
-    if (el) el.innerHTML = '<div style="color:var(--text-3);font-size:13px">Could not load cookie status (Camofox may not be configured).</div>';
+    if (el)
+      el.innerHTML =
+        '<div style="color:var(--text-3);font-size:13px">Could not load cookie status (Camofox may not be configured).</div>';
   }
 }
 
@@ -344,7 +348,8 @@ async function uploadTiktokCookies() {
   let cookies;
   try {
     cookies = JSON.parse(raw);
-    if (!Array.isArray(cookies) || cookies.length === 0) throw new Error("Must be a non-empty array");
+    if (!Array.isArray(cookies) || cookies.length === 0)
+      throw new Error("Must be a non-empty array");
   } catch (e) {
     errEl.textContent = `Invalid JSON: ${e.message}`;
     errEl.style.display = "block";
@@ -372,4 +377,3 @@ async function deleteTiktokCookies() {
     showToast("Failed to remove cookies", "error");
   }
 }
-

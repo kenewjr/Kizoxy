@@ -99,6 +99,7 @@ module.exports = [
       "infra/",
       "coverage/",
       ".github/",
+      "scratch/",
       "src/dashboard/public/",
     ],
   },
