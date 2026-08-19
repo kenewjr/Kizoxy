@@ -16,7 +16,7 @@ module.exports = async (client) => {
     files.forEach((file) => {
       try {
         const event = require(`../events/track/${file}`);
-        let eventName = file.split(".")[0];
+        const eventName = file.split(".")[0];
         client.manager.on(eventName, event.bind(null, client));
         logger.success(`Loaded event: ${eventName}`);
         totalLoaded++;

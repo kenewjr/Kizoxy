@@ -13,7 +13,7 @@ function truncateChoice(str, max = CHOICE_LEN) {
 
 async function playSearchAutocompleteChoices(manager, query) {
   const q = (query || "").trim();
-  if (!q) return [];
+  if (!q || /^https?:\/\//i.test(q)) return [];
   const res = await manager.search(q, { requester: null }).catch(() => null);
   if (!res?.tracks?.length) return [];
   return res.tracks.slice(0, 25).map((t) => {
@@ -146,8 +146,9 @@ module.exports = async (client, interaction) => {
     if (interaction.commandName === "play") {
       try {
         const raw = interaction.options.getString("search") || Random;
+        const isUrl = /^https?:\/\//i.test(raw.trim());
         let choice = await playSearchAutocompleteChoices(client.manager, raw);
-        if (!choice.length) {
+        if (!choice.length && !isUrl) {
           choice = await playSearchAutocompleteChoices(client.manager, Random);
         }
         await interaction.respond(choice.length ? choice : []);
@@ -169,11 +170,12 @@ module.exports = async (client, interaction) => {
         if (sub === "playskip" || sub === "playtop") {
           try {
             const raw = interaction.options.getString("search") || Random;
+            const isUrl = /^https?:\/\//i.test(raw.trim());
             let choice = await playSearchAutocompleteChoices(
               client.manager,
               raw,
             );
-            if (!choice.length) {
+            if (!choice.length && !isUrl) {
               choice = await playSearchAutocompleteChoices(
                 client.manager,
                 Random,

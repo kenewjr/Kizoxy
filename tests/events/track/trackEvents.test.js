@@ -37,8 +37,8 @@ const playerMoved = require("../../../src/events/track/playerMoved");
 const playerStart = require("../../../src/events/track/playerStart");
 const queueEnd = require("../../../src/events/track/queueEnd");
 const trackEnd = require("../../../src/events/track/trackEnd");
-const trackException = require("../../../src/events/track/trackException");
-const trackStuck = require("../../../src/events/track/trackStuck");
+const playerException = require("../../../src/events/track/playerException");
+const playerStuck = require("../../../src/events/track/playerStuck");
 
 describe("Track Events Hardening", () => {
   let client, player, channel, mockMessage;
@@ -443,76 +443,47 @@ describe("Track Events Hardening", () => {
     });
   });
 
-  describe("trackException.js", () => {
-    it("sends notice and skips if queue is not empty", async () => {
-      player.queue.size = 1;
-      await trackException(
-        client,
-        player,
-        { title: "Bad Song", uri: "http" },
-        { exception: { message: "Error 403" } },
-      );
+  describe("playerException.js", () => {
+    it("sends notice without stopping the track a second time", async () => {
+      await playerException(client, player, {
+        exception: { message: "Error 403" },
+      });
       expect(channel.send).toHaveBeenCalled();
-      expect(player.skip).toHaveBeenCalledTimes(1);
-    });
-
-    it("returns early if channel does not exist", async () => {
-      client.channels.cache.clear();
-      await trackException(
-        client,
-        player,
-        { title: "Bad Song", uri: "http" },
-        { exception: { message: "Error 403" } },
-      );
       expect(player.skip).not.toHaveBeenCalled();
     });
 
-    it("does not skip if queue is empty", async () => {
-      player.queue.size = 0;
-      player.queue.current = null;
-      await trackException(
-        client,
-        player,
-        { title: "Bad Song", uri: "http" },
-        { exception: { message: "Error 403" } },
-      );
+    it("logs safely when channel and payload are missing", async () => {
+      client.channels.cache.clear();
+      await expect(playerException(client, player)).resolves.not.toThrow();
+      expect(player.skip).not.toHaveBeenCalled();
+    });
+
+    it("uses the current queue track in the notice", async () => {
+      player.queue.current = { title: "Bad Song", uri: "http" };
+      await playerException(client, player, {
+        exception: { message: "Error 403" },
+      });
+      expect(channel.send).toHaveBeenCalledTimes(1);
       expect(player.skip).not.toHaveBeenCalled();
     });
   });
 
-  describe("trackStuck.js", () => {
-    it("sends notice and skips if queue is not empty", async () => {
-      player.queue.size = 1;
-      await trackStuck(
-        client,
-        player,
-        { title: "Stuck Song", uri: "http" },
-        { thresholdMs: 5000 },
-      );
+  describe("playerStuck.js", () => {
+    it("sends a buffering notice without stopping the current track", async () => {
+      await playerStuck(client, player, { thresholdMs: 5000 });
       expect(channel.send).toHaveBeenCalled();
-      expect(player.skip).toHaveBeenCalledTimes(1);
-    });
-
-    it("returns early if channel does not exist", async () => {
-      client.channels.cache.clear();
-      await trackStuck(
-        client,
-        player,
-        { title: "Stuck Song", uri: "http" },
-        { thresholdMs: 5000 },
-      );
       expect(player.skip).not.toHaveBeenCalled();
     });
 
-    it("does not skip if queue is empty", async () => {
-      player.queue.size = 0;
+    it("does not stop the current track when the notice channel is unavailable", async () => {
+      client.channels.cache.clear();
+      await playerStuck(client, player, { thresholdMs: 5000 });
+      expect(player.skip).not.toHaveBeenCalled();
+    });
+
+    it("handles a missing current track without stopping the queue", async () => {
       player.queue.current = null;
-      await trackStuck(
-        client,
-        player,
-        { title: "Stuck Song", uri: "http" },
-        { thresholdMs: 5000 },
-      );
+      await playerStuck(client, player, { thresholdMs: 5000 });
       expect(player.skip).not.toHaveBeenCalled();
     });
   });

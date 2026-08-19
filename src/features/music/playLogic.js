@@ -45,9 +45,15 @@ async function waitForNodeReady(client, timeoutMs = NODE_READY_TIMEOUT_MS) {
 // once after a short delay to absorb the voice-connection race that previously
 // required users to issue /play twice before audio started.
 async function startPlayback(player) {
+  logger.debug(
+    `Playback gate guild=${player.guildId} playing=${!!player.playing} paused=${!!player.paused} current=${player.queue.current?.identifier || "none"} queued=${player.queue.size}`,
+  );
   if (player.playing || player.paused) return;
   try {
     await player.play();
+    logger.info(
+      `Playback requested guild=${player.guildId} current=${player.queue.current?.identifier || "unknown"}`,
+    );
   } catch (err) {
     logger.warning(
       `Initial play() failed, retrying once: ${err.message || err}`,
@@ -196,6 +202,9 @@ async function playLogic(client, ctx, args) {
       (result.type && String(result.type).toUpperCase().includes("PLAYLIST")) ||
       !!result.playlistName ||
       !!result.playlist?.name;
+    logger.info(
+      `Resolved play guild=${ctx.guild.id} type=${isPlaylist ? "playlist" : "track"} tracks=${result.tracks.length} existingPlayer=${!!existingPlayer}`,
+    );
 
     if (isPlaylist) {
       let added = 0;

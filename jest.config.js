@@ -84,10 +84,10 @@ module.exports = {
     "./src/events/track/trackEnd.js": {
       statements: 100,
     },
-    "./src/events/track/trackException.js": {
+    "./src/events/track/playerException.js": {
       statements: 100,
     },
-    "./src/events/track/trackStuck.js": {
+    "./src/events/track/playerStuck.js": {
       statements: 100,
     },
   },
