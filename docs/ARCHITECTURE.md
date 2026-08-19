@@ -2,7 +2,7 @@
 
 ## 1. High-Level Architecture Diagram
 
-```
+```text
                                ┌───────────────────────────┐
                                │   Discord Gateway & API   │
                                └─────────────┬─────────────┘

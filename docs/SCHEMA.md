@@ -15,7 +15,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 
 ### 2.1 TikTok Storage (`data/tiktok_subscriptions.json` & `data/tiktok_state.json`)
 
-#### Subscriptions Schema:
+#### TikTok Subscriptions Schema
 
 ```json
 {
@@ -32,7 +32,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 }
 ```
 
-#### State Schema:
+#### TikTok State Schema
 
 ```json
 {
@@ -51,7 +51,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 
 ### 2.2 YouTube Storage (`data/youtube_subscriptions.json` & `data/youtube_state.json`)
 
-#### Subscriptions Schema:
+#### YouTube Subscriptions Schema
 
 ```json
 {
@@ -74,7 +74,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 
 ### 2.3 TempVC Storage (`data/temp_vc_settings.json` & `data/temp_vc_active.json`)
 
-#### Settings Schema:
+#### TempVC Settings Schema
 
 ```json
 {
@@ -90,7 +90,7 @@ Penyimpanan data Kizoxy berbasis file JSON dengan mekanisme **Atomic File Writes
 }
 ```
 
-#### Active Channels Schema:
+#### TempVC Active Channels Schema
 
 ```json
 {
