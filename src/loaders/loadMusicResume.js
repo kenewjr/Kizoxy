@@ -92,7 +92,7 @@ module.exports = async (client) => {
           client.manager.on("playerStart", seekOnStart);
           setTimeout(() => {
             client.manager.off("playerStart", seekOnStart);
-          }, 15000);
+          }, 15000).unref?.();
         }
 
         await player.play();

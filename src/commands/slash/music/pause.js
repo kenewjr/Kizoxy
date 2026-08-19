@@ -49,7 +49,7 @@ module.exports = {
         } catch (_err) {
           // Ignore error if already deleted
         }
-      }, 5000);
+      }, 5000).unref?.();
     } catch (_err) {
       await interaction.reply({
         content: "❌ Failed to pause playback.",

@@ -90,16 +90,18 @@ class TiktokScheduler {
         `[TIKTOK] Polling ${usernames.length} profile(s) in sequential queue...`,
       );
 
-      for (const username of usernames) {
+      for (const [index, username] of usernames.entries()) {
         try {
           await this._pollUser(username, userMap.get(username));
         } catch (err) {
           logger.error(`[TIKTOK] Error polling @${username}:`, err.message);
         }
-        // Jeda antrean agar tidak tabrakan — jitter agar tidak terlihat pola tetap
-        await new Promise((res) =>
-          setTimeout(res, jitteredDelayMs(3000, 1500)),
-        );
+        // Jeda antar profil agar tidak tabrakan; jangan menunda akhir siklus.
+        if (index < usernames.length - 1) {
+          await new Promise((res) =>
+            setTimeout(res, jitteredDelayMs(3000, 1500)),
+          );
+        }
       }
     } finally {
       this._running = false;

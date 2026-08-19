@@ -39,6 +39,6 @@ module.exports = {
       try {
         await interaction.deleteReply();
       } catch (_err) {}
-    }, 5000);
+    }, 5000).unref?.();
   },
 };

@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection } = require("discord.js");
+const { Client, Events, GatewayIntentBits, Collection } = require("discord.js");
 require("./lib/patchInteractions");
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
@@ -194,7 +194,7 @@ async function tryTriggerMusicResume() {
   );
 }
 
-client.once("ready", () => {
+client.once(Events.ClientReady, () => {
   tryTriggerMusicResume().catch(() => {});
 });
 

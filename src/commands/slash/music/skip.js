@@ -58,7 +58,7 @@ module.exports = {
           } catch (_err) {
             // Ignore error if already deleted
           }
-        }, EPHEMERAL_TTL_MS);
+        }, EPHEMERAL_TTL_MS).unref?.();
         return;
       }
 
@@ -77,7 +77,7 @@ module.exports = {
           } catch (_err) {
             // Ignore error if already deleted
           }
-        }, EPHEMERAL_TTL_MS);
+        }, EPHEMERAL_TTL_MS).unref?.();
         return;
       }
 
@@ -100,7 +100,7 @@ module.exports = {
         } catch (_err) {
           // Ignore error if already deleted
         }
-      }, EPHEMERAL_TTL_MS);
+      }, EPHEMERAL_TTL_MS).unref?.();
     } catch (_err) {
       try {
         if (interaction.replied || interaction.deferred) {

@@ -41,6 +41,6 @@ module.exports = {
       } catch (_err) {
         // Ignore error if already deleted
       }
-    }, 5000);
+    }, 5000).unref?.();
   },
 };

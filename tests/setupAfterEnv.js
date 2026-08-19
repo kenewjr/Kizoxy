@@ -66,13 +66,13 @@ jest.spyOn(path, "join").mockImplementation((...args) => {
 // 3. Automatically flush all active storage singletons after each test to prevent pending save timers
 afterEach(async () => {
   const storages = [
-    "../../src/persistence/commandStorage",
-    "../../src/persistence/donateSeenStorage",
-    "../../src/persistence/fixembedStorage",
-    "../../src/persistence/levelSettingsStorage",
-    "../../src/persistence/tempvcStorage",
-    "../../src/persistence/tiktokStorage",
-    "../../src/persistence/youtubeStorage",
+    "../src/persistence/commandStorage",
+    "../src/persistence/donateSeenStorage",
+    "../src/persistence/fixembedStorage",
+    "../src/persistence/levelSettingsStorage",
+    "../src/persistence/tempvcStorage",
+    "../src/persistence/tiktokStorage",
+    "../src/persistence/youtubeStorage",
   ];
   for (const s of storages) {
     try {

@@ -130,7 +130,7 @@ module.exports = {
       setTimeout(
         () => interaction.editReply({ content: " ", embeds: [embed] }),
         2000,
-      );
+      ).unref?.();
     } catch (err) {
       await interaction.editReply(`❌ Failed to update filter: ${err.message}`);
     }

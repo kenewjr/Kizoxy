@@ -35,8 +35,6 @@ const playerEmpty = require("../../../src/events/track/playerEmpty");
 const playerEnd = require("../../../src/events/track/playerEnd");
 const playerMoved = require("../../../src/events/track/playerMoved");
 const playerStart = require("../../../src/events/track/playerStart");
-const queueEnd = require("../../../src/events/track/queueEnd");
-const trackEnd = require("../../../src/events/track/trackEnd");
 const playerException = require("../../../src/events/track/playerException");
 const playerStuck = require("../../../src/events/track/playerStuck");
 
@@ -127,6 +125,43 @@ describe("Track Events Hardening", () => {
       client.channels.cache.clear();
       await playerEmpty(client, player);
       expect(player.destroy).not.toHaveBeenCalled();
+    });
+
+    it("restarts lofi through the live playerEmpty event", async () => {
+      player.data.set("lofi", true);
+      player.data.set("lofiUrl", "lofi-stream-url");
+      player.playing = false;
+      player.paused = false;
+      player.search.mockResolvedValue({ tracks: ["lofi-track"] });
+
+      await playerEmpty(client, player);
+
+      expect(player.search).toHaveBeenCalledWith("lofi-stream-url", {
+        requester: client.user,
+      });
+      expect(player.queue.add).toHaveBeenCalledWith("lofi-track");
+      expect(player.play).toHaveBeenCalledTimes(1);
+      expect(player.destroy).not.toHaveBeenCalled();
+    });
+
+    it("keeps the lofi player when restart returns no tracks", async () => {
+      player.data.set("lofi", true);
+      player.search.mockResolvedValue({ tracks: [] });
+
+      await playerEmpty(client, player);
+
+      expect(player.queue.add).not.toHaveBeenCalled();
+      expect(player.destroy).not.toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalled();
+    });
+
+    it("handles lofi restart search failure without destroying the player", async () => {
+      player.data.set("lofi", true);
+      player.search.mockRejectedValue(new Error("Lavalink offline"));
+
+      await expect(playerEmpty(client, player)).resolves.not.toThrow();
+      expect(player.destroy).not.toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalled();
     });
   });
 
@@ -326,120 +361,6 @@ describe("Track Events Hardening", () => {
           embeds: [player.data.nowPlayingEmbed],
         }),
       );
-    });
-  });
-
-  describe("queueEnd.js", () => {
-    it("starts lofi if lofi mode is active", async () => {
-      player.data.set("lofi", true);
-      player.data.set("lofiUrl", "lofi-stream-url");
-      player.playing = false;
-      player.paused = false;
-      player.search.mockResolvedValue({ tracks: ["lofi-track"] });
-
-      await queueEnd(client, player);
-      expect(player.search).toHaveBeenCalledWith("lofi-stream-url", {
-        requester: client.user,
-      });
-      expect(player.queue.add).toHaveBeenCalledWith("lofi-track");
-      expect(player.play).toHaveBeenCalledTimes(1);
-    });
-
-    it("handles lofi auto-restart search failure", async () => {
-      player.data.set("lofi", true);
-      player.data.set("lofiUrl", "lofi-stream-url");
-      player.search.mockRejectedValue(new Error("Lavalink offline"));
-      await expect(queueEnd(client, player)).resolves.not.toThrow();
-    });
-
-    it("returns early if channel does not exist and lofi is inactive", async () => {
-      client.channels.cache.clear();
-      await queueEnd(client, player);
-      expect(player.destroy).not.toHaveBeenCalled();
-    });
-
-    it("sends 24/7 notice and keeps alive if stay is active", async () => {
-      player.data.set("stay", true);
-      await queueEnd(client, player);
-      expect(channel.send).toHaveBeenCalled();
-      expect(player.destroy).not.toHaveBeenCalled();
-    });
-
-    it("handles error on sending 24/7 notice", async () => {
-      player.data.set("stay", true);
-      channel.send.mockRejectedValueOnce(new Error("Send failed"));
-      await expect(queueEnd(client, player)).resolves.not.toThrow();
-    });
-
-    it("destroys player if normal end", async () => {
-      await queueEnd(client, player);
-      expect(channel.send).toHaveBeenCalled();
-      expect(player.destroy).toHaveBeenCalledTimes(1);
-    });
-
-    it("handles error on sending normal end notice", async () => {
-      channel.send.mockRejectedValueOnce(new Error("Send failed"));
-      await expect(queueEnd(client, player)).resolves.not.toThrow();
-    });
-  });
-
-  describe("trackEnd.js", () => {
-    it("does nothing if lofi mode is disabled", async () => {
-      player.data.set("lofi", false);
-      await trackEnd(client, player, {}, {});
-      expect(player.search).not.toHaveBeenCalled();
-    });
-
-    it("does nothing if stopped or replaced", async () => {
-      player.data.set("lofi", true);
-      await trackEnd(client, player, {}, { reason: "stopped" });
-      await trackEnd(client, player, {}, { reason: "replaced" });
-      expect(player.search).not.toHaveBeenCalled();
-    });
-
-    it("re-searches and plays lofi stream on interruption", async () => {
-      player.data.set("lofi", true);
-      player.data.set("lofiUrl", "url");
-      player.playing = false;
-      player.paused = false;
-      player.search.mockResolvedValue({ tracks: ["lofi"] });
-
-      await trackEnd(
-        client,
-        player,
-        { requester: "user", uri: "url" },
-        { reason: "finished" },
-      );
-      expect(player.search).toHaveBeenCalledWith("url", { requester: "user" });
-      expect(player.queue.add).toHaveBeenCalledWith("lofi");
-      expect(player.play).toHaveBeenCalledTimes(1);
-    });
-
-    it("logs error if lofi auto-restart returns no tracks", async () => {
-      player.data.set("lofi", true);
-      player.data.set("lofiUrl", "url");
-      player.search.mockResolvedValue({ tracks: [] });
-      await trackEnd(
-        client,
-        player,
-        { requester: "user", uri: "url" },
-        { reason: "finished" },
-      );
-      expect(player.queue.add).not.toHaveBeenCalled();
-    });
-
-    it("handles search exception during lofi auto-restart", async () => {
-      player.data.set("lofi", true);
-      player.data.set("lofiUrl", "url");
-      player.search.mockRejectedValue(new Error("Lavalink offline"));
-      await expect(
-        trackEnd(
-          client,
-          player,
-          { requester: "user", uri: "url" },
-          { reason: "finished" },
-        ),
-      ).resolves.not.toThrow();
     });
   });
 
