@@ -1,5 +1,8 @@
 const Logger = require("../../lib/logger");
 const { Constants } = require("shoukaku");
+const {
+  getSpotifyOembedTitle,
+} = require("../../integrations/spotify/oembed");
 
 const logger = new Logger("PLAY");
 
@@ -9,8 +12,31 @@ const PLAYLIST_RETRY_DELAYS_MS = [2000, 3000, 4000];
 const NODE_POLL_INTERVAL_MS = 200;
 
 const PLAYLIST_URL_RE = /[?&]list=|\bplaylist\b/i;
+const SPOTIFY_URL_RE = /^https?:\/\/(?:open\.)?spotify\.com\//i;
+const SPOTIFY_ENTITY_URL_RE =
+  /^https?:\/\/open\.spotify\.com\/(?:intl-[^/]+\/)?(track|album|artist|playlist)\/[^/?#]+/i;
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function getSpotifyEntityType(query) {
+  return SPOTIFY_URL_RE.test(query)
+    ? SPOTIFY_ENTITY_URL_RE.exec(query)?.[1]?.toLowerCase() || null
+    : null;
+}
+
+async function searchWithRetries(manager, query, options, delays) {
+  let result = await manager.search(query, options);
+  let attempt = 0;
+  while (!result?.tracks?.length && attempt < delays.length) {
+    logger.debug(
+      `Search returned empty, retry ${attempt + 1}/${delays.length}...`,
+    );
+    await delay(delays[attempt]);
+    result = await manager.search(query, options);
+    attempt++;
+  }
+  return { result, attempt };
+}
 
 // Resolves once at least one Lavalink node reports CONNECTED, or false on timeout.
 // On a fresh boot the node WebSocket may still be connecting, which previously
@@ -114,7 +140,9 @@ async function playLogic(client, ctx, args) {
     }
 
     const requester = isSlash ? ctx.user : ctx.author;
-    const looksLikePlaylist = PLAYLIST_URL_RE.test(query);
+    const spotifyEntityType = getSpotifyEntityType(query);
+    const looksLikePlaylist =
+      spotifyEntityType === "playlist" || PLAYLIST_URL_RE.test(query);
 
     // Immediate feedback — overwritten by the real result once resolved.
     let placeholderMsg;
@@ -149,19 +177,34 @@ async function playLogic(client, ctx, args) {
 
     // Search BEFORE creating the player: a failed lookup should not leave an
     // idle voice connection behind.
-    let result = await client.manager.search(query, { requester });
     const delays = looksLikePlaylist
       ? PLAYLIST_RETRY_DELAYS_MS
       : SEARCH_RETRY_DELAYS_MS;
-    let attempt = 0;
-    while (!result?.tracks?.length && attempt < delays.length) {
-      logger.debug(
-        `Search returned empty, retry ${attempt + 1}/${delays.length}...`,
-      );
-      await delay(delays[attempt]);
-      result = await client.manager.search(query, { requester });
-      attempt++;
+    let { result, attempt } = await searchWithRetries(
+      client.manager,
+      query,
+      { requester },
+      delays,
+    );
+
+    if (
+      !result?.tracks?.length &&
+      ["track", "album", "artist"].includes(spotifyEntityType)
+    ) {
+      const title = await getSpotifyOembedTitle(query);
+      if (title) {
+        logger.info(
+          `Spotify link failed to load directly, retrying via YouTube search: "${title}"`,
+        );
+        ({ result, attempt } = await searchWithRetries(
+          client.manager,
+          title,
+          { requester, engine: "youtube" },
+          SEARCH_RETRY_DELAYS_MS,
+        ));
+      }
     }
+
     if (!result?.tracks?.length) {
       logger.warning(
         `Search failed after ${attempt} retries for query "${query}" — genuine no results`,
@@ -172,6 +215,18 @@ async function playLogic(client, ctx, args) {
         } catch (_) {
           /* already gone */
         }
+      }
+      if (spotifyEntityType === "playlist") {
+        return reply(
+          "❌ | Couldn't load that Spotify playlist right now — this needs a Lavalink-side fix (Spotify's Premium API policy), not something retryable from here.",
+          true,
+        );
+      }
+      if (["track", "album", "artist"].includes(spotifyEntityType)) {
+        return reply(
+          "❌ | Couldn't load that Spotify link — try a direct YouTube link or search instead.",
+          true,
+        );
       }
       return reply("❌ | No results found.", true);
     }

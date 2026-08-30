@@ -278,6 +278,12 @@ async function renderTikTok(el, guildId) {
   try {
     const subs = await api.get(`/guilds/${guildId}/tiktok`);
     const g = state.currentGuild;
+    let proxyStatus;
+    try {
+      proxyStatus = await api.get(`/guilds/${guildId}/proxy/status`);
+    } catch (err) {
+      proxyStatus = { error: err.message || "Scraper unavailable" };
+    }
     let healthBanner = "";
     try {
       const meta = await api.get("/meta");
@@ -300,7 +306,8 @@ async function renderTikTok(el, guildId) {
       </div>
     </div>`;
     el.innerHTML = `${healthBanner}${infoBanner}
-      <div class="card" style="padding:0;overflow-x:auto">
+      <div id="tt-proxy-panel">${renderTtProxyPanel(proxyStatus, guildId)}</div>
+      <div class="card table-container" style="padding:0">
         <table class="table" id="tt-table">
           <thead><tr><th>Username</th><th>Announce Ch</th><th>Posts</th><th>Live</th><th></th></tr></thead>
           <tbody>${subs.map((s) => ttRow(s, guildId)).join("")}</tbody>
@@ -346,6 +353,135 @@ async function renderTikTok(el, guildId) {
   } catch {
     el.innerHTML =
       '<div class="card" style="color:var(--red)">Failed to load TikTok subscriptions.</div>';
+  }
+}
+
+function proxyData(response) {
+  return response?.data && typeof response.data === "object"
+    ? response.data
+    : response || {};
+}
+
+function renderTtProxyPanel(response, guildId) {
+  const status = proxyData(response);
+  if (status.error) {
+    return `<section class="card proxy-card" aria-labelledby="tt-proxy-title">
+      <div class="proxy-card__header">
+        <div><h3 id="tt-proxy-title">Scraper-wide proxy rotation</h3><p>Shared by every guild, not a per-server setting.</p></div>
+        <span class="badge badge--red">Unavailable</span>
+      </div>
+      <div class="proxy-error">${esc(status.error)}</div>
+      ${proxyCaveatHtml()}
+    </section>`;
+  }
+
+  const mode = ["off", "manual", "auto"].includes(status.mode)
+    ? status.mode
+    : "off";
+  const currentProxy = status.current_proxy || "Direct connection (no proxy)";
+  const failures = Number.isFinite(Number(status.consecutive_failures))
+    ? Number(status.consecutive_failures)
+    : 0;
+  const threshold = Number.isFinite(Number(status.failure_threshold))
+    ? Number(status.failure_threshold)
+    : 20;
+
+  return `<section class="card proxy-card" aria-labelledby="tt-proxy-title">
+    <div class="proxy-card__header">
+      <div><h3 id="tt-proxy-title">Scraper-wide proxy rotation</h3><p>Shared by every guild, not a per-server setting.</p></div>
+      <span class="badge ${currentProxy === "Direct connection (no proxy)" ? "badge--grey" : "badge--green"}">${currentProxy === "Direct connection (no proxy)" ? "Direct" : "Proxy active"}</span>
+    </div>
+    <div class="proxy-card__status">
+      <div><span>Current connection</span><strong>${esc(currentProxy)}</strong></div>
+      <div><span>Network failure trigger</span><strong>${failures} / ${threshold} consecutive network failures</strong></div>
+    </div>
+    <div class="proxy-card__controls">
+      <div class="form-group">
+        <label for="tt-proxy-mode">Rotation mode</label>
+        <select class="select" id="tt-proxy-mode" onchange="setTtProxyMode('${guildId}',this.value)">
+          <option value="off" ${mode === "off" ? "selected" : ""}>Off</option>
+          <option value="manual" ${mode === "manual" ? "selected" : ""}>Manual</option>
+          <option value="auto" ${mode === "auto" ? "selected" : ""}>Auto</option>
+        </select>
+      </div>
+      <button class="btn btn--primary" id="tt-proxy-rotate" onclick="rotateTtProxy('${guildId}')">↻ Rotate Now</button>
+    </div>
+    <div class="form-group proxy-card__source">
+      <label for="tt-proxy-source">Proxy list source URL</label>
+      <div class="proxy-source-row">
+        <input class="input" id="tt-proxy-source" type="url" value="${escAttr(status.list_source_url || "")}" placeholder="https://provider.example/proxies.txt" autocomplete="url">
+        <button class="btn btn--ghost" id="tt-proxy-source-save" onclick="saveTtProxySource('${guildId}')">Save</button>
+      </div>
+      ${proxyCaveatHtml()}
+    </div>
+  </section>`;
+}
+
+function proxyCaveatHtml() {
+  return `<div class="proxy-caveat"><strong>Free proxy lists are usually not reliable against TikTok's anti-bot system</strong> — only about 2–8% of public proxies typically work, and public proxy IPs are often blocked faster than your own connection. This works with any proxy list URL, including a paid provider's, if you have one. Rotation only helps with network-level blocking; it won't help with accounts that are private, banned, or don't exist.</div>`;
+}
+
+async function refreshTtProxyPanel(guildId) {
+  const panel = document.getElementById("tt-proxy-panel");
+  if (!panel) return;
+  try {
+    panel.innerHTML = renderTtProxyPanel(
+      await api.get(`/guilds/${guildId}/proxy/status`),
+      guildId,
+    );
+  } catch (err) {
+    panel.innerHTML = renderTtProxyPanel({ error: err.message }, guildId);
+  }
+}
+
+async function setTtProxyMode(guildId, mode) {
+  const select = document.getElementById("tt-proxy-mode");
+  if (select) select.disabled = true;
+  try {
+    await api.post(`/guilds/${guildId}/proxy/mode`, { mode });
+    showToast(`Proxy mode set to ${mode}`, "success");
+  } catch {
+    showToast("Failed to update proxy mode", "error");
+  } finally {
+    await refreshTtProxyPanel(guildId);
+  }
+}
+
+async function rotateTtProxy(guildId) {
+  const button = document.getElementById("tt-proxy-rotate");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Rotating…";
+  }
+  try {
+    await api.post(`/guilds/${guildId}/proxy/rotate`);
+    showToast("Proxy rotated", "success");
+  } catch {
+    showToast("Failed to rotate proxy", "error");
+  } finally {
+    await refreshTtProxyPanel(guildId);
+  }
+}
+
+async function saveTtProxySource(guildId) {
+  const input = document.getElementById("tt-proxy-source");
+  const button = document.getElementById("tt-proxy-source-save");
+  const listSourceUrl = input?.value.trim() || "";
+  if (!listSourceUrl) {
+    showToast("Proxy list source URL is required", "error");
+    input?.focus();
+    return;
+  }
+  if (button) button.disabled = true;
+  try {
+    await api.post(`/guilds/${guildId}/proxy/source`, {
+      list_source_url: listSourceUrl,
+    });
+    showToast("Proxy list source saved", "success");
+  } catch {
+    showToast("Failed to save proxy list source", "error");
+  } finally {
+    await refreshTtProxyPanel(guildId);
   }
 }
 

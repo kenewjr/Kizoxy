@@ -6,6 +6,10 @@ jest.mock("shoukaku", () => ({
   Constants: { State: { CONNECTED: 2, CONNECTING: 1, DISCONNECTED: 0 } },
 }));
 
+jest.mock("../../../src/integrations/spotify/oembed", () => ({
+  getSpotifyOembedTitle: jest.fn(),
+}));
+
 jest.mock("../../../src/lib/logger", () => {
   return jest.fn().mockImplementation(() => ({
     info: jest.fn(),
@@ -16,6 +20,9 @@ jest.mock("../../../src/lib/logger", () => {
   }));
 });
 
+const {
+  getSpotifyOembedTitle,
+} = require("../../../src/integrations/spotify/oembed");
 const playLogic = require("../../../src/features/music/playLogic");
 
 const CONNECTED = Constants.State.CONNECTED;
@@ -66,6 +73,7 @@ const emptyResult = { type: "SEARCH", tracks: [] };
 describe("playLogicReadiness", () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    getSpotifyOembedTitle.mockReset();
   });
 
   afterEach(() => {
@@ -231,28 +239,94 @@ describe("playLogicReadiness", () => {
     expect(ctx.channel.send).toHaveBeenCalledWith(expect.stringContaining("3"));
   });
 
-  // covers: Spotify link (routed through ytsearch per KI #44 — Spotify support
-  // dropped, so Spotify URLs are just passed as a raw query string to search().
-  // No special code path exists in playLogic.js; the search engine handles
-  // resolution. This test confirms the generic path still works for Spotify-shaped input.)
-  test("Spotify link — treated as a generic search query, gate/retry logic works normally", async () => {
+  test("Spotify track direct failure falls back to YouTube search using oEmbed title", async () => {
     const mgr = mockManager([CONNECTED]);
-    mgr.search.mockResolvedValue(singleTrackResult);
+    mgr.search
+      .mockResolvedValueOnce(emptyResult)
+      .mockResolvedValueOnce(emptyResult)
+      .mockResolvedValueOnce(emptyResult)
+      .mockResolvedValueOnce(emptyResult)
+      .mockResolvedValueOnce(singleTrackResult);
+    getSpotifyOembedTitle.mockResolvedValue("Never Gonna Give You Up");
     const client = { manager: mgr };
     const ctx = makeCtx();
-    const args = ["https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"];
+    const spotifyUrl =
+      "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC";
 
-    const promise = playLogic(client, ctx, args);
-    await jest.advanceTimersByTimeAsync(100);
+    const promise = playLogic(client, ctx, [spotifyUrl]);
+    await jest.advanceTimersByTimeAsync(5200);
     await promise;
 
-    expect(mgr.search).toHaveBeenCalledWith(
-      "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
-      { requester: ctx.author },
-    );
-    expect(mgr.search).toHaveBeenCalledTimes(1);
+    expect(getSpotifyOembedTitle).toHaveBeenCalledWith(spotifyUrl);
+    expect(mgr.search).toHaveBeenNthCalledWith(5, "Never Gonna Give You Up", {
+      requester: ctx.author,
+      engine: "youtube",
+    });
+    expect(mgr.createPlayer).toHaveBeenCalled();
     expect(ctx.channel.send).toHaveBeenCalledWith(
       expect.stringContaining("Test Song"),
+    );
+  });
+
+  test("Spotify playlist failure skips oEmbed and shows Lavalink-side guidance", async () => {
+    const mgr = mockManager([CONNECTED]);
+    mgr.search.mockResolvedValue(emptyResult);
+    const client = { manager: mgr };
+    const ctx = makeCtx();
+
+    const promise = playLogic(client, ctx, [
+      "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+    ]);
+    await jest.advanceTimersByTimeAsync(9100);
+    await promise;
+
+    expect(getSpotifyOembedTitle).not.toHaveBeenCalled();
+    expect(mgr.search).toHaveBeenCalledTimes(4);
+    expect(ctx.channel.send).toHaveBeenCalledWith(
+      expect.stringContaining("Lavalink-side fix"),
+    );
+  });
+
+  test("Spotify oEmbed failure falls through to direct YouTube guidance", async () => {
+    const mgr = mockManager([CONNECTED]);
+    mgr.search.mockResolvedValue(emptyResult);
+    getSpotifyOembedTitle.mockResolvedValue(null);
+    const client = { manager: mgr };
+    const ctx = makeCtx();
+
+    const promise = playLogic(client, ctx, [
+      "https://open.spotify.com/album/6DEjYFkNZh67HP7R9PSZvv",
+    ]);
+    await jest.advanceTimersByTimeAsync(5200);
+    await promise;
+
+    expect(getSpotifyOembedTitle).toHaveBeenCalledTimes(1);
+    expect(mgr.search).toHaveBeenCalledTimes(4);
+    expect(ctx.channel.send).toHaveBeenCalledWith(
+      expect.stringContaining("direct YouTube link or search"),
+    );
+  });
+
+  test("empty YouTube fallback returns useful Spotify failure message", async () => {
+    const mgr = mockManager([CONNECTED]);
+    mgr.search.mockResolvedValue(emptyResult);
+    getSpotifyOembedTitle.mockResolvedValue("Unfindable Artist");
+    const client = { manager: mgr };
+    const ctx = makeCtx();
+
+    const promise = playLogic(client, ctx, [
+      "https://open.spotify.com/artist/0LyfQWJT6nXafLPZqxe9Of",
+    ]);
+    await jest.advanceTimersByTimeAsync(10400);
+    await promise;
+
+    expect(mgr.search).toHaveBeenCalledTimes(8);
+    expect(mgr.search).toHaveBeenLastCalledWith("Unfindable Artist", {
+      requester: ctx.author,
+      engine: "youtube",
+    });
+    expect(ctx.channel.send).toHaveBeenCalledWith(
+      expect.stringContaining("direct YouTube link or search"),
     );
   });
 

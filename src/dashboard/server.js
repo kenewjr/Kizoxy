@@ -28,6 +28,7 @@ function createDashboard(client) {
   app.use("/api/guilds", require("./routes/guildAlarms"));
   app.use("/api/guilds", require("./routes/youtube"));
   app.use("/api/guilds", require("./routes/tiktok"));
+  app.use("/api/guilds", require("./routes/proxy"));
   app.use("/api/logs", require("./routes/logs"));
   app.use("/api/commands", require("./routes/commands"));
   app.use("/api/sendmsg", require("./routes/sendmsg"));

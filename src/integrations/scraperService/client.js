@@ -265,6 +265,20 @@ module.exports = {
   triggerAutoReconnect,
   getTiktokPosts: (username) => request(buildTiktokPath("posts", username)),
   getTiktokLiveStatus: (username) => request(buildTiktokPath("live", username)),
+  getProxyStatus: () => request("/proxy/status"),
+  rotateProxy: () => request("/proxy/rotate", { method: "POST" }),
+  setProxyMode: (mode) =>
+    request("/proxy/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode }),
+    }),
+  setProxyListSource: (listSourceUrl) =>
+    request("/proxy/source", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ list_source_url: listSourceUrl }),
+    }),
   getYoutubeLatestVideos: async (channelId, limit = 5) => {
     const body = await request(
       `/youtube/channel/${channelId}/latest?limit=${limit}`,

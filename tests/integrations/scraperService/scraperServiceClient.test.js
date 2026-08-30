@@ -5,6 +5,11 @@ describe("scraperService client header and request tests", () => {
   let origApiKey;
   let origServiceKey;
 
+  const successResponse = (data = {}) => ({
+    ok: true,
+    json: () => Promise.resolve({ success: true, data }),
+  });
+
   beforeEach(() => {
     origFetch = global.fetch;
     origApiKey = process.env.API_KEY;
@@ -69,6 +74,46 @@ describe("scraperService client header and request tests", () => {
     const apiKeyCount = lowerKeys.filter((k) => k === "x-api-key").length;
     expect(apiKeyCount).toBe(1);
   });
+
+  it.each([
+    ["getProxyStatus", [], "/proxy/status", "GET", undefined],
+    ["rotateProxy", [], "/proxy/rotate", "POST", undefined],
+    [
+      "setProxyMode",
+      ["auto"],
+      "/proxy/mode",
+      "POST",
+      JSON.stringify({ mode: "auto" }),
+    ],
+    [
+      "setProxyListSource",
+      ["https://proxy.example/list.txt"],
+      "/proxy/source",
+      "POST",
+      JSON.stringify({ list_source_url: "https://proxy.example/list.txt" }),
+    ],
+  ])(
+    "%s sends the expected scraper request",
+    async (methodName, args, path, expectedMethod, expectedBody) => {
+      global.fetch = jest.fn().mockResolvedValue(successResponse({ mode: "auto" }));
+
+      await expect(scraperClient[methodName](...args)).resolves.toEqual({
+        success: true,
+        data: { mode: "auto" },
+      });
+
+      const [url, options] = global.fetch.mock.calls[0];
+      expect(url).toBe(`${scraperClient.BASE_URL}${path}`);
+      expect(options.method || "GET").toBe(expectedMethod);
+      expect(options.body).toBe(expectedBody);
+      expect(new Headers(options.headers).get("x-api-key")).toBe(
+        "test-secret-key",
+      );
+      expect(new Headers(options.headers).get("Content-Type")).toBe(
+        expectedBody ? "application/json" : null,
+      );
+    },
+  );
 
   it("handles non-ok responses cleanly", async () => {
     global.fetch = jest.fn().mockResolvedValue({

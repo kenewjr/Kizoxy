@@ -157,6 +157,7 @@ body {
 #main {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -799,6 +800,13 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 
+  #guild-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .tab-header {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -1237,6 +1245,140 @@ body {
 /* Responsive scrollable tables */
 .table-container {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   border-radius: var(--radius);
+}
+
+#guild-tab-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ── TikTok scraper-wide proxy controls ── */
+.proxy-card {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(var(--accent-rgb), 0.16), transparent 36%),
+    rgba(30, 32, 36, 0.62);
+}
+.proxy-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, #8b5cf6, var(--accent), #22d3ee);
+}
+.proxy-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.proxy-card__header h3 {
+  margin: 0 0 3px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.proxy-card__header p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.proxy-card__status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.proxy-card__status > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(15, 16, 18, 0.46);
+}
+.proxy-card__status span,
+.proxy-card__status strong {
+  display: block;
+}
+.proxy-card__status span {
+  margin-bottom: 4px;
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+.proxy-card__status strong {
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+.proxy-card__controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.proxy-card__controls .form-group {
+  flex: 1;
+}
+.proxy-card__controls .btn {
+  margin-bottom: 12px;
+  min-height: 33px;
+}
+.proxy-card__source {
+  margin-bottom: 0;
+}
+.proxy-source-row {
+  display: flex;
+  gap: 8px;
+}
+.proxy-source-row .input {
+  min-width: 0;
+}
+.proxy-caveat {
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.08);
+  color: #d8c79b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.proxy-caveat strong {
+  color: #f6d58b;
+}
+.proxy-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--red);
+  font-size: 13px;
+}
+.proxy-card :disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+@media (max-width: 640px) {
+  .proxy-card__header,
+  .proxy-card__controls,
+  .proxy-source-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .proxy-card__status {
+    grid-template-columns: 1fr;
+  }
+  .proxy-card__controls .btn {
+    margin-bottom: 12px;
+    justify-content: center;
+  }
 }
