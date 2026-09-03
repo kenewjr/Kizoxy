@@ -177,9 +177,12 @@ async function playLogic(client, ctx, args) {
 
     // Search BEFORE creating the player: a failed lookup should not leave an
     // idle voice connection behind.
-    const delays = looksLikePlaylist
-      ? PLAYLIST_RETRY_DELAYS_MS
-      : SEARCH_RETRY_DELAYS_MS;
+    const delays =
+      spotifyEntityType === "playlist"
+        ? []
+        : looksLikePlaylist
+          ? PLAYLIST_RETRY_DELAYS_MS
+          : SEARCH_RETRY_DELAYS_MS;
     let { result, attempt } = await searchWithRetries(
       client.manager,
       query,

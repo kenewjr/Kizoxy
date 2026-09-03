@@ -268,20 +268,18 @@ describe("playLogicReadiness", () => {
     );
   });
 
-  test("Spotify playlist failure skips oEmbed and shows Lavalink-side guidance", async () => {
+  test("Spotify playlist failure skips retries/oEmbed and shows Lavalink-side guidance", async () => {
     const mgr = mockManager([CONNECTED]);
     mgr.search.mockResolvedValue(emptyResult);
     const client = { manager: mgr };
     const ctx = makeCtx();
 
-    const promise = playLogic(client, ctx, [
+    await playLogic(client, ctx, [
       "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
     ]);
-    await jest.advanceTimersByTimeAsync(9100);
-    await promise;
 
     expect(getSpotifyOembedTitle).not.toHaveBeenCalled();
-    expect(mgr.search).toHaveBeenCalledTimes(4);
+    expect(mgr.search).toHaveBeenCalledTimes(1);
     expect(ctx.channel.send).toHaveBeenCalledWith(
       expect.stringContaining("Lavalink-side fix"),
     );
