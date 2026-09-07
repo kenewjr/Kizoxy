@@ -40,11 +40,14 @@ describe("lyrics mode button", () => {
 
   test("switches back to Romaji", async () => {
     interaction.customId = `lyrics-mode:cmd:romaji:${ownerId}:${cacheKey}`;
-    lyricsService.getCachedLyricsEmbed.mockReturnValue({ title: "Romaji lyrics" });
+    lyricsService.getCachedLyricsEmbed.mockReturnValue({
+      title: "Romaji lyrics",
+    });
 
     await handler.execute(interaction, {});
 
-    const row = interaction.message.edit.mock.calls[0][0].components[0].toJSON();
+    const row =
+      interaction.message.edit.mock.calls[0][0].components[0].toJSON();
     expect(row.components[0].label).toBe("Original");
   });
 
@@ -55,7 +58,9 @@ describe("lyrics mode button", () => {
 
     expect(interaction.message.edit).not.toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("requester") }),
+      expect.objectContaining({
+        content: expect.stringContaining("requester"),
+      }),
     );
   });
 
@@ -122,7 +127,10 @@ describe("lyrics mode button", () => {
       expect(player.data.lyricsState.mode).toBe("original");
       expect(player.data.lyricsEmbed).toBe(originalEmbed);
       const payload = interaction.message.edit.mock.calls[0][0];
-      expect(payload.embeds).toEqual([player.data.nowPlayingEmbed, originalEmbed]);
+      expect(payload.embeds).toEqual([
+        player.data.nowPlayingEmbed,
+        originalEmbed,
+      ]);
       expect(payload.components).toHaveLength(2);
       expect(payload.components[1].toJSON().components[0]).toMatchObject({
         custom_id: `lyrics-mode:np:romaji:${cacheKey}`,

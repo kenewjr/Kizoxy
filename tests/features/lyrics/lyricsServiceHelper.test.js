@@ -189,7 +189,11 @@ describe("lyricsServiceHelper", () => {
       };
 
       const romaji = buildEmbedFromData(client, variants, "romaji").toJSON();
-      const original = buildEmbedFromData(client, variants, "original").toJSON();
+      const original = buildEmbedFromData(
+        client,
+        variants,
+        "original",
+      ).toJSON();
 
       expect(romaji.description).toBe("saranghae");
       expect(romaji.footer.text).toContain("🇰🇷");

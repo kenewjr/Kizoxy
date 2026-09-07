@@ -381,7 +381,9 @@ describe("Music Prefix Commands Hardening", () => {
 
       const payload = loadingMock.edit.mock.calls[0][0];
       expect(payload.embeds).toEqual([{ title: "Lyrics Embed" }]);
-      expect(payload.components[0].toJSON().components[0].label).toBe("Original");
+      expect(payload.components[0].toJSON().components[0].label).toBe(
+        "Original",
+      );
     });
 
     it("catches search lyrics exceptions", async () => {

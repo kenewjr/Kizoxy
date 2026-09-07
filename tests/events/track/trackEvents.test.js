@@ -348,7 +348,9 @@ describe("Track Events Hardening", () => {
     it("autoFetchLyrics: handles searchLyrics exceptions", async () => {
       player.lyricsEnabled = true;
       const track = player.queue.current;
-      mockSearchLyricsForNowPlaying.mockRejectedValue(new Error("lyrics crash"));
+      mockSearchLyricsForNowPlaying.mockRejectedValue(
+        new Error("lyrics crash"),
+      );
 
       await playerStart(client, player, track);
       await jest.advanceTimersByTimeAsync(0);

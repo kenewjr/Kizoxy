@@ -1,8 +1,6 @@
 const Logger = require("../../lib/logger");
 const { Constants } = require("shoukaku");
-const {
-  getSpotifyOembedTitle,
-} = require("../../integrations/spotify/oembed");
+const { getSpotifyOembedTitle } = require("../../integrations/spotify/oembed");
 
 const logger = new Logger("PLAY");
 

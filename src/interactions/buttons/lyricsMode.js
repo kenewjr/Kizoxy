@@ -8,7 +8,9 @@ const {
   buildLyricsModeRow,
   parseLyricsModeCustomId,
 } = require("../../features/lyrics/lyricsModeControls");
-const { buildNowPlayingComponents } = require("../../features/music/musicHelper");
+const {
+  buildNowPlayingComponents,
+} = require("../../features/music/musicHelper");
 
 const logger = new Logger("LYRICS-MODE");
 
@@ -27,7 +29,11 @@ module.exports = {
         });
       }
 
-      const embed = getCachedLyricsEmbed(client, control.cacheKey, control.mode);
+      const embed = getCachedLyricsEmbed(
+        client,
+        control.cacheKey,
+        control.mode,
+      );
       if (!embed) {
         return interaction.editReply({
           content: "⚠️ Lyrics expired. Run the lyrics command again.",
@@ -38,11 +44,7 @@ module.exports = {
         await interaction.message.edit({
           embeds: [embed],
           components: [
-            buildLyricsModeRow(
-              control.ownerId,
-              control.cacheKey,
-              control.mode,
-            ),
+            buildLyricsModeRow(control.ownerId, control.cacheKey, control.mode),
           ],
         });
         return interaction.editReply({
@@ -92,8 +94,12 @@ module.exports = {
         content: `✅ Showing ${control.mode === "original" ? "original" : "Romaji"} lyrics.`,
       });
     } catch (error) {
-      logger.error(`Failed to switch Now Playing lyrics mode: ${error.message}`);
-      return interaction.editReply({ content: "❌ Failed to change lyrics mode." });
+      logger.error(
+        `Failed to switch Now Playing lyrics mode: ${error.message}`,
+      );
+      return interaction.editReply({
+        content: "❌ Failed to change lyrics mode.",
+      });
     }
   },
 };

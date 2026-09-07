@@ -277,11 +277,7 @@ function buildEmbedFromData(client, data, mode = null) {
   const footerParts = [
     `${languageFlag(data)}${data.artist}`,
     data.album ? `📀 ${data.album}` : null,
-    displayMode
-      ? displayMode === "original"
-        ? "Original"
-        : "Romaji"
-      : null,
+    displayMode ? (displayMode === "original" ? "Original" : "Romaji") : null,
     `Powered by ${src}`,
   ].filter(Boolean);
 

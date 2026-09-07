@@ -250,8 +250,7 @@ describe("playLogicReadiness", () => {
     getSpotifyOembedTitle.mockResolvedValue("Never Gonna Give You Up");
     const client = { manager: mgr };
     const ctx = makeCtx();
-    const spotifyUrl =
-      "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC";
+    const spotifyUrl = "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC";
 
     const promise = playLogic(client, ctx, [spotifyUrl]);
     await jest.advanceTimersByTimeAsync(5200);

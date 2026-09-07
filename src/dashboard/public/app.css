@@ -1262,7 +1262,11 @@ body {
   overflow: hidden;
   margin-bottom: 16px;
   background:
-    radial-gradient(circle at 100% 0, rgba(var(--accent-rgb), 0.16), transparent 36%),
+    radial-gradient(
+      circle at 100% 0,
+      rgba(var(--accent-rgb), 0.16),
+      transparent 36%
+    ),
     rgba(30, 32, 36, 0.62);
 }
 .proxy-card::before {

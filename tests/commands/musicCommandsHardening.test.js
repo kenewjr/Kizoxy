@@ -402,7 +402,9 @@ describe("Music Slash Commands Hardening", () => {
 
   describe("lyrics.js", () => {
     it("aborts when deferReply fails", async () => {
-      interaction.deferReply.mockRejectedValue(new Error("Unknown interaction"));
+      interaction.deferReply.mockRejectedValue(
+        new Error("Unknown interaction"),
+      );
       await lyricsCmd.run(client, interaction);
       expect(lyricsService.validatePlayerForLyrics).not.toHaveBeenCalled();
     });
@@ -453,7 +455,9 @@ describe("Music Slash Commands Hardening", () => {
           components: [expect.anything()],
         }),
       );
-      const row = interaction.editReply.mock.calls.at(-1)[0].components[0].toJSON();
+      const row = interaction.editReply.mock.calls
+        .at(-1)[0]
+        .components[0].toJSON();
       expect(row.components[0].label).toBe("Original");
       expect(row.components[0].custom_id).toContain(
         `lyrics-mode:cmd:original:${interaction.user.id}:abc123`,
@@ -484,7 +488,10 @@ describe("Music Slash Commands Hardening", () => {
         { response: { status: 500 } },
         "❌ Failed to fetch lyrics. Please try again later.",
       ],
-      [new Error("Network Error"), "❌ An error occurred while fetching lyrics."],
+      [
+        new Error("Network Error"),
+        "❌ An error occurred while fetching lyrics.",
+      ],
     ])("handles lyrics search errors", async (error, expected) => {
       lyricsService.validatePlayerForLyrics.mockReturnValue({
         player,

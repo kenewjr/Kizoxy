@@ -54,34 +54,39 @@ const cases = [
 describe("Dashboard proxy routes", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it.each(cases)("proxies $name and returns scraper result", async (testCase) => {
-    const result = { success: true, data: { mode: "auto" } };
-    scraperService[testCase.service].mockResolvedValue(result);
+  it.each(cases)(
+    "proxies $name and returns scraper result",
+    async (testCase) => {
+      const result = { success: true, data: { mode: "auto" } };
+      scraperService[testCase.service].mockResolvedValue(result);
 
-    let call = request(createApp())[testCase.method](testCase.path);
-    if (testCase.body) call = call.send(testCase.body);
-    const response = await call.expect(200);
+      let call = request(createApp())[testCase.method](testCase.path);
+      if (testCase.body) call = call.send(testCase.body);
+      const response = await call.expect(200);
 
-    expect(response.body).toEqual(result);
-    expect(scraperService[testCase.service]).toHaveBeenCalledWith(
-      ...testCase.expectedArgs,
-    );
-  });
+      expect(response.body).toEqual(result);
+      expect(scraperService[testCase.service]).toHaveBeenCalledWith(
+        ...testCase.expectedArgs,
+      );
+    },
+  );
 
-  it.each(cases)("returns 502 when $name cannot reach scraper", async (testCase) => {
-    scraperService[testCase.service].mockRejectedValue(
-      new Error("connect ECONNREFUSED 127.0.0.1:8100"),
-    );
+  it.each(cases)(
+    "returns 502 when $name cannot reach scraper",
+    async (testCase) => {
+      scraperService[testCase.service].mockRejectedValue(
+        new Error("connect ECONNREFUSED 127.0.0.1:8100"),
+      );
 
-    let call = request(createApp())[testCase.method](testCase.path);
-    if (testCase.body) call = call.send(testCase.body);
-    const response = await call.expect(502);
+      let call = request(createApp())[testCase.method](testCase.path);
+      if (testCase.body) call = call.send(testCase.body);
+      const response = await call.expect(502);
 
-    expect(response.body).toEqual({
-      error:
-        "Failed to reach scraper: connect ECONNREFUSED 127.0.0.1:8100",
-    });
-  });
+      expect(response.body).toEqual({
+        error: "Failed to reach scraper: connect ECONNREFUSED 127.0.0.1:8100",
+      });
+    },
+  );
 
   it("rejects an invalid mode before calling scraper", async () => {
     const response = await request(createApp())

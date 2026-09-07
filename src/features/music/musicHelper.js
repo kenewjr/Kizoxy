@@ -219,11 +219,7 @@ function buildNowPlayingComponents(player, overrides = {}) {
   const components = [buildMusicControlRow(state)];
   const lyricsState = player?.data?.lyricsState;
 
-  if (
-    state.lyricsEnabled &&
-    lyricsState?.canRomanize &&
-    lyricsState.cacheKey
-  ) {
+  if (state.lyricsEnabled && lyricsState?.canRomanize && lyricsState.cacheKey) {
     components.push(
       buildNowPlayingLyricsModeRow(
         lyricsState.cacheKey,

@@ -95,7 +95,9 @@ describe("scraperService client header and request tests", () => {
   ])(
     "%s sends the expected scraper request",
     async (methodName, args, path, expectedMethod, expectedBody) => {
-      global.fetch = jest.fn().mockResolvedValue(successResponse({ mode: "auto" }));
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue(successResponse({ mode: "auto" }));
 
       await expect(scraperClient[methodName](...args)).resolves.toEqual({
         success: true,
