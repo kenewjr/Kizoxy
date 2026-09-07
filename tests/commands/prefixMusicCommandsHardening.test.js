@@ -20,7 +20,7 @@ jest.mock("../../src/features/music/musicHelper", () => {
 });
 
 jest.mock("../../src/features/lyrics/lyricsService", () => ({
-  searchLyrics: jest.fn(),
+  searchLyricsForCommand: jest.fn(),
 }));
 
 const musicHelper = require("../../src/features/music/musicHelper");
@@ -355,7 +355,7 @@ describe("Music Prefix Commands Hardening", () => {
     });
 
     it("handles lyrics search not found", async () => {
-      lyricsService.searchLyrics.mockResolvedValue(null);
+      lyricsService.searchLyricsForCommand.mockResolvedValue(null);
       const loadingMock = {
         edit: jest.fn().mockResolvedValue({}),
       };
@@ -368,8 +368,26 @@ describe("Music Prefix Commands Hardening", () => {
       );
     });
 
+    it("shows Romaji lyrics with an Original button", async () => {
+      lyricsService.searchLyricsForCommand.mockResolvedValue({
+        cacheKey: "abc123",
+        canRomanize: true,
+        embed: { title: "Lyrics Embed" },
+      });
+      const loadingMock = { edit: jest.fn().mockResolvedValue({}) };
+      message.channel.send.mockResolvedValueOnce(loadingMock);
+
+      await lyricsCmd.run(client, message);
+
+      const payload = loadingMock.edit.mock.calls[0][0];
+      expect(payload.embeds).toEqual([{ title: "Lyrics Embed" }]);
+      expect(payload.components[0].toJSON().components[0].label).toBe("Original");
+    });
+
     it("catches search lyrics exceptions", async () => {
-      lyricsService.searchLyrics.mockRejectedValue(new Error("Service error"));
+      lyricsService.searchLyricsForCommand.mockRejectedValue(
+        new Error("Service error"),
+      );
       await lyricsCmd.run(client, message);
       expect(message.reply).toHaveBeenCalledWith(
         "❌ An error occurred while fetching lyrics.",

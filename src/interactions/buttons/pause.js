@@ -2,7 +2,7 @@ const Logger = require("../../lib/logger");
 const {
   validateMusicContext,
   scheduleAutoDelete,
-  buildMusicControlRow,
+  buildNowPlayingComponents,
   swapNowPlayingComponents,
 } = require("../../features/music/musicHelper");
 
@@ -28,13 +28,10 @@ module.exports = {
       player.pause(!wasPaused);
       const isPausedNow = !wasPaused;
 
-      await swapNowPlayingComponents(interaction, [
-        buildMusicControlRow({
-          paused: isPausedNow,
-          queueLength: player.queue?.size ?? 0,
-          lyricsEnabled: !!player.lyricsEnabled,
-        }),
-      ]);
+      await swapNowPlayingComponents(
+        interaction,
+        buildNowPlayingComponents(player, { paused: isPausedNow }),
+      );
 
       await interaction.editReply({
         content: isPausedNow

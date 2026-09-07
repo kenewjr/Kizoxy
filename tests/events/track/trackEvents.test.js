@@ -16,17 +16,17 @@ jest.mock("../../../src/lib/logger", () => {
   }));
 });
 
-const mockSearchLyrics = jest.fn();
+const mockSearchLyricsForNowPlaying = jest.fn();
 jest.mock("../../../src/features/lyrics/lyricsService", () => ({
-  searchLyrics: mockSearchLyrics,
+  searchLyricsForNowPlaying: mockSearchLyricsForNowPlaying,
 }));
 
-const mockBuildMusicControlRow = jest.fn().mockReturnValue({});
+const mockBuildNowPlayingComponents = jest.fn().mockReturnValue([{}]);
 const mockBuildNowPlayingEmbed = jest.fn().mockReturnValue({ data: {} });
 const mockFetchNowPlayingMessage = jest.fn();
 
 jest.mock("../../../src/features/music/musicHelper", () => ({
-  buildMusicControlRow: mockBuildMusicControlRow,
+  buildNowPlayingComponents: mockBuildNowPlayingComponents,
   buildNowPlayingEmbed: mockBuildNowPlayingEmbed,
   fetchNowPlayingMessage: mockFetchNowPlayingMessage,
 }));
@@ -48,7 +48,9 @@ describe("Track Events Hardening", () => {
     mockWarning.mockClear();
     mockError.mockClear();
     mockDebug.mockClear();
-    mockSearchLyrics.mockReset();
+    mockSearchLyricsForNowPlaying.mockReset();
+    mockBuildNowPlayingComponents.mockClear();
+    mockBuildNowPlayingComponents.mockReturnValue([{}]);
     mockFetchNowPlayingMessage.mockReset();
 
     mockMessage = {
@@ -309,16 +311,17 @@ describe("Track Events Hardening", () => {
 
     it("searches lyrics automatically if lyricsEnabled is true", async () => {
       player.lyricsEnabled = true;
-      const track = { title: "Song 1" };
+      const track = player.queue.current;
       const mockLyricsEmbed = { title: "Lyrics" };
-      mockSearchLyrics.mockResolvedValue(mockLyricsEmbed);
+      mockSearchLyricsForNowPlaying.mockResolvedValue({
+        cacheKey: "track-key",
+        canRomanize: true,
+        embed: mockLyricsEmbed,
+      });
 
       await playerStart(client, player, track);
-      // Run pending timers/setImmediate
-      jest.runOnlyPendingTimers();
-      for (let i = 0; i < 10; i++) {
-        await Promise.resolve();
-      }
+      // Run the pending setImmediate without draining the recurring queue watcher.
+      await jest.advanceTimersByTimeAsync(0);
 
       expect(mockMessage.edit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -329,14 +332,11 @@ describe("Track Events Hardening", () => {
 
     it("autoFetchLyrics: cleans loading embed if lyrics not found", async () => {
       player.lyricsEnabled = true;
-      const track = { title: "Song 1" };
-      mockSearchLyrics.mockResolvedValue(null);
+      const track = player.queue.current;
+      mockSearchLyricsForNowPlaying.mockResolvedValue(null);
 
       await playerStart(client, player, track);
-      jest.runOnlyPendingTimers();
-      for (let i = 0; i < 10; i++) {
-        await Promise.resolve();
-      }
+      await jest.advanceTimersByTimeAsync(0);
 
       expect(mockMessage.edit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -347,14 +347,11 @@ describe("Track Events Hardening", () => {
 
     it("autoFetchLyrics: handles searchLyrics exceptions", async () => {
       player.lyricsEnabled = true;
-      const track = { title: "Song 1" };
-      mockSearchLyrics.mockRejectedValue(new Error("lyrics crash"));
+      const track = player.queue.current;
+      mockSearchLyricsForNowPlaying.mockRejectedValue(new Error("lyrics crash"));
 
       await playerStart(client, player, track);
-      jest.runOnlyPendingTimers();
-      for (let i = 0; i < 10; i++) {
-        await Promise.resolve();
-      }
+      await jest.advanceTimersByTimeAsync(0);
 
       expect(mockMessage.edit).toHaveBeenCalledWith(
         expect.objectContaining({

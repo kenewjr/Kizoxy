@@ -16,7 +16,7 @@ const forwardCmd = require("../../src/commands/slash/music/forward");
 const volumeCmd = require("../../src/commands/slash/music/volume");
 
 jest.mock("../../src/features/lyrics/lyricsService", () => ({
-  searchLyrics: jest.fn(),
+  searchLyricsForCommand: jest.fn(),
   validatePlayerForLyrics: jest.fn(),
 }));
 
@@ -280,13 +280,17 @@ describe("Extended Music Commands Tests", () => {
   });
 
   describe("lyrics command", () => {
-    it("toggles and searches lyrics (happy path)", async () => {
+    it("searches lyrics (happy path)", async () => {
       const lyricsService = require("../../src/features/lyrics/lyricsService");
       lyricsService.validatePlayerForLyrics.mockReturnValue({
         player,
         track: { title: "Track Title" },
       });
-      lyricsService.searchLyrics.mockResolvedValue({});
+      lyricsService.searchLyricsForCommand.mockResolvedValue({
+        cacheKey: "abc123",
+        canRomanize: false,
+        embed: {},
+      });
 
       await lyricsCmd.run(client, interaction);
       expect(interaction.editReply).toHaveBeenCalled();
@@ -298,20 +302,7 @@ describe("Extended Music Commands Tests", () => {
         player,
         track: { title: "Track Title" },
       });
-      lyricsService.searchLyrics.mockResolvedValue(null);
-      player.lyricsEnabled = false;
-
-      await lyricsCmd.run(client, interaction);
-      expect(interaction.editReply).toHaveBeenCalled();
-    });
-
-    it("handles deactivating/hiding lyrics", async () => {
-      const lyricsService = require("../../src/features/lyrics/lyricsService");
-      lyricsService.validatePlayerForLyrics.mockReturnValue({
-        player,
-        track: { title: "Track Title" },
-      });
-      player.lyricsEnabled = true; // start active so run toggles it off
+      lyricsService.searchLyricsForCommand.mockResolvedValue(null);
 
       await lyricsCmd.run(client, interaction);
       expect(interaction.editReply).toHaveBeenCalled();

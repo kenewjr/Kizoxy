@@ -39,6 +39,7 @@ module.exports = async (client, interaction) => {
       "tiktok_panel",
       "fixembed_panel",
       "help_category",
+      "lyrics-mode",
     ];
     let button = client.buttons.get(interaction.customId);
 

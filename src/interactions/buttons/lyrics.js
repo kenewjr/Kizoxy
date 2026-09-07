@@ -1,26 +1,15 @@
 const Logger = require("../../lib/logger");
 const {
-  searchLyrics,
+  searchLyricsForNowPlaying,
   validatePlayerForLyrics,
 } = require("../../features/lyrics/lyricsService");
 const {
   scheduleAutoDelete,
   EPHEMERAL_ERROR_TTL_MS,
-  addLyricsToNowPlaying,
-  removeLyricsFromNowPlaying,
-  buildMusicControlRow,
-  swapNowPlayingComponents,
+  buildNowPlayingComponents,
 } = require("../../features/music/musicHelper");
 
 const logger = new Logger("MUSIC-LYRICS");
-
-function nowPlayingControls(player, lyricsEnabled) {
-  return buildMusicControlRow({
-    paused: !!player.paused,
-    queueLength: player.queue?.size ?? 0,
-    lyricsEnabled,
-  });
-}
 
 module.exports = {
   customId: "music-lyrics",
@@ -40,43 +29,83 @@ module.exports = {
       }
 
       const { player, track } = validation;
-
+      if (player.data?.nowPlayingMessage?.id !== interaction.message.id) {
+        await interaction.editReply({
+          content: "⚠️ This Now Playing message is no longer active.",
+        });
+        return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
+      }
       player.lyricsEnabled = !player.lyricsEnabled;
 
       if (player.lyricsEnabled) {
         await interaction.editReply({ content: "🔍 Searching lyrics..." });
+        const fetchToken = (player._lyricsFetchToken || 0) + 1;
+        player._lyricsFetchToken = fetchToken;
+        const result = await searchLyricsForNowPlaying(track, player, client);
 
-        const lyricsEmbed = await searchLyrics(track, player, client);
+        if (
+          player._lyricsFetchToken !== fetchToken ||
+          !player.lyricsEnabled ||
+          player.queue?.current !== track
+        ) {
+          return scheduleAutoDelete(interaction);
+        }
 
-        if (!lyricsEmbed) {
+        if (!result) {
           player.lyricsEnabled = false;
+          player.data.lyricsState = null;
           await interaction.editReply({
             content: `⚠️ Lyrics not found for **${track.title}**.`,
           });
           return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        const updated = await addLyricsToNowPlaying(
-          client,
-          player,
-          lyricsEmbed,
-        );
-        if (!updated) {
-          logger.warning("addLyricsToNowPlaying returned false");
+        const nowPlayingMessage = player.data?.nowPlayingMessage;
+        const nowPlayingEmbed = player.data?.nowPlayingEmbed;
+        if (
+          !nowPlayingMessage ||
+          !nowPlayingEmbed ||
+          nowPlayingMessage.id !== interaction.message.id
+        ) {
+          player.lyricsEnabled = false;
+          player.data.lyricsState = null;
+          await interaction.editReply({
+            content: "⚠️ This Now Playing message is no longer active.",
+          });
+          return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
         }
 
-        await swapNowPlayingComponents(interaction, [
-          nowPlayingControls(player, true),
-        ]);
-
+        player.data.lyricsState = {
+          cacheKey: result.cacheKey,
+          canRomanize: result.canRomanize,
+          mode: "romaji",
+        };
+        player.data.lyricsEmbed = result.embed;
+        await nowPlayingMessage.edit({
+          embeds: [nowPlayingEmbed, result.embed],
+          components: buildNowPlayingComponents(player),
+        });
         await interaction.editReply({ content: "✅ Lyrics shown." });
         return scheduleAutoDelete(interaction);
       }
 
-      await removeLyricsFromNowPlaying(client, player);
-      await swapNowPlayingComponents(interaction, [
-        nowPlayingControls(player, false),
-      ]);
+      player._lyricsFetchToken = (player._lyricsFetchToken || 0) + 1;
+      player.data.lyricsState = null;
+      player.data.lyricsEmbed = null;
+      const nowPlayingMessage = player.data?.nowPlayingMessage;
+      const nowPlayingEmbed = player.data?.nowPlayingEmbed;
+      if (
+        nowPlayingMessage &&
+        nowPlayingEmbed &&
+        nowPlayingMessage.id === interaction.message.id
+      ) {
+        await nowPlayingMessage.edit({
+          embeds: [nowPlayingEmbed],
+          components: buildNowPlayingComponents(player, {
+            lyricsEnabled: false,
+          }),
+        });
+      }
       await interaction.editReply({ content: "✅ Lyrics hidden." });
       return scheduleAutoDelete(interaction);
     } catch (error) {

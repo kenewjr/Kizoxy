@@ -23,7 +23,7 @@ jest.mock("../../src/features/music/musicHelper", () => {
 });
 
 jest.mock("../../src/features/lyrics/lyricsService", () => ({
-  searchLyrics: jest.fn(),
+  searchLyricsForCommand: jest.fn(),
   validatePlayerForLyrics: jest.fn(),
 }));
 
@@ -401,6 +401,12 @@ describe("Music Slash Commands Hardening", () => {
   });
 
   describe("lyrics.js", () => {
+    it("aborts when deferReply fails", async () => {
+      interaction.deferReply.mockRejectedValue(new Error("Unknown interaction"));
+      await lyricsCmd.run(client, interaction);
+      expect(lyricsService.validatePlayerForLyrics).not.toHaveBeenCalled();
+    });
+
     it("aborts if validatePlayerForLyrics fails", async () => {
       lyricsService.validatePlayerForLyrics.mockReturnValue({
         error: "No player",
@@ -416,10 +422,8 @@ describe("Music Slash Commands Hardening", () => {
         player,
         track: { title: "Test" },
       });
-      lyricsService.searchLyrics.mockResolvedValue(null);
-      player.lyricsEnabled = false; // Toggles to true
+      lyricsService.searchLyricsForCommand.mockResolvedValue(null);
       await lyricsCmd.run(client, interaction);
-      expect(player.lyricsEnabled).toBe(false);
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: "⚠️ Lyrics not found for **Test**.",
@@ -427,47 +431,69 @@ describe("Music Slash Commands Hardening", () => {
       );
     });
 
-    it("logs warning when addLyricsToNowPlaying returns false", async () => {
-      const musicHelper = require("../../src/features/music/musicHelper");
-      musicHelper.addLyricsToNowPlaying.mockResolvedValueOnce(false);
+    it("shows Romaji lyrics with an Original button", async () => {
       lyricsService.validatePlayerForLyrics.mockReturnValue({
         player,
         track: { title: "Test" },
       });
-      lyricsService.searchLyrics.mockResolvedValue({ title: "Lyrics Embed" });
+      lyricsService.searchLyricsForCommand.mockResolvedValue({
+        cacheKey: "abc123",
+        canRomanize: true,
+        embed: { title: "Lyrics Embed" },
+      });
       player.lyricsEnabled = false;
-      await lyricsCmd.run(client, interaction);
-      // triggers line 63 warning logger
-      expect(interaction.editReply).toHaveBeenCalledWith(
-        expect.objectContaining({ content: "✅ Lyrics shown." }),
-      );
-    });
 
-    it("deactivates and hides lyrics", async () => {
-      lyricsService.validatePlayerForLyrics.mockReturnValue({
-        player,
-        track: { title: "Test" },
-      });
-      player.lyricsEnabled = true; // Toggles to false
       await lyricsCmd.run(client, interaction);
+
       expect(player.lyricsEnabled).toBe(false);
       expect(interaction.editReply).toHaveBeenCalledWith(
-        expect.objectContaining({ content: "✅ Lyrics hidden." }),
+        expect.objectContaining({
+          content: null,
+          embeds: [{ title: "Lyrics Embed" }],
+          components: [expect.anything()],
+        }),
+      );
+      const row = interaction.editReply.mock.calls.at(-1)[0].components[0].toJSON();
+      expect(row.components[0].label).toBe("Original");
+      expect(row.components[0].custom_id).toContain(
+        `lyrics-mode:cmd:original:${interaction.user.id}:abc123`,
       );
     });
 
-    it("handles lyrics search throws error", async () => {
+    it("omits mode button for non-romanizable lyrics", async () => {
       lyricsService.validatePlayerForLyrics.mockReturnValue({
         player,
         track: { title: "Test" },
       });
-      lyricsService.searchLyrics.mockRejectedValue(new Error("Network Error"));
-      player.lyricsEnabled = false; // Toggles to true
+      lyricsService.searchLyricsForCommand.mockResolvedValue({
+        cacheKey: "abc123",
+        canRomanize: false,
+        embed: { title: "Lyrics Embed" },
+      });
+
+      await lyricsCmd.run(client, interaction);
+
+      expect(interaction.editReply).toHaveBeenLastCalledWith(
+        expect.objectContaining({ components: [] }),
+      );
+    });
+
+    it.each([
+      [{ type: "request" }, "❌ Could not connect to lyrics service."],
+      [
+        { response: { status: 500 } },
+        "❌ Failed to fetch lyrics. Please try again later.",
+      ],
+      [new Error("Network Error"), "❌ An error occurred while fetching lyrics."],
+    ])("handles lyrics search errors", async (error, expected) => {
+      lyricsService.validatePlayerForLyrics.mockReturnValue({
+        player,
+        track: { title: "Test" },
+      });
+      lyricsService.searchLyricsForCommand.mockRejectedValue(error);
       await lyricsCmd.run(client, interaction);
       expect(interaction.editReply).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: "❌ An error occurred while fetching lyrics.",
-        }),
+        expect.objectContaining({ content: expected }),
       );
     });
   });

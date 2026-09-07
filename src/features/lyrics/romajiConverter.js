@@ -2,6 +2,7 @@ const Kuroshiro = require("kuroshiro").default || require("kuroshiro");
 const KuromojiAnalyzer =
   require("kuroshiro-analyzer-kuromoji").default ||
   require("kuroshiro-analyzer-kuromoji");
+const { romanize } = require("hangul-romanizer");
 const Logger = require("../../lib/logger");
 
 const logger = new Logger("ROMAJI");
@@ -45,6 +46,15 @@ function isJapanese(text) {
   return japaneseRegex.test(text);
 }
 
+function isKorean(text) {
+  if (!text || typeof text !== "string") return false;
+  return /[\uAC00-\uD7A3\u3131-\u318E]/.test(text);
+}
+
+function hasRomanizableText(text) {
+  return isJapanese(text) || isKorean(text);
+}
+
 const NodeCache = require("node-cache");
 const romajiCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
@@ -53,7 +63,7 @@ async function convertToRomaji(text) {
     return "";
   }
 
-  if (!isJapanese(text)) {
+  if (!hasRomanizableText(text)) {
     return text;
   }
 
@@ -63,16 +73,19 @@ async function convertToRomaji(text) {
   if (cached !== undefined) return cached;
 
   try {
-    const kuroshiro = await initializeKuroshiro();
+    let output = isKorean(text) ? romanize(text) : text;
 
-    const romaji = await kuroshiro.convert(text, {
-      to: "romaji",
-      mode: "spaced", // Add spaces between words
-      romajiSystem: "hepburn", // Use Hepburn romanization (most common)
-    });
+    if (isJapanese(text)) {
+      const kuroshiro = await initializeKuroshiro();
+      output = await kuroshiro.convert(output, {
+        to: "romaji",
+        mode: "spaced", // Add spaces between words
+        romajiSystem: "hepburn", // Use Hepburn romanization (most common)
+      });
+    }
 
-    romajiCache.set(key, romaji);
-    return romaji;
+    romajiCache.set(key, output);
+    return output;
   } catch (error) {
     logger.error(`Conversion error: ${error.message}`);
     // Return original text if conversion fails
@@ -82,7 +95,7 @@ async function convertToRomaji(text) {
 
 async function convertLyricsToRomaji(lyricsText) {
   const text = Array.isArray(lyricsText) ? lyricsText.join("\n") : lyricsText;
-  if (!text || !isJapanese(text)) {
+  if (!text || !hasRomanizableText(text)) {
     return text;
   }
 
@@ -163,6 +176,8 @@ module.exports = {
   convertLyricsToRomaji,
   getCacheStats,
   isJapanese,
+  isKorean,
+  hasRomanizableText,
   isJapaneseTrack,
   preInitialize,
 };

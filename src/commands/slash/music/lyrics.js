@@ -1,34 +1,25 @@
 const Logger = require("../../../lib/logger");
 const {
-  searchLyrics,
+  searchLyricsForCommand,
   validatePlayerForLyrics,
 } = require("../../../features/lyrics/lyricsService");
 const {
+  buildLyricsModeRow,
+} = require("../../../features/lyrics/lyricsModeControls");
+const {
   scheduleAutoDelete,
   EPHEMERAL_ERROR_TTL_MS,
-  addLyricsToNowPlaying,
-  removeLyricsFromNowPlaying,
-  buildMusicControlRow,
-  swapNowPlayingComponents,
 } = require("../../../features/music/musicHelper");
 
 const logger = new Logger("MUSIC-LYRICS");
 
-function nowPlayingControls(player, lyricsEnabled) {
-  return buildMusicControlRow({
-    paused: !!player.paused,
-    queueLength: player.queue?.size ?? 0,
-    lyricsEnabled,
-  });
-}
-
 module.exports = {
   name: ["music", "lyric"],
-  description: "Search and display lyrics for a song (converts JPN to romaji).",
+  description: "Search lyrics with original and Romaji modes.",
   category: "Music",
 
   run: async (client, interaction) => {
-    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    await interaction.deferReply().catch(() => {});
     if (!interaction.deferred) return;
 
     try {
@@ -39,44 +30,25 @@ module.exports = {
       }
 
       const { player, track } = validation;
-      player.lyricsEnabled = !player.lyricsEnabled;
+      await interaction.editReply({ content: "🔍 Searching lyrics..." });
 
-      if (player.lyricsEnabled) {
-        await interaction.editReply({ content: "🔍 Searching lyrics..." });
-
-        const lyricsEmbed = await searchLyrics(track, player, client);
-
-        if (!lyricsEmbed) {
-          player.lyricsEnabled = false;
-          await interaction.editReply({
-            content: `⚠️ Lyrics not found for **${track.title}**.`,
-          });
-          return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
-        }
-
-        const updated = await addLyricsToNowPlaying(
-          client,
-          player,
-          lyricsEmbed,
-        );
-        if (!updated) {
-          logger.warning("addLyricsToNowPlaying returned false");
-        }
-
-        await swapNowPlayingComponents(interaction, [
-          nowPlayingControls(player, true),
-        ]);
-
-        await interaction.editReply({ content: "✅ Lyrics shown." });
-        return scheduleAutoDelete(interaction);
+      const result = await searchLyricsForCommand(track, player, client);
+      if (!result) {
+        await interaction.editReply({
+          content: `⚠️ Lyrics not found for **${track.title}**.`,
+        });
+        return scheduleAutoDelete(interaction, EPHEMERAL_ERROR_TTL_MS);
       }
 
-      await removeLyricsFromNowPlaying(client, player);
-      await swapNowPlayingComponents(interaction, [
-        nowPlayingControls(player, false),
-      ]);
-      await interaction.editReply({ content: "✅ Lyrics hidden." });
-      return scheduleAutoDelete(interaction);
+      const components = result.canRomanize
+        ? [buildLyricsModeRow(interaction.user.id, result.cacheKey)]
+        : [];
+
+      return interaction.editReply({
+        content: null,
+        embeds: [result.embed],
+        components,
+      });
     } catch (error) {
       logger.error(`Unexpected lyrics command error: ${error.message}`);
       const msg =

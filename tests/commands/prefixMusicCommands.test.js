@@ -8,8 +8,10 @@ jest.mock("../../src/persistence/tiktokStorage", () => ({
   listSubscriptions: jest.fn().mockResolvedValue([]),
 }));
 jest.mock("../../src/features/lyrics/lyricsService", () => ({
-  searchLyrics: jest.fn().mockResolvedValue({
-    data: { description: "Mock lyrics" },
+  searchLyricsForCommand: jest.fn().mockResolvedValue({
+    cacheKey: "mock-cache-key",
+    canRomanize: false,
+    embed: { data: { description: "Mock lyrics" } },
   }),
 }));
 

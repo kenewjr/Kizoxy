@@ -6,6 +6,7 @@ const {
   getSourceMeta,
   buildNowPlayingEmbed,
   buildMusicControlRow,
+  buildNowPlayingComponents,
   fetchNowPlayingMessage,
   addLyricsToNowPlaying,
   removeLyricsFromNowPlaying,
@@ -141,6 +142,37 @@ describe("Music Helper Tests", () => {
       const row = buildMusicControlRow({ paused: false, queueLength: 2 });
       expect(row).toBeDefined();
     });
+  });
+
+  describe("buildNowPlayingComponents", () => {
+    it("shows mode row only for active romanizable lyrics", () => {
+      player.lyricsEnabled = true;
+      player.data.lyricsState = {
+        cacheKey: "track-key",
+        canRomanize: true,
+        mode: "romaji",
+      };
+
+      const components = buildNowPlayingComponents(player);
+      expect(components).toHaveLength(2);
+      expect(components[1].toJSON().components[0]).toMatchObject({
+        custom_id: "lyrics-mode:np:original:track-key",
+        label: "Original",
+      });
+    });
+
+    it.each([
+      [false, true, "track-key"],
+      [true, false, "track-key"],
+      [true, true, null],
+    ])(
+      "omits mode row when prerequisites are missing",
+      (lyricsEnabled, canRomanize, cacheKey) => {
+        player.lyricsEnabled = lyricsEnabled;
+        player.data.lyricsState = { cacheKey, canRomanize, mode: "romaji" };
+        expect(buildNowPlayingComponents(player)).toHaveLength(1);
+      },
+    );
   });
 
   describe("fetchNowPlayingMessage", () => {

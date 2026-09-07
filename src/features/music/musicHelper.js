@@ -8,6 +8,9 @@ const formatduration = require("../../lib/FormatDuration");
 const { COLORS } = require("../../lib/embeds");
 const Logger = require("../../lib/logger");
 const { stats } = require("../../lib/ephemeralStats");
+const {
+  buildNowPlayingLyricsModeRow,
+} = require("../lyrics/lyricsModeControls");
 
 const logger = new Logger("MUSIC-HELPERS");
 
@@ -207,6 +210,31 @@ function buildMusicControlRow(stateOrPaused = false) {
   );
 }
 
+function buildNowPlayingComponents(player, overrides = {}) {
+  const state = {
+    paused: overrides.paused ?? !!player?.paused,
+    queueLength: overrides.queueLength ?? player?.queue?.size ?? 0,
+    lyricsEnabled: overrides.lyricsEnabled ?? !!player?.lyricsEnabled,
+  };
+  const components = [buildMusicControlRow(state)];
+  const lyricsState = player?.data?.lyricsState;
+
+  if (
+    state.lyricsEnabled &&
+    lyricsState?.canRomanize &&
+    lyricsState.cacheKey
+  ) {
+    components.push(
+      buildNowPlayingLyricsModeRow(
+        lyricsState.cacheKey,
+        lyricsState.mode || "romaji",
+      ),
+    );
+  }
+
+  return components;
+}
+
 // Returns the stored message object directly instead of re-fetching from Discord.
 // playerStart.js keeps player.data.nowPlayingMessage in sync on every track start.
 async function fetchNowPlayingMessage(client, player) {
@@ -274,6 +302,7 @@ module.exports = {
   validateMusicContextMessage,
   scheduleAutoDelete,
   buildMusicControlRow,
+  buildNowPlayingComponents,
   buildNowPlayingEmbed,
   formatProgressBar,
   getSourceMeta,

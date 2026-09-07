@@ -95,6 +95,12 @@ function sourceLabel(source = "") {
   return map[source.toLowerCase()] ?? source;
 }
 
+function languageFlag(data) {
+  if (data.is_korean) return "🇰🇷 ";
+  if (data.is_japanese) return "🇯🇵 ";
+  return "";
+}
+
 function splitTitleSegments(rawTitle) {
   return rawTitle
     .split(/\s[-–×x／/]\s|\s[-–×x／/]|[-–×x／/]\s/)
@@ -256,29 +262,43 @@ function buildCacheKey(track) {
   );
 }
 
-function buildEmbedFromData(client, data) {
-  const flag = data.is_japanese ? "🇯🇵 " : "";
+function buildEmbedFromData(client, data, mode = null) {
+  const canRomanize = !!data.can_romanize;
+  const displayMode =
+    canRomanize && (mode === "original" || mode === "romaji") ? mode : null;
+  const displayText =
+    displayMode === "original"
+      ? data.originalLyrics || data.lyrics
+      : displayMode === "romaji"
+        ? data.romajiLyrics || data.lyrics
+        : data.lyrics;
   const src = sourceLabel(data.source ?? "");
 
   const footerParts = [
-    `${flag}${data.artist}`,
+    `${languageFlag(data)}${data.artist}`,
     data.album ? `📀 ${data.album}` : null,
+    displayMode
+      ? displayMode === "original"
+        ? "Original"
+        : "Romaji"
+      : null,
     `Powered by ${src}`,
   ].filter(Boolean);
 
-  let displayText = data.lyrics;
-  if (displayText.length > 4096) {
+  let safeText = displayText;
+  if (safeText.length > 4096) {
     const suffix = data.url
       ? `...\n[Read more](${data.url})`
       : "...\n[Lyrics truncated]";
-    displayText = displayText.slice(0, 4096 - suffix.length) + suffix;
+    safeText = safeText.slice(0, 4096 - suffix.length) + suffix;
   }
 
   return Embeds.music(client, {
     title: `🎵 ${data.title || "Unknown"}`,
-    description: displayText,
+    description: safeText,
     footerText: footerParts.join("  ·  "),
     url: data.url || undefined,
+    softCap: false,
   });
 }
 

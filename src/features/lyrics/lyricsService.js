@@ -1,6 +1,12 @@
+const crypto = require("crypto");
 const NodeCache = require("node-cache");
 const Logger = require("../../lib/logger");
-const { convertLyricsToRomaji, isJapanese } = require("./romajiConverter");
+const {
+  convertLyricsToRomaji,
+  isJapanese,
+  isKorean,
+  hasRomanizableText,
+} = require("./romajiConverter");
 const { searchLRCLIB } = require("./lrclibClient");
 const {
   cleanTitle,
@@ -172,16 +178,28 @@ function registerResolver(resolver) {
   _resolvers.push(resolver);
 }
 
-async function searchLyrics(track, player, client) {
+async function getLyricsData(track, player, client) {
   const rawTitle = track.title ?? "";
   const rawAuthor = track.author ?? "";
 
-  const cacheKey = buildCacheKey(track);
+  const rawCacheKey = buildCacheKey(track);
+  const cacheKey = crypto.createHash("sha1").update(rawCacheKey).digest("hex");
   const cached = lyricsCache.get(cacheKey);
   _maybeLogCacheStats();
   if (cached) {
     logger.success(`Cache hit for: ${cacheKey}`);
-    return buildEmbedFromData(client, cached);
+    const data = cached.cacheKey
+      ? cached
+      : {
+          ...cached,
+          cacheKey,
+          originalLyrics: cached.originalLyrics || cached.lyrics,
+          romajiLyrics: cached.romajiLyrics || cached.lyrics,
+          can_romanize: !!cached.can_romanize,
+          is_korean: !!cached.is_korean,
+        };
+    if (data !== cached) lyricsCache.set(cacheKey, data);
+    return { cacheKey, data };
   }
 
   // Extract cover-clean title and original artist before building strategies.
@@ -243,17 +261,20 @@ async function searchLyrics(track, player, client) {
   }
 
   const isJp = isJapanese(rawData.text);
-  logger.info(`Japanese detected: ${isJp}`);
+  const isKr = isKorean(rawData.text);
+  const shouldRomanize = hasRomanizableText(rawData.text);
+  logger.info(`Japanese detected: ${isJp} | Korean detected: ${isKr}`);
 
-  let displayLyrics = rawData.text;
-  if (isJp) {
+  let romajiLyrics = rawData.text;
+  if (shouldRomanize) {
     logger.info("Converting to romaji...");
-    displayLyrics = await convertLyricsToRomaji(rawData.text).catch((err) => {
+    romajiLyrics = await convertLyricsToRomaji(rawData.text).catch((err) => {
       logger.error(`Romaji conversion failed: ${err.message}`);
       return rawData.text;
     });
     logger.success("Romaji conversion complete");
   }
+  const canRomanize = shouldRomanize && romajiLyrics !== rawData.text;
 
   const firstData = {
     title: track.title,
@@ -261,23 +282,52 @@ async function searchLyrics(track, player, client) {
     album: null,
     source: rawData.source,
     is_japanese: isJp,
+    is_korean: isKr,
+    can_romanize: canRomanize,
+    cacheKey,
     url: null,
-    lyrics: displayLyrics,
+    originalLyrics: rawData.text,
+    romajiLyrics,
+    // Preserve legacy Now Playing behavior: Japanese Romaji, all else original.
+    lyrics: isJp ? romajiLyrics : rawData.text,
   };
 
   logger.info(
-    `source=${firstData.source} | is_jp=${firstData.is_japanese}` +
-      ` | artist="${firstData.artist}" | len=${displayLyrics.length}`,
+    `source=${firstData.source} | is_jp=${isJp} | is_kr=${isKr}` +
+      ` | artist="${firstData.artist}" | len=${romajiLyrics.length}`,
   );
 
-  if (!displayLyrics?.trim()) {
+  if (!romajiLyrics?.trim()) {
     return null;
   }
 
   lyricsCache.set(cacheKey, firstData);
   logger.debug(`Lyrics cached: key=${cacheKey} | ttl=24h`);
 
-  return buildEmbedFromData(client, firstData);
+  return { cacheKey, data: firstData };
+}
+
+async function searchLyrics(track, player, client) {
+  const result = await getLyricsData(track, player, client);
+  return result ? buildEmbedFromData(client, result.data) : null;
+}
+
+async function searchLyricsWithModes(track, player, client) {
+  const result = await getLyricsData(track, player, client);
+  if (!result) return null;
+
+  return {
+    cacheKey: result.cacheKey,
+    canRomanize: result.data.can_romanize,
+    embed: buildEmbedFromData(client, result.data, "romaji"),
+  };
+}
+
+function getCachedLyricsEmbed(client, cacheKey, mode) {
+  const data = lyricsCache.get(cacheKey);
+  return data?.cacheKey === cacheKey && data.can_romanize
+    ? buildEmbedFromData(client, data, mode)
+    : null;
 }
 
 function validatePlayerForLyrics(client, interaction) {
@@ -296,6 +346,9 @@ function validatePlayerForLyrics(client, interaction) {
 
 module.exports = {
   searchLyrics,
+  searchLyricsForCommand: searchLyricsWithModes,
+  searchLyricsForNowPlaying: searchLyricsWithModes,
+  getCachedLyricsEmbed,
   validatePlayerForLyrics,
   registerResolver,
   cleanTitle,

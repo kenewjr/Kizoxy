@@ -148,6 +148,8 @@ describe("lyricsServiceHelper", () => {
       album: "Album",
       source: "lrclib",
       is_japanese: false,
+      is_korean: false,
+      can_romanize: false,
       url: "https://example.com",
       lyrics: "line one\nline two",
     };
@@ -175,6 +177,25 @@ describe("lyricsServiceHelper", () => {
         is_japanese: true,
       }).toJSON();
       expect(json.footer.text).toContain("🇯🇵");
+    });
+
+    test("selects Romaji and original variants", () => {
+      const variants = {
+        ...data,
+        is_korean: true,
+        can_romanize: true,
+        originalLyrics: "사랑해",
+        romajiLyrics: "saranghae",
+      };
+
+      const romaji = buildEmbedFromData(client, variants, "romaji").toJSON();
+      const original = buildEmbedFromData(client, variants, "original").toJSON();
+
+      expect(romaji.description).toBe("saranghae");
+      expect(romaji.footer.text).toContain("🇰🇷");
+      expect(romaji.footer.text).toContain("Romaji");
+      expect(original.description).toBe("사랑해");
+      expect(original.footer.text).toContain("Original");
     });
   });
 

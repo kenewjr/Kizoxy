@@ -16,9 +16,15 @@ jest.mock("../../src/persistence/tiktokStorage", () => ({
 }));
 
 jest.mock("../../src/features/lyrics/lyricsService", () => ({
-  searchLyrics: jest.fn().mockResolvedValue({
-    data: { description: "Mock lyrics" },
+  searchLyricsForCommand: jest.fn().mockResolvedValue({
+    cacheKey: "mock-cache-key",
+    canRomanize: false,
+    embed: { data: { description: "Mock lyrics" } },
   }),
+  validatePlayerForLyrics: jest.fn().mockImplementation((client, interaction) => ({
+    player: client.manager.players.get(interaction.guild.id),
+    track: client.manager.players.get(interaction.guild.id)?.queue.current,
+  })),
 }));
 
 jest.mock("../../src/persistence/fixembedStorage", () => ({
