@@ -267,7 +267,7 @@ describe("playLogicReadiness", () => {
     );
   });
 
-  test("Spotify playlist failure skips retries/oEmbed and shows Lavalink-side guidance", async () => {
+  test("Spotify playlist failure skips retries/oEmbed without claiming a Premium restriction", async () => {
     const mgr = mockManager([CONNECTED]);
     mgr.search.mockResolvedValue(emptyResult);
     const client = { manager: mgr };
@@ -279,8 +279,12 @@ describe("playLogicReadiness", () => {
 
     expect(getSpotifyOembedTitle).not.toHaveBeenCalled();
     expect(mgr.search).toHaveBeenCalledTimes(1);
+    expect(mgr.createPlayer).not.toHaveBeenCalled();
     expect(ctx.channel.send).toHaveBeenCalledWith(
-      expect.stringContaining("Lavalink-side fix"),
+      expect.stringContaining("Check that the playlist is public"),
+    );
+    expect(ctx.channel.send).not.toHaveBeenCalledWith(
+      expect.stringMatching(/Premium|not something retryable/i),
     );
   });
 

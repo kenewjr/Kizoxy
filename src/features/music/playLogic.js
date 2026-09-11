@@ -208,7 +208,7 @@ async function playLogic(client, ctx, args) {
 
     if (!result?.tracks?.length) {
       logger.warning(
-        `Search failed after ${attempt} retries for query "${query}" — genuine no results`,
+        `Search returned no playable tracks after ${attempt} retries for query "${query}"; upstream failure or empty result`,
       );
       if (placeholderMsg) {
         try {
@@ -219,7 +219,7 @@ async function playLogic(client, ctx, args) {
       }
       if (spotifyEntityType === "playlist") {
         return reply(
-          "❌ | Couldn't load that Spotify playlist right now — this needs a Lavalink-side fix (Spotify's Premium API policy), not something retryable from here.",
+          "❌ | Couldn't load that Spotify playlist right now. Check that the playlist is public, or try again later. A YouTube link or song search can be used meanwhile.",
           true,
         );
       }
