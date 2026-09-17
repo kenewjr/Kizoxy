@@ -130,4 +130,39 @@ describe("Guilds Route Tests", () => {
       expect(res.body.active_count).toBeDefined();
     });
   });
+
+  describe("POST /api/guilds/:id/leave", () => {
+    it("leaves the guild successfully", async () => {
+      const res = await request(app).post(`/api/guilds/${guild.id}/leave`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(guild.leave).toHaveBeenCalled();
+    });
+
+    it("returns 404 for unknown guild", async () => {
+      const res = await request(app).post("/api/guilds/nonexistent/leave");
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe("Guild not found");
+    });
+
+    it("destroys active player if present before leaving", async () => {
+      const mockPlayer = { destroy: jest.fn().mockResolvedValue() };
+      const clientOverrides = {
+        guilds: { cache: new Map([[guild.id, guild]]) },
+        manager: { players: new Map([[guild.id, mockPlayer]]) },
+      };
+      const setup = createTestApp(clientOverrides);
+      const res = await request(setup.app).post(`/api/guilds/${guild.id}/leave`);
+      expect(res.status).toBe(200);
+      expect(mockPlayer.destroy).toHaveBeenCalled();
+      expect(guild.leave).toHaveBeenCalled();
+    });
+
+    it("returns 500 when guild.leave fails", async () => {
+      guild.leave.mockRejectedValueOnce(new Error("Discord API error"));
+      const res = await request(app).post(`/api/guilds/${guild.id}/leave`);
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Discord API error");
+    });
+  });
 });

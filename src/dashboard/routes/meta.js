@@ -31,20 +31,43 @@ router.get("/health", (req, res) => {
     getServiceStatus,
   } = require("../../integrations/scraperService/client");
   const scraperStatus = getServiceStatus();
-  if (!client || !client.ws || client.ws.status !== 0) {
-    return res.status(503).json({
-      status: "unhealthy",
-      ws_status: client?.ws?.status ?? -1,
-      scraper_service: scraperStatus,
-      uptime_ms: process.uptime() * 1000,
-    });
+
+  const isDiscordHealthy = !!(client && client.ws && client.ws.status === 0);
+
+  // Lavalink nodes status
+  const nodes = client?.manager?.shoukaku?.nodes;
+  let lavalinkStatus = "disconnected";
+  let lavalinkConnectedCount = 0;
+  let lavalinkTotalCount = 0;
+  if (nodes && typeof nodes.values === "function") {
+    lavalinkTotalCount = nodes.size || 0;
+    for (const node of nodes.values()) {
+      if (node.state === 1) lavalinkConnectedCount++;
+    }
+    lavalinkStatus = lavalinkConnectedCount > 0 ? "connected" : "disconnected";
   }
-  return res.json({
-    status: "ok",
+
+  const overallStatus = isDiscordHealthy ? "ok" : "unhealthy";
+  const statusCode = isDiscordHealthy ? 200 : 503;
+
+  return res.status(statusCode).json({
+    status: overallStatus,
+    discord: {
+      status: isDiscordHealthy ? "connected" : "disconnected",
+      ws_status: client?.ws?.status ?? -1,
+      ping_ms: client?.ws?.ping ?? -1,
+    },
+    lavalink: {
+      status: lavalinkStatus,
+      connected_nodes: lavalinkConnectedCount,
+      total_nodes: lavalinkTotalCount,
+    },
     scraper_service: scraperStatus,
     uptime_ms: process.uptime() * 1000,
+    timestamp: new Date().toISOString(),
   });
 });
+
 
 // GET /api/stats
 router.get("/stats", async (req, res) => {

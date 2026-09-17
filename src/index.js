@@ -1,4 +1,4 @@
-const { Client, Events, GatewayIntentBits, Collection } = require("discord.js");
+const { Client, Events, GatewayIntentBits, Collection, Options } = require("discord.js");
 require("./lib/patchInteractions");
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
@@ -15,6 +15,22 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
   ],
   allowedMentions: { parse: ["users", "roles"] },
+  makeCache: Options.cacheWithLimits({
+    ...Options.DefaultMakeCacheSettings,
+    MessageManager: 50,
+    ThreadMemberManager: 0,
+  }),
+  sweepers: {
+    ...Options.DefaultSweeperSettings,
+    messages: {
+      interval: 3600,
+      lifetime: 1800,
+    },
+    threads: {
+      interval: 3600,
+      lifetime: 1800,
+    },
+  },
 });
 
 client.config = require("./config/config");

@@ -195,4 +195,32 @@ router.patch("/:id/player/filters", async (req, res) => {
   }
 });
 
+// POST /api/guilds/:id/leave
+router.post("/:id/leave", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = req.app.locals.client;
+    const guild =
+      client.guilds?.cache?.get(id) ||
+      (typeof client.guilds?.fetch === "function"
+        ? await client.guilds.fetch(id).catch(() => null)
+        : null);
+
+    if (!guild) return res.status(404).json({ error: "Guild not found" });
+
+    const player = client.manager?.players?.get(id);
+    if (player && typeof player.destroy === "function") {
+      await player.destroy().catch(() => {});
+    }
+
+    const guildName = guild.name;
+    await guild.leave();
+    logger.info(`Left guild: ${guildName} (${id}) via dashboard`);
+    res.json({ success: true, message: `Successfully left ${guildName}` });
+  } catch (err) {
+    logger.error(`POST /api/guilds/${req.params.id}/leave: ${err.message}`);
+    res.status(500).json({ error: err.message || "Failed to leave guild" });
+  }
+});
+
 module.exports = router;

@@ -24,6 +24,7 @@ const mockGuild = {
   ownerId: "owner123",
   iconURL: () => null,
   joinedAt: new Date("2024-01-01"),
+  leave: jest.fn().mockResolvedValue({}),
   channels: { cache: new Map([["channel-1", mockChannel]]) },
   roles: { cache: new Map() },
   members: {

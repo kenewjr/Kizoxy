@@ -8,6 +8,8 @@ describe("GET /api/health", () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("ok");
     expect(typeof res.body.uptime_ms).toBe("number");
+    expect(res.body.discord).toBeDefined();
+    expect(res.body.lavalink).toBeDefined();
   });
 
   it("returns 503 when Discord WS disconnected", async () => {

@@ -267,18 +267,20 @@ describe("playLogicReadiness", () => {
     );
   });
 
-  test("Spotify playlist failure skips retries/oEmbed without claiming a Premium restriction", async () => {
+  test("Spotify playlist failure retries 3 times before showing guidance", async () => {
     const mgr = mockManager([CONNECTED]);
     mgr.search.mockResolvedValue(emptyResult);
     const client = { manager: mgr };
     const ctx = makeCtx();
 
-    await playLogic(client, ctx, [
+    const promise = playLogic(client, ctx, [
       "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
     ]);
+    await jest.advanceTimersByTimeAsync(8000);
+    await promise;
 
     expect(getSpotifyOembedTitle).not.toHaveBeenCalled();
-    expect(mgr.search).toHaveBeenCalledTimes(1);
+    expect(mgr.search).toHaveBeenCalledTimes(4);
     expect(mgr.createPlayer).not.toHaveBeenCalled();
     expect(ctx.channel.send).toHaveBeenCalledWith(
       expect.stringContaining("Check that the playlist is public"),

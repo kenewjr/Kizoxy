@@ -35,6 +35,7 @@ function createMockGuild(overrides = {}) {
     ownerId: "333333333333333333",
     joinedAt: new Date("2026-01-01"),
     iconURL: () => null,
+    leave: jest.fn().mockResolvedValue({}),
     channels: {
       cache: new Map(),
       fetch: jest.fn(),

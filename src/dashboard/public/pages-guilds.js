@@ -31,12 +31,17 @@ async function renderGuilds() {
           <tbody>${guilds
             .map(
               (g) => `
-            <tr data-name="${esc(g.name.toLowerCase())}">
+            <tr data-name="${esc(g.name.toLowerCase())}" id="guild-row-${g.id}">
               <td>${guildIconHtml(g.icon, g.name)}</td>
               <td>${esc(g.name)}</td>
               <td>${g.memberCount.toLocaleString()}</td>
               <td>${featureBadges(g.feature_counts)}</td>
-              <td><button class="btn btn--ghost btn--sm" onclick="location.hash='#guild/${g.id}'">Settings</button></td>
+              <td>
+                <div style="display:flex;gap:6px;justify-content:flex-end">
+                  <button class="btn btn--ghost btn--sm" onclick="location.hash='#guild/${g.id}'">Settings</button>
+                  <button class="btn btn--danger btn--sm" onclick="leaveGuild('${g.id}', '${escAttr(g.name)}')">Leave</button>
+                </div>
+              </td>
             </tr>`,
             )
             .join("")}</tbody>
@@ -53,4 +58,26 @@ function filterGuildTable() {
   document.querySelectorAll("#guild-table tbody tr").forEach((row) => {
     row.style.display = row.dataset.name.includes(q) ? "" : "none";
   });
+}
+
+async function leaveGuild(guildId, guildName) {
+  if (!confirm(`Are you sure you want Kizoxy to leave "${guildName}"?`)) return;
+  try {
+    await api.post(`/guilds/${guildId}/leave`);
+    showToast(`Left ${guildName}`, "success");
+    if (state.guilds) {
+      state.guilds = state.guilds.filter((g) => g.id !== guildId);
+      if (typeof updateSidebarFilterVisibility === "function") {
+        updateSidebarFilterVisibility();
+      }
+    }
+    if (location.hash.startsWith("#guild/")) {
+      location.hash = "#guilds";
+    } else {
+      const row = document.getElementById(`guild-row-${guildId}`);
+      if (row) row.remove();
+    }
+  } catch (err) {
+    showToast(err.message || "Failed to leave guild", "error");
+  }
 }

@@ -95,5 +95,14 @@ function renderGuildOverview(el, g) {
     <div class="card">
       <div style="margin-bottom:8px"><strong>Owner:</strong> ${esc(g.ownerId)}</div>
       <div><strong>Joined:</strong> ${g.joinedAt ? new Date(g.joinedAt).toLocaleDateString() : "N/A"}</div>
+    </div>
+    <div class="card" style="margin-top:16px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.03)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-weight:600;color:var(--red);margin-bottom:4px">Leave Server</div>
+          <div style="color:var(--text-3);font-size:12px">Make Kizoxy leave this server. The bot can be re-invited anytime.</div>
+        </div>
+        <button class="btn btn--danger btn--sm" onclick="leaveGuild('${g.id}', '${escAttr(g.name)}')">Leave Server</button>
+      </div>
     </div>`;
 }

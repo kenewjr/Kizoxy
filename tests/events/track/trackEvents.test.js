@@ -386,6 +386,23 @@ describe("Track Events Hardening", () => {
       expect(channel.send).toHaveBeenCalledTimes(1);
       expect(player.skip).not.toHaveBeenCalled();
     });
+
+    it("sanitizes multi-client youtube stack traces into user-friendly message", () => {
+      const rawTrace = `(yts.version: 1.18.3) All clients failed to load the item.\n\nClient [WEB] failed: Read timed out\nat java.base/sun.nio.ch.NioSocketImpl.timedRead\nClient [ANDROID_MUSIC] failed: This video requires login.`;
+      const result = playerException.sanitizeExceptionMessage(rawTrace);
+      expect(result).toBe("This track requires login or is age-restricted.");
+    });
+
+    it("sanitizes timeouts and unhandled stacktraces", () => {
+      expect(playerException.sanitizeExceptionMessage("Read timed out")).toBe(
+        "Connection to audio provider timed out.",
+      );
+      expect(
+        playerException.sanitizeExceptionMessage(
+          "at com.sedmelluq.discord.lavaplayer.TrackExecutor.run()",
+        ),
+      ).toBe("Playback error occurred.");
+    });
   });
 
   describe("playerStuck.js", () => {

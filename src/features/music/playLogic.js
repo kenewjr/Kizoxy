@@ -7,6 +7,7 @@ const logger = new Logger("PLAY");
 const NODE_READY_TIMEOUT_MS = 10000;
 const SEARCH_RETRY_DELAYS_MS = [600, 1500, 3000];
 const PLAYLIST_RETRY_DELAYS_MS = [2000, 3000, 4000];
+const SPOTIFY_PLAYLIST_RETRY_DELAYS_MS = [1500, 2500, 3500];
 const NODE_POLL_INTERVAL_MS = 200;
 
 const PLAYLIST_URL_RE = /[?&]list=|\bplaylist\b/i;
@@ -177,7 +178,7 @@ async function playLogic(client, ctx, args) {
     // idle voice connection behind.
     const delays =
       spotifyEntityType === "playlist"
-        ? []
+        ? SPOTIFY_PLAYLIST_RETRY_DELAYS_MS
         : looksLikePlaylist
           ? PLAYLIST_RETRY_DELAYS_MS
           : SEARCH_RETRY_DELAYS_MS;
