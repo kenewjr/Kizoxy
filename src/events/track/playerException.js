@@ -10,17 +10,25 @@ function sanitizeExceptionMessage(rawMessage) {
   const lower = rawMessage.toLowerCase();
 
   if (
+    lower.includes("all clients failed") ||
+    lower.includes("failed to load the item")
+  ) {
+    return "Audio stream could not be loaded by provider.";
+  }
+  if (
+    lower.includes("decoding") ||
+    lower.includes("cannot decode") ||
+    lower.includes("unfriendlyexception") ||
+    lower.includes("matroskastreamingfile")
+  ) {
+    return "Failed to decode audio format.";
+  }
+  if (
     lower.includes("requires login") ||
     lower.includes("sign in") ||
     lower.includes("age-restricted")
   ) {
     return "This track requires login or is age-restricted.";
-  }
-  if (
-    lower.includes("all clients failed") ||
-    lower.includes("failed to load the item")
-  ) {
-    return "Audio stream could not be loaded by provider.";
   }
   if (
     lower.includes("not available") ||

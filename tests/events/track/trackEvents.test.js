@@ -390,6 +390,13 @@ describe("Track Events Hardening", () => {
     it("sanitizes multi-client youtube stack traces into user-friendly message", () => {
       const rawTrace = `(yts.version: 1.18.3) All clients failed to load the item.\n\nClient [WEB] failed: Read timed out\nat java.base/sun.nio.ch.NioSocketImpl.timedRead\nClient [ANDROID_MUSIC] failed: This video requires login.`;
       const result = playerException.sanitizeExceptionMessage(rawTrace);
+      expect(result).toBe("Audio stream could not be loaded by provider.");
+    });
+
+    it("sanitizes true age-restricted or login-required message", () => {
+      const result = playerException.sanitizeExceptionMessage(
+        "This video requires login or is age-restricted.",
+      );
       expect(result).toBe("This track requires login or is age-restricted.");
     });
 
