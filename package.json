@@ -4,7 +4,7 @@
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "fast-xml-parser": "^5.11.1",
+    "fast-xml-parser": "^5.11.2",
     "got-scraping": "^4.2.1",
     "hangul-romanizer": "^0.1.0",
     "kazagumo": "^3.4.3",
