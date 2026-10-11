@@ -5,7 +5,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.11.1",
-    "got-scraping": "^4.2.1",
+    "got-scraping": "^4.2.2",
     "hangul-romanizer": "^0.1.0",
     "kazagumo": "^3.4.3",
     "kuroshiro": "^1.2.0",
