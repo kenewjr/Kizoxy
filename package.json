@@ -8,7 +8,7 @@
     "got-scraping": "^4.2.2",
     "hangul-romanizer": "^0.1.0",
     "kazagumo": "^3.4.3",
-    "kuroshiro": "^1.2.0",
+    "kuroshiro": "^1.2.1",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "node-cache": "^5.1.2",
     "sharp": "^0.35.5",
